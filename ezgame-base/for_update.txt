@@ -1,0 +1,16 @@
+crear / update files :
+    python setup.py sdist bdist_wheel
+
+update (test pypi : NoVA): 
+    python -m twine upload --repository testpypi dist/ezstools-0.0.1.tar.gz dist/ezstools-0.0.1-py3-none-any.whl
+
+
+
+definitivo (pypi : ezsnova):
+    python -m twine upload dist/ezstools-0.0.2.tar.gz dist/ezstools-0.0.2-py3-none-any.whl
+    
+
+git :
+    git remote add origin https://github.com/NoxxDev/ezstools.git
+    git branch -M main
+    git push -u origin main
