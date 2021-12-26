@@ -1,4 +1,4 @@
-import pygame as pg, random, os
+import pygame as pg, random, os, time as t
 pg.init()
 # Colors (R, G, B)
 color = {
@@ -380,4 +380,28 @@ class Circle(Object):
         self.resolveStyle(surface)
         pg.draw.circle(surface, self.color, self.pos, self.radius)
         
+class TimeHandler:
+    def __init__(self):
+        self.intervals = {}
+        self.start_time = t.time()
+        self.time = 0
+
+    def addInterval(self, name, callback, time, args=()):
+        self.intervals[name] = {"callback": callback, "time": time, "args": args, "last_call": t.time()}
         
+    def remove(self, name):
+        del self.intervals[name]
+        
+    def check(self):
+        for key, value in self.intervals.items():
+            if t.time() - value["last_call"] >= value["time"]:
+                self.intervals[key]["last_call"] = t.time()
+                self.intervals[key]["callback"](*self.intervals[key]["args"])
+        
+    def call(self, callback, args):
+        if args == [] or args == ():
+            callback()
+        elif isinstance(args, tuple) or isinstance(args, list):
+            callback(*args)
+        else:
+            callback(args)

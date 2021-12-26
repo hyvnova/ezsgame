@@ -1,5 +1,5 @@
-import pygame as pg, random
-from pystyle.premade import color, Text, Rect, EventHandler, Image, Circle
+import pygame as pg, random, time, asyncio
+from pystyle.premade import *
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "PyStyle", icon : str = "", fps : int = 60, 
@@ -15,6 +15,15 @@ class Screen:
         self.resolveSize(size)        
         self.init()
         self.events = EventHandler(self.screen)
+        self.time = TimeHandler()
+
+    def getFPS(self):
+        return self.clock.get_fps()
+
+    def check(self, surface=None):
+        surface = self if surface == None else surface
+        self.events.check(self.events.get(), surface)
+        self.time.check()
 
     @staticmethod
     def mousePos():
@@ -22,7 +31,7 @@ class Screen:
 
     def sleep(self, time : int):
         pg.time.wait(time)
-    
+            
     def div(self, axis, q):
         divs = []
         if axis == "x":
