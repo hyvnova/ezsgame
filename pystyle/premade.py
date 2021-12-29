@@ -25,11 +25,21 @@ color = {
     "dark_purple": (128, 0, 128), 
 }
 
+def randomColor(exclude=[]):
+    colors = color.copy() 
+    for i in exclude:
+        colors.pop(i, None)
+    return random.choice(list(colors.values()))
+
 # PyStyle
 class Object:
     def __init__(self, size, pos, **styles):
         # define general style properties
-        self.color = styles.get("color", color["white"])
+        c = styles.get("color", color["white"])
+        if isinstance(c, str):
+            self.color = color[c]
+        else:
+            self.color = c
         self.margin = styles.get("margin", [0, 0, 0, 0]) # top, right, bottom, left
         self.padding = styles.get("padding", [0, 0, 0, 0]) # top, right, bottom, left
         self.rounded = styles.get("rounded", 0)
@@ -38,7 +48,13 @@ class Object:
         self.size = size
         self.surface = styles.get("surface", None)
 
-    def collision(self, obj, surface=None):
+    def center(self):
+        r'''
+        return center position of obtect
+        ''' 
+        return [self.pos[0] + self.size[0]/2, self.pos[1] + self.size[1]/2]
+
+    def collides(self, obj, surface=None):
         surface = self.surface if surface == None else surface.screen
         
         self.resolveStyle(surface)
@@ -75,14 +91,14 @@ class Object:
         self.size = [self.size[0] - self.margin[0] - self.margin[0], self.size[1] - self.margin[1] - self.margin[1]]
         # align position x
         if self.pos[0] == "center":
-            padding = self.padding[0] + self.padding[2] + self.margin[0] + self.margin[2] + self.rounded
+            padding = self.padding[0] + self.padding[2] if self.padding[0] > self.padding[2] else self.padding[0] + self.padding[2]    
             self.pos[0] = (surface.get_width() - self.size[0]) / 2 - padding
         elif self.pos[0] == "right":
             self.pos[0] = surface.get_width() - self.size[0] - self.margin[0] - self.padding[0]
         elif self.pos[0] == "left":
             self.pos[0] = self.margin[0] + self.padding[0] + self.size[0] 
         elif self.pos[0] == "right-center":
-            self.pos[0] = surface.get_width() - self.size[0] - self.margin[0] - self.padding[0] / 2 - (self.size[0] * 2) + self.margin[0] / 2
+            self.pos[0] = surface.get_width() - self.size[0] - self.margin[0] - self.padding[0] / 2 - (self.size[0] * 2) 
         elif self.pos[0] == "left-center":
             self.pos[0] = self.margin[0] + self.padding[0] / 2 + self.size[0] - self.margin[0] / 2 + (self.size[0] * 2)
         else:
@@ -92,9 +108,9 @@ class Object:
         if self.pos[1] == "center":
             self.pos[1] = (surface.get_height() - self.size[1]) / 2 + self.margin[1] / 2 + self.padding[1] / 2 
         elif self.pos[1] == "top":
-            self.pos[1] = self.margin[1] + self.padding[1]
+            self.pos[1] = self.margin[1] + self.padding[1] + self.size[1] /2
         elif self.pos[1] == "bottom":
-            self.pos[1] = surface.get_height() - self.size[1] - self.margin[1] - self.padding[1]
+            self.pos[1] = surface.get_height() - (self.size[1] / 2) - self.margin[1] - self.padding[1] 
         elif self.pos[1] == "top-center":
             self.pos[1] = self.margin[1] + self.padding[1] + (surface.get_height() - self.size[1]) / 2 - (surface.get_height() - self.size[1]) / 2 / 2
         elif self.pos[1] == "bottom-center":
@@ -204,7 +220,7 @@ class Image(Rect):
       
 class EventHandler:
     r'''
-    @param surface: surface to be drawn on ``pygame.Surface``
+    - Manages events on the app 
     '''
     def __init__(self, surface):
         self.surface = surface
@@ -220,7 +236,6 @@ class EventHandler:
         
         for ev in event:
             # BASE EVENTS ----------------------------------------------------------------------------------
-            # quit
             if ev.type == pg.QUIT:
                 if "quit" in self.base_events:
                     self.base_events["quit"]["callback"](*self.base_events["quit"]["args"])
@@ -275,7 +290,7 @@ class EventHandler:
             else:
                 fun(args)
                         
-    def addEventListener(self, event, name, object, callback, args : list = []):
+    def addEventListener(self,name, event, object, callback, args : list = []):
         r'''
         - Adds a event listener to a object
         @param event: event to be added ``str``
@@ -381,18 +396,38 @@ class Circle(Object):
         pg.draw.circle(surface, self.color, self.pos, self.radius)
         
 class TimeHandler:
+    r'''
+    - Handles the time events
+    '''
     def __init__(self):
         self.intervals = {}
         self.start_time = t.time()
         self.time = 0
 
-    def addInterval(self, name, callback, time, args=()):
+    def addInterval(self, name, time, callback,  args=()):
+        r'''
+        - Adds event that will be called every time the time is reached
+        @param name: name of the event ``str``
+        @param time: time to be called ``int`` in miliseconds
+        @param callback: callback function to be called when the event is triggered ``function``
+        @param args: arguments to be passed to the callback function ``list``
+        '''
+        time = time / 1000
         self.intervals[name] = {"callback": callback, "time": time, "args": args, "last_call": t.time()}
         
     def remove(self, name):
+        r'''
+        - Removes an event from the event list so it won't be called anymore
+        @param name: name of the event to be removed ``str``
+        '''
+        
         del self.intervals[name]
         
     def check(self):
+        r'''
+        - Checks if the time is reached and calls the event
+        '''
+        
         for key, value in self.intervals.items():
             if t.time() - value["last_call"] >= value["time"]:
                 self.intervals[key]["last_call"] = t.time()
@@ -405,3 +440,7 @@ class TimeHandler:
             callback(*args)
         else:
             callback(args)
+
+
+
+
