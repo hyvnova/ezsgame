@@ -1,4 +1,4 @@
-import pygame as pg, random, time, asyncio
+import pygame as pg, random
 from pystyle.premade import *
 from pystyle.animations import *
 
@@ -8,31 +8,31 @@ class Screen:
         self.size = size
         self.title = title
         self.icon = icon
-        self.screen = None
+        self.surface = None
         self.clock = None
-        self.fps = 60
+        self.fps = fps
         self.show_fps = show_fps
         self.size = [0, 0]
         self.resolveSize(size)        
-        self.init()
-        self.events = EventHandler(self.screen)
+        self.events = EventHandler(self)
         self.time = TimeHandler()
         self.loadIcon(icon)
-        
+        self.init()
+         
     def loadIcon(self, icon : str):
         self.icon = icon
         if icon == "":
-            self.icon = "ezgame/pystyle/assets/img/icon.jpg"
+            self.icon = "pystyle/assets/img/icon.jpg"
         pg.display.set_icon(pg.image.load(self.icon))
 
     def shake(self, force=5):
         r'''
         Shake the screen
         '''
-        x, y = self.screen.get_rect().center
+        x, y = self.surface.get_rect().center
         x = random.randint(-force, force)
         y = random.randint(-force, force)
-        self.screen.blit(self.screen, (x, y))
+        self.surface.blit(self.surface, (x, y))
         
     def getFPS(self):
         return self.clock.get_fps()
@@ -61,10 +61,10 @@ class Screen:
                 divs.append([round(i * self.size[1] / q, 1), round((i + 1) * self.size[1] / q, 1)])
             
         return divs
-
-    def half(self):
+    
+    def center(self):
         r'''
-        Returns the half of the screen size -> [width, height]
+        Returns the center of the screen
         '''
         return self.size[0] / 2, self.size[1] / 2
 
@@ -87,7 +87,7 @@ class Screen:
         
     def init(self):
         pg.init()
-        self.screen = pg.display.set_mode(self.size, 0, 32)
+        self.surface = pg.display.set_mode(self.size, 0, 32)
         pg.display.set_caption(self.title)
         if self.icon != "":
             pg.display.set_icon(pg.image.load(self.icon))
@@ -105,7 +105,7 @@ class Screen:
         quit()
 
     def fill(self, color : list):
-        self.screen.fill(color)
+        self.surface.fill(color)
         
     def gridDiv(self, cols=3, rows=3):
         r'''
@@ -169,6 +169,8 @@ class IScreen(Screen):
             objects = self.objects
             
         if auto_place:
+            if len(objects) > self.grid_space:
+                raise Exception(f"Not enough space in the grid ({self.grid_space}) for {len(objects)} objects")
             c = 0
             r = 0
             for obj in objects:

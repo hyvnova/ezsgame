@@ -1,5 +1,7 @@
+import pygame as pg
+
 class Animation:
-    def __init__(self, screen, object, start,end, loop, done_callback=None, args=()):
+    def __init__(self, screen, object, start, end, time=50, step=1, loop=False, done_callback=None, args=()):
         self.screen = screen
         self.object = object
         self.done = False
@@ -9,19 +11,21 @@ class Animation:
         self.surface = self.screen.screen
         self.loop = loop
         self.end = end
+        self.time = time
+        self.step = step
+        self.corrected = False
+
         
     def resolve(self):
-        object = self.object
-        
         obj_pos = self.object.getPos(self.screen)
-        self.object.pos = self.start
-        self.start = self.object.resolveStyle(self.screen)
+        if isinstance(self.start, list) or isinstance(self.start, tuple):
+            self.object.pos = self.start
+            self.start = self.object.resolveStyle(self.screen)
+            
+            self.object.pos = self.end
+            self.end = self.object.resolveStyle(self.screen)
         
-        self.object.pos = self.end
-        self.end = self.object.resolveStyle(self.screen)
-    
-        self.object.pos = obj_pos
-
+            self.object.pos = obj_pos
         
 class Slide(Animation):
     f'''
@@ -32,14 +36,11 @@ class Slide(Animation):
     @param step: step size
     [If objet is not at start position, it will be moved to start position]
     '''
-    def __init__(self, screen, object, start="current", end="right", time=1, step=1, loop=False, done_callback=None, args=()):
-        super().__init__(screen, object, start, end, loop, done_callback, args)
-        self.time = time
-        self.step = step
-        self.screen = screen
-        self.corrected = False
+    def __init__(self, screen, object, start="current", end="right", time=50, step=1, loop=False, done_callback=None, args=()):
+        super().__init__(screen, object, start, end, time, step, loop, done_callback, args)
         self.resolve()
         self.screen.time.addInterval(name=f"slide_{start}_{end}", time=self.time, callback=self.update)
+        self.rot = start
         
 
     def update(self):    
@@ -92,7 +93,8 @@ class Slide(Animation):
                         self.done_callback(*self.args)
                     else:
                         self.done_callback(self.args)
-
+                return False
+            
 
         
 

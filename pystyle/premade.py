@@ -1,6 +1,6 @@
 import pygame as pg, random, os, time as t
 pg.init()
-# Colors (R, G, B)
+
 color = {
     "black": (0, 0, 0),
     "white": (255, 255, 255),
@@ -41,88 +41,91 @@ class Object:
         else:
             self.color = c
         self.margin = styles.get("margin", [0, 0, 0, 0]) # top, right, bottom, left
-        self.padding = styles.get("padding", [0, 0, 0, 0]) # top, right, bottom, left
         self.rounded = styles.get("rounded", 0)
         self.opacity = styles.get("opacity", 255)
         self.pos = pos
         self.size = size
-        self.surface = styles.get("surface", None)
-
+        if styles.get("screen"):
+            self.screen = styles["screen"]
+            self.resolveStyle(self.screen)   
+            
+        if styles.get("name"):
+            self.name = styles["name"]    
+    
     def center(self):
         r'''
         return center position of obtect
         ''' 
         return [self.pos[0] + self.size[0]/2, self.pos[1] + self.size[1]/2]
 
-    def collides(self, obj, surface=None):
-        surface = self.surface if surface == None else surface.screen
+    def collides(self, obj, screen=None):
+        screen = self.screen if screen == None else screen
         
-        self.resolveStyle(surface)
-        obj.resolveStyle(surface)
+        self.resolveStyle(screen)
+        obj.resolveStyle(screen)
+
+        collide_box = [self.pos[0] + self.margin[3], self.pos[1] + self.margin[0], self.size[0] - self.margin[1] - self.margin[3], self.size[1] - self.margin[0] - self.margin[2]]
+        obj_collide_box = [obj.pos[0] + obj.margin[3], obj.pos[1] + obj.margin[0], obj.size[0] - obj.margin[1] - obj.margin[3], obj.size[1] - obj.margin[0] - obj.margin[2]]
         
-        if self.pos[0] + self.size[0] > obj.pos[0] and self.pos[0] < obj.pos[0] + obj.size[0] and self.pos[1] + self.size[1] > obj.pos[1] and self.pos[1] < obj.pos[1] + obj.size[1]:
-            return True
-        return False
-            
-    def move(self, x=0, y=0, surface=None):
-        surface = self.surface if surface == None else surface.screen
-        self.resolveStyle(surface) 
+        if collide_box[0] > obj_collide_box[0] + obj_collide_box[2] or collide_box[0] + collide_box[2] < obj_collide_box[0] or collide_box[1] > obj_collide_box[1] + obj_collide_box[3] or collide_box[1] + collide_box[3] < obj_collide_box[1]:
+            return False
+        return True
+    
+    def move(self, x=0, y=0, screen=None):
+        screen = self.screen if screen == None else screen
+        self.resolveStyle(screen) 
         self.pos[0] += x
         self.pos[1] += y * -1
      
-    # return true if object is out of screen
-    def isOut(self, surface=None):
-        surface = self.surface if surface == None else surface.screen
-        self.resolveStyle(surface)
-        if self.pos[0] < 0 or self.pos[0] + self.size[0] > surface.get_width() or self.pos[1] < 0 or self.pos[1] + self.size[1] > surface.get_height():
+    def isOut(self, screen=None):
+        screen = self.screen if screen == None else screen
+        self.resolveStyle(screen)
+        # should use object size
+        if self.pos[0] < 0 or self.pos[0] + self.size[0] > screen.get_width() or self.pos[1] < 0 or self.pos[1] + self.size[1] > screen.get_height():
             return True
         return False
-            
-    def resolveStyle(self, surface=None):
-        if not isinstance(surface, pg.Surface):
-            surface = self.surface if surface == None else surface.screen
         
+    def resolveStyle(self, screen=None):
+        screen = self.screen if screen == None else screen
+            
         if isinstance(self.size, tuple):
             self.size = [self.size[0], self.size[1]]
         if isinstance(self.pos, tuple):
             self.pos = [self.pos[0], self.pos[1]]
         
-        # resolve style properties
+        if isinstance(self.pos[0], str):
+            self.pos[0] = self.pos[0].lower()
+        if isinstance(self.pos[1], str):
+            self.pos[1] = self.pos[1].lower()
+        
         self.size = [self.size[0] - self.margin[0] - self.margin[0], self.size[1] - self.margin[1] - self.margin[1]]
         # align position x
         if self.pos[0] == "center":
-            padding = self.padding[0] + self.padding[2] if self.padding[0] > self.padding[2] else self.padding[0] + self.padding[2]    
-            self.pos[0] = (surface.get_width() - self.size[0]) / 2 - padding
+            self.pos[0] =   screen.size[0]/2 - self.size[0]/2
         elif self.pos[0] == "right":
-            self.pos[0] = surface.get_width() - self.size[0] - self.margin[0] - self.padding[0]
-        elif self.pos[0] == "left":
-            self.pos[0] = self.margin[0] + self.padding[0] + self.size[0] 
+            self.pos[0] = screen.size[0] - self.size[0] / 2 - self.margin[1] 
         elif self.pos[0] == "right-center":
-            self.pos[0] = surface.get_width() - self.size[0] - self.margin[0] - self.padding[0] / 2 - (self.size[0] * 2) 
+            self.pos[0] = screen.size[0] - self.size[0] / 2 - self.margin[1] - screen.center()[0]/2
+        elif self.pos[0] == "left":
+            self.pos[0] = self.margin[3] + self.size[0] / 2
         elif self.pos[0] == "left-center":
-            self.pos[0] = self.margin[0] + self.padding[0] / 2 + self.size[0] - self.margin[0] / 2 + (self.size[0] * 2)
-        else:
-            self.pos[0] += self.padding[0] / 2 
-    
+            self.pos[0] = screen.center()[0] /2 - self.size[0] / 2 - self.margin[1]
+        
         # align position y
         if self.pos[1] == "center":
-            self.pos[1] = (surface.get_height() - self.size[1]) / 2 + self.margin[1] / 2 + self.padding[1] / 2 
+            self.pos[1] = screen.size[1]/2 - self.size[1]/2
         elif self.pos[1] == "top":
-            self.pos[1] = self.margin[1] + self.padding[1] + self.size[1] /2
-        elif self.pos[1] == "bottom":
-            self.pos[1] = surface.get_height() - (self.size[1] / 2) - self.margin[1] - self.padding[1] 
+            self.pos[1] = self.margin[0] + self.size[1] / 2
         elif self.pos[1] == "top-center":
-            self.pos[1] = self.margin[1] + self.padding[1] + (surface.get_height() - self.size[1]) / 2 - (surface.get_height() - self.size[1]) / 2 / 2
+            self.pos[1] = screen.center()[1] / 2 - self.size[1] / 2 - self.margin[0]
+        elif self.pos[1] == "bottom":
+            self.pos[1] = screen.size[1] - self.size[1] /2  - self.margin[2] 
         elif self.pos[1] == "bottom-center":
-            self.pos[1] = surface.get_height() - self.size[1] - self.margin[1] - self.padding[1] - (surface.get_height() - self.size[1]) / 2 / 2 
-        else:
-            self.pos[1] = self.pos[1] + self.margin[1] + self.padding[1] / 2
-        return self.pos
+            self.pos[1] = screen.size[1] - self.size[1] /2  - self.margin[2] - screen.center()[1]/2
         
-    def getPos(self, surface=None):
-        surface = self.surface if surface == None else surface.screen
-
-        self.resolveStyle(surface)
+    def getPos(self, screen=None):
+        screen = self.screen if screen == None else screen
+        self.resolveStyle(screen)
         return self.pos
             
 class Rect(Object):
@@ -131,18 +134,17 @@ class Rect(Object):
     @param size: size of the figure ``list(width, height)``
     @Keyword Arguments:
         * color= (R, G, B) ``color["white"] or tuple(R, G, B)``
-        * background= (R, G, B) ``color["white"] or tuple(R, G, B)``
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
-        * padding= [top, right, bottom, left] ``list(top, right, bottom, left)``
+        * rounded= ``int``
+        * screen = ``Screen``
     '''
     def __init__(self,size, pos, **styles):
         super().__init__(size, pos, **styles)
                 
-    def draw(self, surface=None):
-        surface = self.surface if surface == None else surface.screen
-        self.resolveStyle(surface)
-        pg.draw.rect(surface, self.color, [self.pos[0], self.pos[1], self.size[0], self.size[1]], self.rounded)
-    
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        pg.draw.rect(screen.surface, self.color, [*self.getPos(screen), *self.size], self.rounded)
+        
 class Text(Object):
     r'''
     @param text: text to be rendered ``str``
@@ -153,8 +155,8 @@ class Text(Object):
     @Keyword Arguments:
         * color= (R, G, B) ``color["white"] or tuple(R, G, B)``
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
-        * padding= [top, right, bottom, left] ``list(top, right, bottom, left)``
         * path = path to font folder ``str``
+        * screen = ``Screen``
     '''
     def __init__(self, text, pos, size, **styles):  
         self.path = styles.get("path", "")
@@ -188,14 +190,11 @@ class Text(Object):
         self.fontname = atributes.get("fontname", self.fontname)
         self.fontsize = atributes.get("fontsize", self.fontsize)
         self.margin = atributes.get("margin", self.margin)
-        self.padding = atributes.get("padding", self.padding)
         self.pos = atributes.get("pos", self.pos)
             
-    def draw(self, surface=None):
-        surface = self.surface if surface == None else surface.screen
-        
-        self.resolveStyle(surface)        
-        surface.blit(self.text, self.pos)
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen    
+        screen.surface.blit(self.text, self.getPos(screen))
 
 class Image(Rect):
     r'''
@@ -205,32 +204,28 @@ class Image(Rect):
     @Keyword Arguments:
         * color= (R, G, B) ``color["white"] or tuple(R, G, B)``
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
-        * padding= [top, right, bottom, left] ``list(top, right, bottom, left)``
+        * screen = ``Screen``
     '''
     def __init__(self, image, pos, size, **styles):
         super().__init__(size, pos, **styles)
         self.image = pg.image.load(image)
         self.image = pg.transform.scale(self.image, self.size)
         
-    def draw(self, surface=None):
-        surface = self.surface if surface == None else surface.screen
-        
-        self.resolveStyle(surface)
-        surface.blit(self.image, self.pos)
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        screen.surface.blit(self.image, self.getPos(screen))
       
 class EventHandler:
     r'''
     - Manages events on the app 
     '''
-    def __init__(self, surface):
-        self.surface = surface
+    def __init__(self, screen):
+        self.screen = screen
         self.events  = {}
         self.base_events = {}
                                             
-    def check(self, event, surface=None):
-        if surface != None:
-            if surface.screen != self.surface:
-                self.surface = surface.screen
+    def check(self, event, screen=None):
+        screen = self.screen if screen == None else screen
                 
         self.events = {k:v for k,v in self.events.items() if v != None}
         
@@ -238,59 +233,50 @@ class EventHandler:
             # BASE EVENTS ----------------------------------------------------------------------------------
             if ev.type == pg.QUIT:
                 if "quit" in self.base_events:
-                    self.base_events["quit"]["callback"](*self.base_events["quit"]["args"])
+                    self.base_events["quit"]["callback"]()
                 pg.quit()
                 quit()
                 
             if ev.type == pg.MOUSEMOTION:
                 if "mousemotion" in self.base_events:
-                    self.base_events["mousemotion"]["callback"](*self.base_events["mousemotion"]["args"])
+                    self.base_events["mousemotion"]["callback"]()
                 
             if ev.type == pg.MOUSEBUTTONDOWN:
                 if "mousedown" in self.base_events:
-                    self.base_events["mousedown"]["callback"](*self.base_events["mousedown"]["args"])
+                    self.base_events["mousedown"]["callback"]()
                     
             if ev.type == pg.MOUSEBUTTONUP:
                 if "mouseup" in self.base_events:
-                    self.base_events["mouseup"]["callback"](*self.base_events["mouseup"]["args"])
+                    self.base_events["mouseup"]["callback"]()
                     
             if ev.type == pg.KEYDOWN:
                 if "keydown" in self.base_events:
-                    self.base_events["keydown"]["callback"](*self.base_events["keydown"]["args"])
+                    self.base_events["keydown"]["callback"]()
                 
             if ev.type == pg.KEYUP:
                 if "keyup" in self.base_events:
-                    self.base_events["keyup"]["callback"](*self.base_events["keyup"]["args"])
+                    self.base_events["keyup"]["callback"]()
                             
             # STORED EVENTS --------------------------------------------------------------------------------
             for key, value in self.events.items():
                 # onclick, onhover
                 if value["type"] == 1025 or value["type"] == 1026:
                     if self.isHovering(value["object"]):
-                        self.call(self.events[key]["callback"], self.events[key]["args"])
+                        self.events[key]["callback"]()
                         continue                
                     
                 #key up or down
                 elif value["type"] == pg.KEYDOWN and ev.type == pg.KEYDOWN:
                     if ev.key == value["key"]:
-                        self.call(self.events[key]["callback"], self.events[key]["args"])
+                        self.events[key]["callback"]()
                         continue
                     
                 elif value["type"] == pg.KEYUP and ev.type == pg.KEYUP:
                     if ev.key == value["key"]:
-                        self.call(self.events[key]["callback"], self.events[key]["args"])
+                        self.events[key]["callback"]()
                         continue
-                                               
-    def call(self, fun, args : list = []):
-        if args == []:
-            fun()
-        else:
-            if isinstance(args, list):
-                fun(*args)
-            else:
-                fun(args)
-                        
-    def addEventListener(self,name, event, object, callback, args : list = []):
+                                            
+    def addEventListener(self,name, event, object, callback):
         r'''
         - Adds a event listener to a object
         @param event: event to be added ``str``
@@ -309,14 +295,13 @@ class EventHandler:
         else:
             raise Exception("Event type not found", event)
         
-        self.events[name] = {"type": event, "object": object, "callback": callback, "args": args}
+        self.events[name] = {"type": event, "object": object, "callback": callback}
 
     def remove(self, name):
         f'''
         - Removes an event from the event list so it won't be called anymore
         @param name: name of the event to be removed ``str``
         '''
-        
         del self.events[name]
 
     def isHovering(self, object):
@@ -325,7 +310,7 @@ class EventHandler:
         @param object: object to be checked ``Object``
         '''
         mouse_pos = pg.mouse.get_pos()
-        object_pos = object.getPos(self.surface)
+        object_pos = object.getPos(self.screen)
         object_size = object.size
 
         if mouse_pos[0] > object_pos[0] and mouse_pos[0] < object_pos[0] + object_size[0] and mouse_pos[1] > object_pos[1] and mouse_pos[1] < object_pos[1] + object_size[1]:
@@ -340,7 +325,7 @@ class EventHandler:
         # return current event
         return pg.event.get()
     
-    def on(self, event, callback, args = ()):
+    def on(self, event, callback):
         r'''
         - Called when event is triggered
         @param event: event to be added ``str``
@@ -349,9 +334,9 @@ class EventHandler:
         @param args: arguments to be passed to the callback function ``list``
         '''
         event = event.lower()
-        self.base_events[event] = {"type": event, "callback": callback, "args": args}
+        self.base_events[event] = {"type": event, "callback": callback}
         
-    def onKey(self, type, keys, callback, args = ()):
+    def onKey(self, type, keys, callback):
         r'''
         - Called when key event is triggered
         @param type: type of event to be added ``str``
@@ -373,8 +358,7 @@ class EventHandler:
                 key = key.lower()
             
             k = eval("pg.K_" + key)
-            self.events[f"{key}_{type}"] = {"type": t, "key": k, "callback": callback, "args": args}
-    
+            self.events[f"{key}_{type}"] = {"type": t, "key": k, "callback": callback}
             
 class Circle(Object):
     r'''
@@ -383,17 +367,16 @@ class Circle(Object):
     @Keyword Arguments:
         * color= (R, G, B) ``color["white"] or tuple(R, G, B)``
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
-        * padding= [top, right, bottom, left] ``list(top, right, bottom, left)``
+        * screen = ``Screen`` 
     '''
     def __init__(self, pos, radius, **styles):
         super().__init__(size=[radius*2, radius*2], pos=pos, **styles)
         self.radius = radius
         
-    def draw(self, surface=None):
-        surface = self.surface if surface == None else surface.screen
-        
-        self.resolveStyle(surface)
-        pg.draw.circle(surface, self.color, self.pos, self.radius)
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        pos = self.getPos(screen)
+        pg.draw.circle(screen.surface, self.color, pos, self.radius)
         
 class TimeHandler:
     r'''
@@ -404,7 +387,7 @@ class TimeHandler:
         self.start_time = t.time()
         self.time = 0
 
-    def addInterval(self, name, time, callback,  args=()):
+    def addInterval(self, name, time, callback):
         r'''
         - Adds event that will be called every time the time is reached
         @param name: name of the event ``str``
@@ -413,34 +396,23 @@ class TimeHandler:
         @param args: arguments to be passed to the callback function ``list``
         '''
         time = time / 1000
-        self.intervals[name] = {"callback": callback, "time": time, "args": args, "last_call": t.time()}
+        self.intervals[name] = {"callback": callback, "time": time, "last_call": t.time()}
         
     def remove(self, name):
         r'''
         - Removes an event from the event list so it won't be called anymore
         @param name: name of the event to be removed ``str``
         '''
-        
         del self.intervals[name]
         
     def check(self):
         r'''
         - Checks if the time is reached and calls the event
         '''
-        
         for key, value in self.intervals.items():
             if t.time() - value["last_call"] >= value["time"]:
                 self.intervals[key]["last_call"] = t.time()
-                self.intervals[key]["callback"](*self.intervals[key]["args"])
-        
-    def call(self, callback, args):
-        if args == [] or args == ():
-            callback()
-        elif isinstance(args, tuple) or isinstance(args, list):
-            callback(*args)
-        else:
-            callback(args)
-
+                self.intervals[key]["callback"]()
 
 
 
