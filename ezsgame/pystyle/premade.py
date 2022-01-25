@@ -1,45 +1,64 @@
 import pygame as pg, random, time as t
+from colour import Color
 pg.init()
+       
+def random_color_list(n):
+    r'''
+    Return a list of n random colors.
+    '''
+    return [[random.randint(0,255), random.randint(0,255), random.randint(0,255)] for i in range(n)]
 
-Color = {
-    "black": (0, 0, 0),
-    "white": (255, 255, 255),
-    "red": (255, 0, 0),
-    "green": (0, 255, 0),
-    "blue": (0, 0, 255),
-    "yellow": (255, 255, 0),
-    "orange": (255, 128, 0),
-    "purple": (128, 0, 128),
-    "pink": (255, 0, 255),
-    "light_blue": (0, 255, 255),
-    "light_green": (0, 255, 0),
-    "light_red": (255, 0, 0),
-    "light_yellow": (255, 255, 0),
-    "light_orange": (255, 128, 0),
-    "light_purple": (128, 0, 128),
-    "dark_blue": (0, 0, 128),
-    "dark_green": (0, 128, 0),
-    "dark_red": (128, 0, 0),
-    "dark_yellow": (128, 128, 0),
-    "dark_orange": (128, 64, 0),
-    "dark_purple": (128, 0, 128), 
-}
+def adapt_rgb(rgb_color):
+    return tuple([i*255 for i in rgb_color])
 
-def randomColor(exclude=[]):
-    colors = Color.copy() 
-    for i in exclude:
-        colors.pop(i, None)
-    return random.choice(list(colors.values()))
+def text_to_color(color):
+        r'''
+        Convert a text color to rgb; "white" -> (255, 255, 255)
+        - color need to exist in Color class
+        @param color: color name. Example: "red"
+        '''
+        if isinstance(color, str):
+            color = Color(color)
+            return adapt_rgb(color.rgb)
+        else:
+            return color
 
+def gradient(screen, start="green", end="blue", complexity=100):
+    r'''
+    Draw a gradient from start to end.
+    - screen: screen to draw on
+    - start: start color
+    - end: end color
+    - complexity: how many times to draw the gradient
+    '''
+    grid = screen.grid_div(complexity, complexity)
+    color = Color(start)
+    colors = list(color.range_to(Color(end),len(grid)))
+    objs = []
+    for i in range(len(grid)):
+        objs.append(Unit(pos=grid[i][:2], size=grid[i][2:], color=adapt_rgb(colors[i].rgb)))
+            
+    return objs
+                    
 # PyStyle
+class Unit:
+    def __init__(self, size, pos, color, screen=None):
+        self.size = size
+        self.pos = pos
+        self.color = color
+        self.screen = screen
+    
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        pg.draw.rect(screen.surface, self.color, [*self.pos, *self.size], 0)
+
 class Object:
     def __init__(self, size, pos, **styles):
         # define general style properties
-        c = styles.get("color", Color["white"])
+        c = styles.get("color", "white")
         if isinstance(c, str):
-            self.color = Color[c]
-        else:
-            self.color = c
+            c = text_to_color(c)
+        self.color = c
         self.margin = styles.get("margin", [0, 0, 0, 0]) # top, right, bottom, left
         self.rounded = styles.get("rounded", 0)
         self.opacity = styles.get("opacity", 255)
@@ -47,8 +66,7 @@ class Object:
         self.size = size
         if styles.get("screen"):
             self.screen = styles["screen"]
-            self.resolveStyle(self.screen)   
-            
+            self.resolve_styles(self.screen)   
         if styles.get("name"):
             self.name = styles["name"]    
     
@@ -58,11 +76,11 @@ class Object:
         ''' 
         return [self.pos[0] + self.size[0]/2, self.pos[1] + self.size[1]/2]
 
-    def collides(self, obj, screen=None):
+    def is_colliding(self, obj, screen=None):
         screen = self.screen if screen == None else screen
         
-        self.resolveStyle(screen)
-        obj.resolveStyle(screen)
+        self.resolve_styles(screen)
+        obj.resolve_styles(screen)
 
         collide_box = [self.pos[0] + self.margin[3], self.pos[1] + self.margin[0], self.size[0] - self.margin[1] - self.margin[3], self.size[1] - self.margin[0] - self.margin[2]]
         obj_collide_box = [obj.pos[0] + obj.margin[3], obj.pos[1] + obj.margin[0], obj.size[0] - obj.margin[1] - obj.margin[3], obj.size[1] - obj.margin[0] - obj.margin[2]]
@@ -73,16 +91,16 @@ class Object:
     
     def move(self, x=0, y=0, screen=None):
         screen = self.screen if screen == None else screen
-        self.resolveStyle(screen) 
+        self.resolve_styles(screen) 
         self.pos[0] += x
         self.pos[1] += y * -1
      
-    def isOut(self, screen=None):
+    def is_out(self, screen=None):
         f'''
         Return True if objects is out of bounds and direction of where is objetc (top, bottom, right, left)
         '''
         screen = self.screen if screen == None else screen
-        self.resolveStyle(screen)
+        self.resolve_styles(screen)
         # should use object size
         if self.pos[0] < 0 or self.pos[0] + self.size[0] > screen.size[0]:
             return True, "right" if self.pos[0] < 0 else "left"
@@ -92,7 +110,10 @@ class Object:
             return False, None
         
         
-    def resolveStyle(self, screen=None):
+    def resolve_styles(self, screen=None):
+        if isinstance(self.color, str):
+            self.color = adapt_rgb(Color(self.color).get_rgb())
+    
         screen = self.screen if screen == None else screen
             
         if isinstance(self.size, tuple):
@@ -138,17 +159,17 @@ class Object:
         elif self.pos[1] == "bottom-center":
             self.pos[1] = screen.size[1] - self.size[1]/2 - screen.center()[1]/2 - margin_y
         
-    def getPos(self, screen=None):
+    def get_pos(self, screen=None):
         screen = self.screen if screen == None else screen
-        self.resolveStyle(screen)
+        self.resolve_styles(screen)
         return self.pos
-            
+                
 class Rect(Object):
     r'''
     @param pos: position of the text ``list(x, y) or list("left", "top")``
     @param size: size of the figure ``list(width, height)``
     @Keyword Arguments:
-        * color= (R, G, B) ``Color["white"] or tuple(R, G, B)``
+        * color= (R, G, B) ``"white" or tuple(R, G, B)``
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
         * rounded= ``int``
         * screen = ``Screen``
@@ -158,7 +179,7 @@ class Rect(Object):
                 
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
-        pg.draw.rect(screen.surface, self.color, [*self.getPos(screen), *self.size], self.rounded)
+        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], self.rounded)
         
 class Text(Object):
     r'''
@@ -168,7 +189,7 @@ class Text(Object):
     @param fontname: font name ``str``
     @param path: Path to Local Fonts are stored
     @Keyword Arguments:
-        * color= (R, G, B) ``Color["white"] or tuple(R, G, B)``
+        * color= (R, G, B) ``"white" or tuple(R, G, B)``
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
         * path = path to font folder ``str``
         * screen = ``Screen``
@@ -177,12 +198,12 @@ class Text(Object):
         self.path = styles.get("path", "")
         self.fontname = styles.get("fontname", "Arial")
         self.fontsize = size
-        self.color = styles.get("color",Color["white"])
+        self.color = styles.get("color","white")
         self.innertext = text
         self.text = self.font(text, self.fontname, size, self.color)
         super().__init__(size=[self.text.get_width(), self.text.get_height()], pos=pos, **styles)
         
-    def font(self, text, name, size, color=Color["white"]):
+    def font(self, text, name, size, color="white"):
         # load local font 
         pg.font.init()
         name = name.lower()
@@ -205,7 +226,7 @@ class Text(Object):
             
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen    
-        screen.surface.blit(self.text, self.getPos(screen))
+        screen.surface.blit(self.text, self.get_pos(screen))
 
 class Image(Rect):
     r'''
@@ -213,7 +234,7 @@ class Image(Rect):
     @param pos: position of the image ``list(x, y) or list("left", "top")``
     @param size: size of the image ``int``
     @Keyword Arguments:
-        * color= (R, G, B) ``Color["white"] or tuple(R, G, B)``
+        * color= (R, G, B) ``"white" or tuple(R, G, B)``
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
         * screen = ``Screen``
     '''
@@ -224,7 +245,7 @@ class Image(Rect):
         
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
-        screen.surface.blit(self.image, self.getPos(screen))
+        screen.surface.blit(self.image, self.get_pos(screen))
       
 class EventHandler:
     r'''
@@ -272,7 +293,7 @@ class EventHandler:
             for key, value in self.events.items():
                 # onclick, onhover
                 if value["type"] == 1025 or value["type"] == 1026:
-                    if self.isHovering(value["object"]):
+                    if self.is_hovering(value["object"]):
                         self.events[key]["callback"]()
                         continue                
                     
@@ -287,7 +308,7 @@ class EventHandler:
                         self.events[key]["callback"]()
                         continue
                                             
-    def addEventListener(self,name, event, object, callback):
+    def add_event_listener(self,name, event, object, callback):
         r'''
         - Adds a event listener to a object
         @param event: event to be added ``str``
@@ -314,13 +335,13 @@ class EventHandler:
         '''
         del self.events[name]
 
-    def isHovering(self, object):
+    def is_hovering(self, object):
         r'''
         - Checks if the mouse is hovering over the object
         @param object: object to be checked ``Object``
         '''
         mouse_pos = pg.mouse.get_pos()
-        object_pos = object.getPos(self.screen)
+        object_pos = object.get_pos(self.screen)
         object_size = object.size
 
         if mouse_pos[0] > object_pos[0] and mouse_pos[0] < object_pos[0] + object_size[0] and mouse_pos[1] > object_pos[1] and mouse_pos[1] < object_pos[1] + object_size[1]:
@@ -345,7 +366,7 @@ class EventHandler:
         event = event.lower()
         self.base_events[event] = {"type": event, "callback": callback}
         
-    def onKey(self, type, keys, callback):
+    def on_key(self, type, keys, callback):
         r'''
         - Called when key event is triggered
         @param type: type of event to be added ``str``
@@ -373,7 +394,7 @@ class Circle(Object):
     @param pos: position of the circle ``list(x, y) or list("left", "top")``
     @param radius: radius of the circle ``int``
     @Keyword Arguments:
-        * color= (R, G, B) ``Color["white"] or tuple(R, G, B)``
+        * color= (R, G, B) ``"white" or tuple(R, G, B)``
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
         * screen = ``Screen`` 
     '''
@@ -383,7 +404,7 @@ class Circle(Object):
         
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
-        pos = self.getPos(screen)
+        pos = self.get_pos(screen)
         pg.draw.circle(screen.surface, self.color, pos, self.radius)
         
 class TimeHandler:
@@ -396,7 +417,7 @@ class TimeHandler:
         self.time = 0
         self.to_remove = []
 
-    def addInterval(self, name, time, callback):
+    def add(self, name, time, callback):
         r'''
         - Adds event that will be called every time the time is reached
         @param name: name of the event ``str``
@@ -425,8 +446,7 @@ class TimeHandler:
             if t.time() - value["last_call"] >= value["time"]:
                 self.intervals[key]["last_call"] = t.time()
                 self.intervals[key]["callback"]()
+    
 
-
-
-
-
+        
+    
