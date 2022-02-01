@@ -1,5 +1,40 @@
 from ezsgame.main import *
+import random, json
 
-s = IScreen(size=[480, 400], title="Test", fps=120, show_fps=True,
-    objects=[Rect(size=[100,100], pos=[1,1], color=Color.white())]
-).run(fill_color=Color.black())
+s = Screen(show_fps=True)
+
+box = Rect(pos=["left","top"], size=[50,50])
+
+inbox = InputBox(pos=["center", "top"], size=[200,100], screen=s)
+    
+styles = [{}]
+def reload():
+    try:
+        with open("stylepack.json", "r") as f:
+            styles[0] = json.load(f)
+            load()
+    except:
+        return
+        
+def load():
+    try:
+        if inbox.value in styles[0]:    
+            box.load_style_pack(styles[0][inbox.value])
+    except:
+        return
+
+s.events.on("mousedown", lambda: load())
+s.time.add(250, lambda: reload(), "reloader")
+
+Slide(s, box, step=1, time=5)
+
+while True:
+    s.check()
+    s.fill((0,0,0))
+    
+    inbox.draw(s)
+    try:
+        box.draw(s)
+    except:
+        continue
+    s.update()

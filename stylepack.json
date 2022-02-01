@@ -1,0 +1,11 @@
+{
+    "custom" : {
+        "color" : "blue",
+        "size" : [100,100],
+        "pos" : ["right", "bottom"]
+    },
+    "red" : {
+        "color" : "red",
+        "pos" : ["center", "center"]
+    }
+}
