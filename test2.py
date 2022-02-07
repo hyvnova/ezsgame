@@ -3,7 +3,7 @@ import random, json
 
 s = Screen(show_fps=True)
 
-box = Rect(pos=["left","top"], size=[50,50])
+box = Rect(pos=["center","center"], size=[50,50])
 
 inbox = InputBox(pos=["center", "top"], size=[200,100], screen=s)
     
@@ -25,8 +25,6 @@ def load():
 
 s.events.on("mousedown", lambda: load())
 s.time.add(250, lambda: reload(), "reloader")
-
-Slide(s, box, step=1, time=5)
 
 while True:
     s.check()

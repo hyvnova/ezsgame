@@ -128,6 +128,7 @@ class Screen:
             else:
                 self.size = size
         
+        
     def init(self):
         pg.init()
         self.surface = pg.display.set_mode(self.size, 0, self.depth, 0, self.vsync)
@@ -180,6 +181,8 @@ class Screen:
         self.grid_space = len(grid)
         self.grid_box_size = [box_width, box_height]
         return grid
+    
+
 
 class IScreen(Screen):
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
