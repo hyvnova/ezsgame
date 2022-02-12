@@ -14,6 +14,10 @@ En general ezsgame Trata de hacer mas simple el proceso de Creacion y manipulaci
 
 
 # Inicio
+# Instalar requeriments
+```bash
+pip install -r requirements.txt
+```
 
 ```python
 # declare a  Screen object
