@@ -12,12 +12,12 @@ En general ezsgame Trata de hacer mas simple el proceso de Creacion y manipulaci
 
 - IScreen - Interface Screen. Pantalla de interfaz. Permite usar otro tipo de caracteristicas en la pantalla.
 
-
-# Inicio
 # Instalar requeriments
 ```bash
 pip install -r requirements.txt
 ```
+
+# Inicio
 
 ```python
 # declare a  Screen object
