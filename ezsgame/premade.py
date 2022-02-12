@@ -1,5 +1,6 @@
 import pygame as pg, random, time as t, json, re
 from colour import Color
+
 pg.init()
    
 def unit_size():
@@ -49,6 +50,29 @@ def gradient(screen, start="green", end="blue", complexity=200):
             
     return objs
         
+def percent(n, total):
+    return (n * total)/100
+
+def _to_percent(n, total):
+    if isinstance(n, str):
+        if re.match(r"[0-9]+%$", n):
+            n = float(n.replace("%",""))
+            return percent(n, total)
+        else:
+            return n 
+    else:
+        return n
+    
+def _to_unit(n): 
+    if isinstance(n, str):
+        if re.match(r"[0-9]+(u||U)$", n):
+            n = float(n.replace("u","").replace("U",""))
+            return round(n * unit_size(),2)
+        else:
+            return n
+    else:
+        return n
+    
 ID_COUNT = -1        
 def get_id():
     global ID_COUNT
@@ -172,7 +196,6 @@ class Object:
         return [self.pos, [self.pos[0] + self.size[0], self.pos[1]],
                             [self.pos[0], self.pos[1] + self.size[1]], [self.pos[0] + self.size[0], self.pos[1] + self.size[1]]
                            ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
- 
             
     def move(self, x=0, y=0, screen=None):
         r'''
@@ -200,30 +223,29 @@ class Object:
             return False, None
         
     def resolve_styles(self, screen=None):
+        screen = self.screen if screen == None else screen
+        
+        #units, percents and other measures
         for i in range(len(self.size)):
-            if isinstance(self.size[i], str):
-                if re.match(r"[0-9]+u$", self.size[i]):
-                    self.size[i]= re.sub("u","", self.size[i])
-                    self.size[i] = float(self.size[i]) * unit_size()
+            self.size[i] = _to_unit(self.size[i])
+            self.size[i] = _to_percent(self.size[i], screen.size[i])
                     
         for i in range(len(self.pos)):
-            if isinstance(self.pos[i], str):
-                if re.match(r"[0-9]+u$", self.pos[i]):
-                    self.pos[i] = re.sub("u","", self.pos[i])
-                    self.pos[i] = float(self.pos[i]) * unit_size()
-                    
+            self.pos[i] = _to_unit(self.pos[i])
+            self.pos[i] = _to_percent(self.pos[i], screen.size[i])
+                             
+        screen_i = 0
         for i in range(len(self.margin)):
-            if isinstance(self.margin[i], str):
-                if re.match(r"[0-9]+u$", self.margin[i]):
-                    self.margin[i] = re.sub("u","", self.margin[i])
-                    self.margin[i] = float(self.margin[i]) * unit_size()
-                    
-        
+            self.margin[i] = _to_unit(self.margin[i])
+            self.margin[i] = _to_percent(self.margin[i], screen.size[screen_i])
+            screen_i += 1
+            if screen_i == 2:
+                screen_i = 0
+         
+        # colors
         if isinstance(self.color, str):
             self.color = adapt_rgb(Color(self.color).get_rgb())
     
-        screen = self.screen if screen == None else screen
-            
         if isinstance(self.size, tuple):
             self.size = [self.size[0], self.size[1]]
         if isinstance(self.pos, tuple):
@@ -271,6 +293,12 @@ class Object:
         screen = self.screen if screen == None else screen
         self.resolve_styles(screen)
         return self.pos
+             
+    def __str__(self):
+        return f"<Object: {self.__class__.__name__}, ID: {self._id}>"
+    
+    def __repr__(self):
+        return f"<Object: {self.__class__.__name__}, ID: {self._id}>"
                 
 class Rect(Object):
     r'''
@@ -376,63 +404,22 @@ class EventHandler:
                         item["callback"]()
                 pg.quit()
                 quit()
-                
-            if ev.type == pg.MOUSEMOTION:
-                if "mousemotion" in self.base_events:
-                    for item in self.base_events['mousemotion']:
+                                            
+            for base_event in self.base_events:
+                if ev.type == base_event:
+                    for item in self.base_events[base_event]:
                         item["callback"]()
-                
-            if ev.type == pg.MOUSEBUTTONDOWN:
-                if "mousedown" in self.base_events:
-                    for item in self.base_events["mousedown"]:
-                        item["callback"]()
-                    
-            if ev.type == pg.MOUSEBUTTONUP:
-                if "mouseup" in self.base_events:
-                    for item in self.base_events["mouseup"]:
-                        item["callback"]()
-                    
-            if ev.type == pg.KEYDOWN:
-                self.pressed_key = [ev.unicode, ev.key]
-                if "keydown" in self.base_events:
-                    for item in self.base_events["keydown"]:
-                        item["callback"]()
-                
-            if ev.type == pg.KEYUP:
-                if "keyup" in self.base_events:
-                    for item in self.base_events["keyup"]:
-                        item["callback"]()
-                            
+                        
             # STORED EVENTS --------------------------------------------------------------------------------
             for key, value in self.events.items():
-                    # on mouse button down
-                if value["type"] == pg.MOUSEBUTTONDOWN and ev.type == pg.MOUSEBUTTONDOWN:
-                    if self.is_hovering(value["object"]):  
-                        self.events[key]["callback"]()
-                    continue
-                
-                    # on mouse button up
-                elif value["type"] == pg.MOUSEBUTTONUP and ev.type == pg.MOUSEBUTTONUP:
-                    if self.is_hovering(value["object"]):
-                        self.events[key]["callback"]()
-                        continue    
-                
-                    # on mousemotion 
-                elif value["type"] == pg.MOUSEMOTION and ev.type == pg.MOUSEMOTION:
-                    if self.is_hovering(value["object"]):
-                        self.events[key]["callback"]()     
-                        continue
+                if value["type"] == ev.type:
+                    if "key" in value:
+                        if ev.key == value["key"]:
+                            value["callback"]()
+                    else:
+                        if self.is_hovering(value["object"]):  
+                            self.events[key]["callback"]()
                     
-                #key up or down
-                elif value["type"] == pg.KEYDOWN and ev.type == pg.KEYDOWN:
-                    if ev.key == value["key"]:
-                        self.events[key]["callback"]()
-                        continue
-                    
-                elif value["type"] == pg.KEYUP and ev.type == pg.KEYUP:
-                    if ev.key == value["key"]:
-                        self.events[key]["callback"]()
-                        continue
       
     def get_pressed_key(self):
         return self.pressed_key
@@ -441,22 +428,18 @@ class EventHandler:
         r'''
         - Adds a event listener to a object
         @param event: event to be added ``str``
-            --events : mousedown, hover
+            --events : (mousedown or click), hover, unhover, (mouseup or unclick).
         @param name: name of the event ``str``
         @param object: object to be added to the event ``Object``
         @param callback: callback function to be called when the event is triggered ``function``
         '''
-        evs  = {
-            "hover" : pg.MOUSEMOTION,
-            "mousedown" : pg.MOUSEBUTTONDOWN
-        }
-        if event not in evs:
-            raise Exception("Event type not found", event)
-        event = evs[event]
+
+        event = event.lower()
+        event_ = self._convert_to_pgevent(event)
         
         if name == "Default":
             name = f"{event}.{object._id}.{len(self.events)}"  
-        self.events[name] = {"type": event, "object": object, "callback": callback}
+        self.events[name] = {"type": event_, "object": object, "callback": callback}
 
     def remove(self, name):
         f'''
@@ -495,10 +478,13 @@ class EventHandler:
         @param name: name of event object, used to removed the event if needed
         '''
         event = event.lower()
+    
+        event_ = self._convert_to_pgevent(event)
+        
         if event not in self.base_events:
-            self.base_events[event] = []
+            self.base_events[event_] = []
         name = f"base_event.{event}.{len(self.base_events)}" if name == "Default" else name
-        self.base_events[event].append({"type": event, "callback": callback, "name":name})
+        self.base_events[event_].append({"type": event_, "callback": callback, "name":name})
         
     def remove_base_event(self, name):
         for i in self.base_events:
@@ -537,6 +523,27 @@ class EventHandler:
             if self.base_events[type][i]["name"] == item["name"]:
                 return i
                     
+    def _convert_to_pgevent(self, event):
+        evs  = {
+            "hover" : pg.MOUSEMOTION,
+            "click" : pg.MOUSEBUTTONDOWN,
+            "mousedown" : pg.MOUSEBUTTONDOWN,
+            "mouseup" : pg.MOUSEBUTTONUP,
+            "unhover" : pg.MOUSEMOTION,
+            "unclick" : pg.MOUSEBUTTONUP,
+            "keydown" : pg.KEYDOWN,
+            "keyup" : pg.KEYUP,
+            "mousewheel" : pg.MOUSEWHEEL,
+            "mousemotion" : pg.MOUSEMOTION,
+            "quit" : pg.QUIT,
+            "mousebuttondown" : pg.MOUSEBUTTONDOWN,
+            "mousebuttonup" : pg.MOUSEBUTTONDOWN,
+            "mousewheelup" : pg.MOUSEBUTTONDOWN
+        }
+        if event not in evs:
+            raise Exception("Event type not found", event)
+        return evs[event]
+                    
 class Circle(Object):
     r'''
     @param pos: position of the circle ``list(x, y) or list("left", "top")``
@@ -560,8 +567,7 @@ class Circle(Object):
         return [pos, [pos[0] + self.size[0], pos[1]],
                             [pos[0], pos[1] + self.size[1]], [pos[0] + self.size[0], pos[1] + self.size[1]]
                            ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
-        
-        
+         
 class TimeHandler:
     r'''
     - Handles the time events
@@ -582,7 +588,7 @@ class TimeHandler:
         time = time / 1000
         name = f"{len(self.intervals)}.{time}" if name == "Default" else name
         self.intervals[name] = {"callback": callback, "time": time, "last_call": t.time()}
-        
+
     def remove(self, name):
         r'''
         - Removes an event from the event list so it won't be called anymore
@@ -628,7 +634,6 @@ class CheckBox(Rect):
         
 class InputBox(Rect):
     def __init__(self, pos, size, screen, **styles):
-        styles["rounded"] = 10
         super().__init__(pos, size, **styles)
         if screen == None:
             raise Exception(f"InputBox object needs screen (ID : {self._id})")
@@ -640,6 +645,7 @@ class InputBox(Rect):
         self.value = ""
         self.overflow = styles.get("overflow", "hidden")
         self.focus = False
+        self.rounded = styles.get("rounded", 5)
         self.resolve_styles(screen)
         self._eventname_unfocus = f"inputbox.{self._id}.on.mousedown._desactivate"
         self._eventname_focus = f"inputbox.{self._id}.on.keydown._catch_char"
@@ -651,6 +657,7 @@ class InputBox(Rect):
             "onfocus" : lambda: self._onfocus(),
             "unfocus" : lambda: self._unfocus()
         } 
+        
         
     def _catch_char(self, key):
         unicode, key = key[0], key[1]
@@ -689,9 +696,9 @@ class InputBox(Rect):
             self.screen.events.remove_base_event(self._eventname_unfocus)            
         
     def _onfocus(self):
-        self.rounded = 5
+        self.rounded = 1
     def _unfocus(self):
-        self.rounded = 10
+        self.rounded = 5
         
     def onfocus(self, callback):
         self.events["onfocus"] = callback

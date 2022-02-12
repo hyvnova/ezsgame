@@ -2,6 +2,7 @@ import pygame as pg, random
 from ezsgame.premade import *
 from ezsgame.animations import *
 from ezsgame.controller import Controller
+from ezsgame.objects import *
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
@@ -22,6 +23,75 @@ class Screen:
         self.load_icon(icon)
         self.init()
         
+        
+    # time decorators  ------------------------------------------------------------
+    def add_interval(self, *args, **kwargs):
+        r'''    
+        Add an interval to the time handler, call the function every <time> seconds
+        '''
+        
+        time = kwargs.get("time", 0)
+        if time <= 0:
+            raise Exception("Time must be greater than 0")
+        
+        name = kwargs.get("name", "Default")
+        name = f"{len(self.time.intervals)}.{time}" if name == "Default" else name
+        
+        def wrapper(func):
+            self.time.add(time, func, name)
+        return wrapper  
+    
+    def remove_interval(self, name : str):
+        r'''
+        Remove an interval from the time handler
+        '''
+        self.time.remove(name)
+    
+    # -----------------------------------------------------------------------------
+    
+    # event decorators ------------------------------------------------------------
+    def on_key(self, *args, **kwargs):
+        type = kwargs.get("type", None)
+        keys = kwargs.get("keys", None)
+        
+        if type == None:
+            type = args[0]
+            
+        if type == None:
+            raise Exception("Event Type must be specified")
+        
+        if keys == None:
+            keys = args[1]
+            
+        if keys == None:
+            raise Exception( "A list of Keys must be specified")
+
+        def wrapper(func):
+            self.events.on_key(type, keys, func)
+        return wrapper
+    
+    def on(self, *args, **kwargs):
+        r'''
+        Call funcion when the event is triggered
+        '''
+        
+        event = kwargs.get("event", None)
+
+        if event == None:
+            event = args[0]
+            
+        if event == None:
+            raise Exception("Event type must be specified")
+            
+        name = kwargs.get("name", "Default")
+        name = f"base_event.{event}.{len(self.events.base_events)}" if name == "Default" else name
+        
+        def wrapper(func):
+            self.events.on(event, func, name)
+        return wrapper
+
+    # -----------------------------------------------------------------------------
+    
     def fill_gradient(self, start, end, complexity=200):
         r'''
         Fill the screen with a gradient
@@ -69,7 +139,7 @@ class Screen:
         '''
         return self.clock.get_fps()
 
-    def check(self):
+    def check_events(self):
         r'''
         Check and Manage the events, should be called in the main loop
         '''
@@ -86,6 +156,7 @@ class Screen:
     def wait(self, time : int):
         r'''
         Wait for a certain amount of time
+        @params : time (milliseconds)
         '''
         pg.time.wait(time)
             
@@ -127,8 +198,7 @@ class Screen:
                 self.size[1] = pg.display.get_surface().get_height()        
             else:
                 self.size = size
-        
-        
+          
     def init(self):
         pg.init()
         self.surface = pg.display.set_mode(self.size, 0, self.depth, 0, self.vsync)
@@ -224,7 +294,7 @@ class IScreen(Screen):
             fill_color = text_to_color(fill_color)
                 
         while True:
-            self.check()
+            self.check_events()
             self.fill(fill_color)
             self.draw(auto_place)
             self.update()
