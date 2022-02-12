@@ -1,0 +1,11 @@
+# ezsgame\ezsgame\premade.py: 2
+colour == 0.1.5
+
+# ezsgame\ezsgame\objects.py: 3,4,5
+pathfinding == 1.0.1
+
+# ezsgame\ezsgame\animations.py: 1
+# ezsgame\ezsgame\main.py: 1
+# ezsgame\ezsgame\objects.py: 1
+# ezsgame\ezsgame\premade.py: 1
+pygame == 2.0.1
