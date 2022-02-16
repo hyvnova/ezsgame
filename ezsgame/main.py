@@ -6,13 +6,14 @@ from ezsgame.objects import *
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
-                 show_fps : bool = False, vsync = False, depth=32, fullscreen=False):
+                 show_fps : bool = False, vsync = False, depth=32, fullscreen=False, color="black"):
         self.size = size
         self.title = title
         self.icon = icon
         self.surface = None
         self.vsync = vsync
         self.clock = None
+        self.color = color
         self.fps = fps
         self.depth = depth
         self.show_fps = show_fps
@@ -28,13 +29,20 @@ class Screen:
     def add_interval(self, *args, **kwargs):
         r'''    
         Add an interval to the time handler, call the function every <time> seconds
+        @params : time (int) : time in milliseconds
+        @params : name (str) : name of the interval
         '''
         
-        time = kwargs.get("time", 0)
-        if time <= 0:
-            raise Exception("Time must be greater than 0")
+        time = kwargs.get("time", None)
+        if time == None:
+            time = args[0]
+        if time == None:
+            raise Exception("Time must be specified")
         
+
         name = kwargs.get("name", "Default")
+        if name == "Default":
+            name = args[1] if len(args) > 1 else "Default"
         name = f"{len(self.time.intervals)}.{time}" if name == "Default" else name
         
         def wrapper(func):
@@ -44,6 +52,7 @@ class Screen:
     def remove_interval(self, name : str):
         r'''
         Remove an interval from the time handler
+        @params : name (str) : name of the interval
         '''
         self.time.remove(name)
     
@@ -51,6 +60,12 @@ class Screen:
     
     # event decorators ------------------------------------------------------------
     def on_key(self, *args, **kwargs):
+        r'''
+        Calls the function when the key event is triggered
+        @params : type (str) : type of the event (keyup, keydown)
+        @params : key (str) : key to listen to
+        '''
+        
         type = kwargs.get("type", None)
         keys = kwargs.get("keys", None)
         
@@ -73,6 +88,7 @@ class Screen:
     def on(self, *args, **kwargs):
         r'''
         Call funcion when the event is triggered
+        @params : event (str) : event to listen to
         '''
         
         event = kwargs.get("event", None)
@@ -176,12 +192,6 @@ class Screen:
             
         return divs
     
-    def center(self):
-        r'''
-        Returns the center of the screen
-        '''
-        return self.size[0] / 2, self.size[1] / 2
-
     def resolve_size(self, size : list):
         if size == []:
             raise Exception("You must specify a size for the screen")
@@ -218,10 +228,11 @@ class Screen:
         pg.quit()
         quit()
 
-    def fill(self, color, pos=[0, 0], size=[0, 0]):
+    def fill(self, color=None, pos=[0, 0], size=[0, 0]):
         r'''
         Fill the screen with a color
         '''
+        color = self.color if color == None else color
         if isinstance(color, str):
             color = text_to_color(color)
             
@@ -252,23 +263,24 @@ class Screen:
         self.grid_box_size = [box_width, box_height]
         return grid
     
-
-
 class IScreen(Screen):
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
-                 show_fps : bool = False, objects = []):
-        super().__init__(size, title, icon, fps, show_fps)
+                 show_fps : bool = False, objects = [], color : str = "black", depth : int = 0, vsync : bool = False):
+        super().__init__(size, title, icon, fps, show_fps, color, depth, vsync)
         self.objects = objects
+        self.color = color
+        self.depth = depth
+        self.vsync = vsync
         self.grid = self.grid_div(cols=3, rows=3)
         self.format_objects()
+        self.init()
         
     def grid_positions(self, order=[0,1]):
         pos = []
         for k in range(self.grid_size[order[0]]):
             for j in range(self.grid_size[order[1]]):
                pos.append([k, j]) 
-        return pos
-               
+        return pos          
     
     def format_objects(self):
         r'''
@@ -284,12 +296,12 @@ class IScreen(Screen):
             
         self.objects = objs
     
-    def run(self, fill_color=(0,0,0), auto_place=True, grid=[3,3]):
+    def run(self, fill_color=None, auto_place=True, grid=[3,3]):
         r'''
         Run the screen
         '''
         self.grid = self.grid_div(*grid)
-        
+        fill_color = self.color if fill_color == None else fill_color
         if isinstance(fill_color, str):
             fill_color = text_to_color(fill_color)
                 
@@ -299,7 +311,7 @@ class IScreen(Screen):
             self.draw(auto_place)
             self.update()
 
-    def show_grid(self) -> "screen":
+    def show_grid(self):
         r'''
         Draws  grid on the screen
         '''

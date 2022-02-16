@@ -173,18 +173,24 @@ class Object:
                     return
                 else:
                     raise Exception(e)
+    
+    
+    def _get_collision_box(self):
+        self.resolve_styles(self.screen)
+        return [self.pos, [self.pos[0] + self.size[0], self.pos[1]],
+                [self.pos[0], self.pos[1] + self.size[1]], [self.pos[0] + self.size[0], self.pos[1] + self.size[1]]
+                ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
+        
 
     def is_colliding(self, obj, screen=None):
         screen = self.screen if screen == None else screen
         
         self.resolve_styles(screen)
         obj.resolve_styles(screen)
-
-        obj_pos =  obj.pos
-        if isinstance(obj, Circle):
-            obj_pos = [obj_pos[0]-obj.size[0]/2, obj_pos[1]-obj.size[1]/2]
-
-        obj_box = obj._get_collide_box()
+        
+        obj_box = obj._get_collision_box()
+        obj_pos = obj.box[0]
+        
         for i in obj_box:
             Rect(pos=[obj_pos[0]-1, obj_pos[1]-1], size=[obj.size[0]+1, obj.size[1]+1], color="red", rounded=2).draw(screen)
             Rect(pos=[self.pos[0]-1, self.pos[1]-1], size=[self.size[0]+1, self.size[1]+1], color="red", rounded=2).draw(screen)
@@ -192,11 +198,7 @@ class Object:
                 return True
         return False
             
-    def _get_collide_box(self):
-        return [self.pos, [self.pos[0] + self.size[0], self.pos[1]],
-                            [self.pos[0], self.pos[1] + self.size[1]], [self.pos[0] + self.size[0], self.pos[1] + self.size[1]]
-                           ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
-            
+
     def move(self, x=0, y=0, screen=None):
         r'''
         Adds x,y to the current object position. (Also inverts y)
@@ -312,6 +314,7 @@ class Rect(Object):
     '''
     def __init__(self, pos, size, **styles):
         super().__init__(pos, size, **styles)
+        self._build_var = f"Rect({self.pos}, {self.size}," + ", ".join([f"{k}={v}" for k, v in styles.items()]) + ")"
                 
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
@@ -392,10 +395,34 @@ class EventHandler:
         self.screen = screen
         self.events  = {}
         self.base_events = {}
+        self.to_remove = {"events": [], "base_events": []}
+        self.to_add = {"events": [], "base_events": []}
                                             
     def check(self, event, screen=None):
         screen = self.screen if screen == None else screen
         self.events = {k:v for k,v in self.events.items() if v != None}
+        
+        # remove events
+        for name in self.to_remove["events"]:
+            del self.events[name]
+            
+        for name in self.to_remove["base_events"]:
+            for i in self.base_events:
+                for item in self.base_events[i]:
+                    if item["name"] == name:
+                        self.base_events[i].pop(self.base_events[i].index(item))
+                        break
+        self.to_remove = {"events": [], "base_events": []}
+                    
+        # add events
+        for item in self.to_add["events"]:
+            self.events[item[0]] = item[1]
+            
+        for item in self.to_add["base_events"]:
+            self.base_events[item[0]].append(item[1])
+        
+        self.to_add = {"events": [], "base_events": []}
+        
         for ev in event:
             # BASE EVENTS ----------------------------------------------------------------------------------
             if ev.type == pg.QUIT:
@@ -408,7 +435,11 @@ class EventHandler:
             for base_event in self.base_events:
                 if ev.type == base_event:
                     for item in self.base_events[base_event]:
+                        if base_event == pg.KEYDOWN:
+                            self.pressed_key = [ev.unicode, ev.key]
                         item["callback"]()
+                        
+                        
                         
             # STORED EVENTS --------------------------------------------------------------------------------
             for key, value in self.events.items():
@@ -417,11 +448,18 @@ class EventHandler:
                         if ev.key == value["key"]:
                             value["callback"]()
                     else:
-                        if self.is_hovering(value["object"]):  
-                            self.events[key]["callback"]()
-                    
+                        if value["evname"] == "unhover":
+                            if self.is_hovering(value["object"]) == False:  
+                                    self.events[key]["callback"]()
+                        else:               
+                            if self.is_hovering(value["object"]):
+                                value["callback"]()
+            
       
     def get_pressed_key(self):
+        r'''
+        Return the pressed key -> [key, unicode]
+        '''
         return self.pressed_key
                                             
     def add_event_listener(self, event, object, callback, name="Default"):
@@ -438,15 +476,16 @@ class EventHandler:
         event_ = self._convert_to_pgevent(event)
         
         if name == "Default":
-            name = f"{event}.{object._id}.{len(self.events)}"  
-        self.events[name] = {"type": event_, "object": object, "callback": callback}
+            name = f"{event}.{object._id}.{len(self.events)}"
+            
+        self.to_add["events"].append([name, {"type": event_, "object": object, "callback": callback, "evname" : event}])
 
     def remove(self, name):
         f'''
         - Removes an event from the event list so it won't be called anymore
         @param name: name of the event to be removed ``str``
         '''
-        del self.events[name]
+        self.to_remove["events"].append(name)
 
     def is_hovering(self, object):
         r'''
@@ -454,13 +493,13 @@ class EventHandler:
         @param object: object to be checked ``Object``
         '''
         mouse_pos = pg.mouse.get_pos()
-        object_pos = object.get_pos(self.screen)
-        object_size = object.size
-
-        if mouse_pos[0] > object_pos[0] and mouse_pos[0] < object_pos[0] + object_size[0] and mouse_pos[1] > object_pos[1] and mouse_pos[1] < object_pos[1] + object_size[1]:
-            return True
-        else:
-            return False
+        box = object._get_collision_box()
+        
+        if mouse_pos[0] > box[0][0] and mouse_pos[0] < box[1][0]:
+            if mouse_pos[1] > box[0][1] and mouse_pos[1] < box[2][1]:
+                return True
+            
+        return False
             
     def get(self):
         f"""
@@ -484,13 +523,11 @@ class EventHandler:
         if event not in self.base_events:
             self.base_events[event_] = []
         name = f"base_event.{event}.{len(self.base_events)}" if name == "Default" else name
-        self.base_events[event_].append({"type": event_, "callback": callback, "name":name})
+        
+        self.to_add["base_events"].append([event_, {"type": event_, "callback": callback, "name":name}])
         
     def remove_base_event(self, name):
-        for i in self.base_events:
-            for item in self.base_events[i]:
-                if item["name"] == name:
-                    self.base_events[i].pop(self.base_events[i].index(item))
+        self.to_remove["base_events"].append(name)
                    
     def on_key(self, type, keys, callback):
         r'''
@@ -554,6 +591,11 @@ class Circle(Object):
         * screen = ``Screen`` 
     '''
     def __init__(self, pos, radius, **styles):
+        if isinstance(radius, str):
+            if re.match(r"[0-9]+%", radius):
+                raise Exception(f"Radius cannot be a percent (ID : {self._id})")
+        
+        radius = _to_unit(radius)
         super().__init__(pos=pos, size=[radius*2, radius*2],  **styles)
         self.radius = radius
         
@@ -562,7 +604,7 @@ class Circle(Object):
         pos = self.get_pos(screen)
         pg.draw.circle(screen.surface, self.color, pos, self.radius)
     
-    def _get_collide_box(self):
+    def _get_collision_box(self):
         pos = [self.pos[0] - self.size[0]/2, self.pos[1] - self.size[1] /2]
         return [pos, [pos[0] + self.size[0], pos[1]],
                             [pos[0], pos[1] + self.size[1]], [pos[0] + self.size[0], pos[1] + self.size[1]]
@@ -614,6 +656,7 @@ class CheckBox(Rect):
     def __init__(self, pos, size, screen=None, **styles):
         self.state = False
         styles["rounded"] = 5
+        styles["screen"] = screen
         super().__init__(pos, size, **styles)
         if screen == None:
             raise Exception(f"CheckBox object needs screen (ID : {self._id})")
@@ -634,6 +677,7 @@ class CheckBox(Rect):
         
 class InputBox(Rect):
     def __init__(self, pos, size, screen, **styles):
+        styles["screen"] = screen
         super().__init__(pos, size, **styles)
         if screen == None:
             raise Exception(f"InputBox object needs screen (ID : {self._id})")
@@ -714,3 +758,47 @@ class InputBox(Rect):
         self.text.update(text=self.value)
         self.text.draw(screen)
         
+class Button(Circle):
+    def __init__(self, pos, radius, screen, **styles):
+        radius = _to_unit(radius)
+        
+        styles["screen"] = screen
+        super().__init__(pos=pos, radius=radius,  **styles)
+        if screen == None:
+            raise Exception(f"Button object needs screen (ID : {self._id})")
+        self.radius = radius
+        if "text" in styles:
+            self.text = styles['text']
+            self.fontsize = styles.get("fontsize", 28)
+            self.textcolor = styles.get('textcolor', "white")
+            self.font = styles.get("textfont", "Arial")
+            self.text_obj = Text(text=self.text, pos=[self.pos[0], self.pos[1]], fontsize=self.fontsize, color=self.textcolor, fontname=self.font)
+            # place text in the center of the button
+            self.text_obj.pos = [self.pos[0]-self.text_obj.size[0]/2, self.pos[1]-self.text_obj.size[1]/2]
+
+        
+        self.screen = screen
+        self.onclick_callback = lambda: None
+        self._eventname = f"button.{self._id}.on.mousedown"
+        screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self.onclick_callback(), name=self._eventname)
+
+    def onclick(self, callback):
+        r'''
+        Calls the callback function when the button is clicked
+        '''
+        self.onclick_callback = callback
+        self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self.onclick_callback(), name=self._eventname)
+        
+    def click(self, *args, **kwargs):
+        r'''
+        <Decorator> Calls the callback function when the button is clicked
+        '''
+        def wrapper(func):
+            self.onclick(func)
+        return wrapper        
+    
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        pg.draw.circle(screen.surface, self.color, self.pos, self.radius)
+        if hasattr(self, "text"):
+            self.text_obj.draw(screen)

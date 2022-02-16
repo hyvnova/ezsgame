@@ -4,7 +4,6 @@ from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core import grid
 from pathfinding.finder.a_star import AStarFinder
 
-
 pg.init()
 
 class IRect(Rect):
@@ -13,7 +12,7 @@ class IRect(Rect):
         if screen == None:
             raise Exception(f"InputBox object needs screen (ID : {self._id})")
         self.screen = screen
-        
+    
     def click(self, *args, **kwargs):
         def wrapper(func):
             self.screen.events.add_event_listener("click", self, func)
