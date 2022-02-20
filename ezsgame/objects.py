@@ -1,5 +1,5 @@
 import pygame as pg
-from ezsgame.premade import Rect, Object, Unit
+from ezsgame.premade import *
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core import grid
 from pathfinding.finder.a_star import AStarFinder
@@ -12,6 +12,7 @@ class IRect(Rect):
         if screen == None:
             raise Exception(f"InputBox object needs screen (ID : {self._id})")
         self.screen = screen
+        self.objects = Group()
     
     def click(self, *args, **kwargs):
         def wrapper(func):
@@ -32,6 +33,23 @@ class IRect(Rect):
         def wrapper(func):
             self.screen.events.add_event_listener("unclick", self, func)
         return wrapper
+    
+    def add(self, objects):
+        if type(objects) == list:
+            for object in objects:
+                object.pos = [object.pos[0] + self.pos[0], object.pos[1] + self.pos[1]]
+                self.objects.add(object)
+        else:
+            objects.pos = [objects.pos[0] + self.pos[0], objects.pos[1] + self.pos[1]]
+            self.objects.add(objects)            
+            
+    def remove(self, object):
+        self.objects.remove(object)
+            
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        super().draw(screen)
+        self.objects.draw(screen)
 
 class Grid(Object):
     def __init__(self, pos, size, grid_size, screen, **styles):
@@ -145,3 +163,61 @@ class Grid(Object):
             return self.grid[pos[0]][pos[1]]
         else:
             return None
+
+class Group:
+    def __init__(self, objects=[], screen=None):
+        if isinstance(objects, list):
+            self.objects = objects
+        else:
+            self.objects = [objects]
+        if screen != None:
+            self.screen = screen
+            
+    def add(self, objs):
+        if type(objs) == list:
+            self.objects += objs
+        else:
+            self.objects.append(objs)    
+
+    def remove(self, obj):
+        self.objects.remove(obj)
+    
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        if screen == None:
+            raise Exception("Screen is not set, need screen to draw")
+        
+        for obj in self.objects:
+            obj.draw(screen)
+
+def _get_object(object):
+    args = {k:v for k,v in object.items() if k != "type" and  k != "elements"}
+    try:
+        obj = eval(object["type"].capitalize())(**args)
+    except Exception as e:
+        raise Exception("Could not load object: " + str(e))
+                
+    return obj
+
+def _get_object_child(parent, object, childs=[]):
+    for key,value in object["elements"].items():
+        if "pos" in value:
+            value["pos"] = [value["pos"][0] + parent.pos[0], value["pos"][1] + parent.pos[1]]
+        
+        parent = _get_object(value)
+        childs.append(parent)
+   
+    for value in object["elements"].values():
+        if "elements" in value:   
+            _get_object_child(parent, value, childs)
+    
+    return childs
+    
+def load_custom_object(object):
+    r'''
+    Load a custom object from a object of json file
+    '''
+    obj = Group(_get_object(object))   
+    obj.add(_get_object_child(obj.objects[0], object))
+    return obj
+

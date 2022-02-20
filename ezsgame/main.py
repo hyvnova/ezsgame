@@ -3,6 +3,7 @@ from ezsgame.premade import *
 from ezsgame.animations import *
 from ezsgame.controller import Controller
 from ezsgame.objects import *
+from ezsgame.physics import *
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
@@ -63,7 +64,7 @@ class Screen:
         r'''
         Calls the function when the key event is triggered
         @params : type (str) : type of the event (keyup, keydown)
-        @params : key (str) : key to listen to
+        @params : keys (list) : key/keys to listen to ["w", "a", "s", "d"]
         '''
         
         type = kwargs.get("type", None)
@@ -80,9 +81,13 @@ class Screen:
             
         if keys == None:
             raise Exception( "A list of Keys must be specified")
+        
+        if not isinstance(keys, list):
+            keys = [keys]
 
         def wrapper(func):
             self.events.on_key(type, keys, func)
+            return func
         return wrapper
     
     def on(self, *args, **kwargs):
@@ -104,6 +109,7 @@ class Screen:
         
         def wrapper(func):
             self.events.on(event, func, name)
+            return func
         return wrapper
 
     # -----------------------------------------------------------------------------
@@ -129,9 +135,10 @@ class Screen:
         '''
         return self.clock.get_time()
          
-    def load_icon(self, icon : str) -> "screen":
+    def load_icon(self, icon : str):
         r'''
         Loads an icon for the screen
+        @params : icon (str) : path to the icon
         '''
         self.icon = icon
         if icon == "":
@@ -139,10 +146,15 @@ class Screen:
         pg.display.set_icon(pg.image.load(self.icon))
         return self
 
-    def shake(self, force=5) -> "screen":
+    def shake(self, force=5):
         r'''
         Shake the screen
+        @params : force (int) : force of the shake
         '''
+        if force <= 0:
+            return
+            
+        force = int(force)
         x, y = self.surface.get_rect().center
         x = random.randint(-force, force)
         y = random.randint(-force, force)

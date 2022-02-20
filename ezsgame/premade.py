@@ -1,5 +1,6 @@
 import pygame as pg, random, time as t, json, re
 from colour import Color
+import copy
 
 pg.init()
    
@@ -33,6 +34,10 @@ def text_to_color(color):
         else:
             return color
 
+def pure_rgb(color):
+    return (color[0]/255, color[1]/255, color[2]/255)
+        
+
 def gradient(screen, start="green", end="blue", complexity=200):
     r'''
     Draw a gradient from start to end.
@@ -42,8 +47,20 @@ def gradient(screen, start="green", end="blue", complexity=200):
     - complexity: how many times to draw the gradient
     '''
     grid = screen.div("x", complexity)
-    color = Color(start)
-    colors = list(color.range_to(Color(end),len(grid)))
+    
+    if isinstance(start, str):
+        start = Color(start)
+        
+    elif isinstance(start, list) or isinstance(start, tuple):
+        start = Color(rgb=pure_rgb(start))
+    
+    if isinstance(end, str):
+        end = Color(end)
+    
+    elif isinstance(end, list) or isinstance(end, tuple):
+        end = Color(rgb=pure_rgb(end))
+        
+    colors = list(start.range_to(end,len(grid)))
     objs = []
     for i in range(len(grid)):
         objs.append(Unit(pos=[grid[i][0], 0], size=[grid[i][1], screen.size[1]], color=adapt_rgb(colors[i].rgb)))
@@ -103,7 +120,6 @@ class Object:
         self.color = c
         self.margin = styles.get("margin", [0, 0, 0, 0]) # top, right, bottom, left
         self.rounded = styles.get("rounded", 0)
-        self.opacity = styles.get("opacity", 255)
         self.pos = pos
         self.size = size
         if styles.get("screen"):
@@ -182,30 +198,34 @@ class Object:
                 ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
         
 
-    def is_colliding(self, obj, screen=None):
+    def is_colliding(self, obj, screen=None, draw_collision_box=False):
+        r'''
+        returns True if the object is colliding with another object
+        '''
+        
         screen = self.screen if screen == None else screen
         
         self.resolve_styles(screen)
         obj.resolve_styles(screen)
         
         obj_box = obj._get_collision_box()
-        obj_pos = obj.box[0]
+        obj_pos = obj_box[0]
         
         for i in obj_box:
-            Rect(pos=[obj_pos[0]-1, obj_pos[1]-1], size=[obj.size[0]+1, obj.size[1]+1], color="red", rounded=2).draw(screen)
-            Rect(pos=[self.pos[0]-1, self.pos[1]-1], size=[self.size[0]+1, self.size[1]+1], color="red", rounded=2).draw(screen)
+            if draw_collision_box:
+                Rect(pos=[obj_pos[0]-1, obj_pos[1]-1], size=[obj.size[0]+1, obj.size[1]+1], color="red", rounded=2).draw(screen)
+                Rect(pos=[self.pos[0]-1, self.pos[1]-1], size=[self.size[0]+1, self.size[1]+1], color="red", rounded=2).draw(screen)
             if (i[0] >= self.pos[0] and i[0] <= self.pos[0]+self.size[0]) and (i[1] >= self.pos[1] and i[1] <= self.pos[1] + self.size[1]):
                 return True
         return False
             
+    def copy(self):
+        return copy.copy(self)
 
-    def move(self, x=0, y=0, screen=None):
+    def move(self, x=0, y=0):
         r'''
-        Adds x,y to the current object position. (Also inverts y)
-        '''
-        
-        screen = self.screen if screen == None else screen
-        self.resolve_styles(screen) 
+        Adds x,y to the current object position. (Also inverts y )
+        '''        
         self.pos[0] += x
         self.pos[1] += y * -1
      
@@ -217,10 +237,10 @@ class Object:
         screen = self.screen if screen == None else screen
         self.resolve_styles(screen)
         
-        if self.pos[0] - self.size[0]/2 < 0 or self.pos[0] + self.size[0]/2 > screen.size[0]:
-            return True, "left" if self.pos[0] - self.size[0]/2 <= 0 else "right"
-        elif self.pos[1] - self.size[1]/2 < 0 or self.pos[1] + self.size[1]/2 > screen.size[1]:
-            return True, "top" if self.pos[1] - self.size[1]/2 <= 0 else "bottom"     
+        if self.pos[0] + self.size[0] < 0 or self.pos[0] - self.size[0]/4 > screen.size[0]:
+            return True, "left" if self.pos[0] + self.size[0]/2 <= 0 else "right"
+        elif self.pos[1] + self.size[1] < 0 or self.pos[1] - self.size[1]/4 > screen.size[1]:
+            return True, "top" if self.pos[1] + self.size[1] <= 0 else "bottom"     
         else:
             return False, None
         
@@ -252,6 +272,7 @@ class Object:
             self.size = [self.size[0], self.size[1]]
         if isinstance(self.pos, tuple):
             self.pos = [self.pos[0], self.pos[1]]
+            
         
         if isinstance(self.pos[0], str):
             self.pos[0] = self.pos[0].lower()
@@ -290,6 +311,8 @@ class Object:
             self.pos[1] = screen.size[1] - self.size[1] - margin_y
         elif self.pos[1] == "bottom-center":
             self.pos[1] = screen.size[1] - self.size[1]/2 - screen.center()[1]/2 - margin_y
+            
+        # apply alpha
         
     def get_pos(self, screen=None):
         screen = self.screen if screen == None else screen
@@ -314,7 +337,6 @@ class Rect(Object):
     '''
     def __init__(self, pos, size, **styles):
         super().__init__(pos, size, **styles)
-        self._build_var = f"Rect({self.pos}, {self.size}," + ", ".join([f"{k}={v}" for k, v in styles.items()]) + ")"
                 
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
@@ -378,7 +400,7 @@ class Image(Rect):
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
         * screen = ``Screen``
     '''
-    def __init__(self, pos, image, size, **styles):
+    def __init__(self, pos, size, image, **styles):
         super().__init__(pos, size, **styles)
         self.image = pg.image.load(image)
         self.image = pg.transform.scale(self.image, self.size)

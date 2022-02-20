@@ -1,17 +1,17 @@
 from ezsgame.main import *
 import json, os
 
-s = Screen()
+s = Screen(show_fps=False
+           , fps=120)
 
 buttons = [
-    Button(pos=[40, s.size[1]-40], radius=27, screen=s, text="Add", textcolor=(88, 230, 23), color="white", fontsize=20),
-    Button(pos=[100, s.size[1]-40], radius=27, screen=s, text="Remove", textcolor=(230, 23, 109), color="white", fontsize=14),  
-    Button(pos=[160, s.size[1]-40], radius=27, screen=s, text="Move", textcolor="blue", color="white", fontsize=20),
-    Button(pos=[220, s.size[1]-40], radius=27, screen=s, text="+", textcolor="black", color="white", fontsize=24),
-    Button(pos=[280, s.size[1]-40], radius=27, screen=s, text="-", textcolor="black", color="white", fontsize=24),
-    
+    Button(pos=[40, s.size[1]-40], radius=26, screen=s, text="Add", textcolor=(88, 230, 23), color="white", fontsize=20),
+    Button(pos=[100, s.size[1]-40], radius=26, screen=s, text="Remove", textcolor=(230, 23, 109), color="white", fontsize=14),  
+    Button(pos=[160, s.size[1]-40], radius=26, screen=s, text="Move", textcolor="blue", color="white", fontsize=20),
     Button(pos=[680, 40], radius=22, screen=s, text="Save", textcolor="black", color="white", fontsize=16),
     Button(pos=[680, 100], radius=22, screen=s, text="Load", textcolor="black", color="white", fontsize=16),
+    Button(pos=[220, s.size[1]-40], radius=25, screen=s, text="Copy", textcolor="black", color="white", fontsize=18),
+    Button(pos=[280, s.size[1]-40], radius=25, screen=s, text="Paste", textcolor="black", color="white", fontsize=16),
 ]
 
 objects = []
@@ -19,73 +19,73 @@ current = [None]
 ui_objects = {}
 mode = [None]  
 
-
-# add
-@buttons[0].click()
-def add():
-    rect = IRect(pos=["center", "center"], size=[50, 50], color="white", screen=s)
-    @rect.hover()
+def add_interaction(obj): 
+    @obj.hover()
     def hover():
-        if f"click_{rect._id}" in ui_objects:
-            if current[0] == rect:
-                click_red = Rect(pos=[rect.pos[0] - 5, rect.pos[1] - 5], size=[rect.size[0] + 10, rect.size[1] + 10], color=(255, 15, 115), rounded=2,  screen=s)
-                ui_objects[f"click_{rect._id}"] = click_red
+        if "click" in ui_objects:
+            if current[0] == obj:
+                click_red = Rect(pos=[obj.pos[0] - 5, obj.pos[1] - 5], size=[obj.size[0] + 10, obj.size[1] + 10], color=(255, 15, 115), rounded=2,  screen=s)
+                ui_objects["click"] = click_red
 
-            if f"hover_{rect._id}" in ui_objects:
-                del ui_objects[f"hover_{rect._id}"]
+            if f"hover_{obj._id}" in ui_objects:
+                del ui_objects[f"hover_{obj._id}"]
         else:
-            hover_rect = Rect(pos=[rect.pos[0] - 5, rect.pos[1] - 5], size=[rect.size[0] + 10, rect.size[1] + 10], color=(255, 82, 154), rounded=1,  screen=s)
-            ui_objects[f"hover_{rect._id}"] = hover_rect
+            hover_rect = Rect(pos=[obj.pos[0] - 5, obj.pos[1] - 5], size=[obj.size[0] + 10, obj.size[1] + 10], color=(255, 82, 154), rounded=1,  screen=s)
+            ui_objects[f"hover_{obj._id}"] = hover_rect
 
-    @rect.unhover()
+    @obj.unhover()
     def unhover():
-        if f"hover_{rect._id}" in ui_objects:
-            del ui_objects[f"hover_{rect._id}"]
+        if f"hover_{obj._id}" in ui_objects:
+            del ui_objects[f"hover_{obj._id}"]
 
-    @rect.click()
+    @obj.click()
     def click():
-        if f"click_{rect._id}" in ui_objects:
-            del ui_objects[f"click_{rect._id}"]
+        if "click" in ui_objects:
+            
+            
+            del ui_objects["click"]
             current[0] = None
             if mode[0] == "move":
                 mode[0] = None
         else:
-            click_red = Rect(pos=[rect.pos[0] - 5, rect.pos[1] - 5], size=[rect.size[0] + 10, rect.size[1] + 10], color=(255, 15, 115), rounded=2,  screen=s)
-            ui_objects[f"click_{rect._id}"] = click_red
-            current[0] = rect
+            click_red = Rect(pos=[obj.pos[0] - 5, obj.pos[1] - 5], size=[obj.size[0] + 10, obj.size[1] + 10], color=(255, 15, 115), rounded=2,  screen=s)
+            ui_objects["click"] = click_red
+            current[0] = obj
+
+# add
+@buttons[0].click()
+@s.on_key(type="down", keys=["1"])
+def add():
+    rect = IRect(pos=["center", "center"], size=[50, 50], color="white", screen=s)
+    add_interaction(rect)
         
-            
     objects.append(rect)
 
 # remove
 @buttons[1].click()
+@s.on_key(type="down", keys=["2"])
+
 def remove():
     if current[0] != None:
-        del ui_objects[f"click_{current[0]._id}"]
-        objects.remove(current[0])
-        current[0] = None
+        del ui_objects[f"click"]
+        try:
+            objects.remove(current[0])
+            del ui_objects[f"hover_{current[0]._id}"]
+            del ui_objects[f"click"]
+        except:
+            pass
+        finally:
+            current[0] = None
             
 # move
 @buttons[2].click() 
+@s.on_key(type="down", keys=["3"])
 def move():
     mode[0] = "move"
-    
-# + size
-@buttons[3].click() 
-def add_size():
-    if current[0] != None:
-        current[0].size[0] += 10
-        current[0].size[1] += 10
-        
-# - size
-@buttons[4].click() 
-def sub_size():
-    if current[0] != None:
-        current[0].size[0] -= 10
-        current[0].size[1] -= 10
-        
+
 # save
-@buttons[5].click()
+@buttons[3].click()
+@s.on_key(type="down", keys=["9"])
 def save():
     global objects
     file = "save.json"
@@ -111,6 +111,9 @@ def save():
                 
                 if key == 'screen':
                     val = None
+                    
+                if key == "objects":
+                    continue
                 
                 obj_build_var += f"{key}={val}, "
             
@@ -119,7 +122,7 @@ def save():
         data[obj._id] = obj_build_var
             
     with open(file, 'w') as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=4)
         
     saved_text = Text(pos=["center", "center"], text="Saved", fontsize=30, screen=s, color="white")
     ui_objects[f"saved_{saved_text._id}"] = saved_text
@@ -129,7 +132,8 @@ def save():
         s.time.remove(f"saved_{saved_text._id}")
         
 # load
-@buttons[6].click() 
+@buttons[4].click() 
+@s.on_key(type="down", keys=["0"])
 def load():
     if not "inputbox" in ui_objects:
         inputbox = InputBox(pos=["center", "top"], size=[200, 50], screen=s, color="white", fontsize=20)
@@ -141,10 +145,60 @@ def _load(file):
 
     objs = []
     for key, val in data.items():
-        val = val.replace("screen=None", "screen=s")        
-        objs.append(eval(val))
+        val = val.replace("screen=None", "screen=s")    
+        obj = eval(val)    
+        add_interaction(obj)
+        objs.append(obj)
         
     return objs   
+
+# copy
+@buttons[5].click()
+@s.on_key(type="down", keys=["4"])
+def copy():
+    if current[0] != None:
+        copy_obj = current[0].copy()
+        copy_obj._id = get_id()
+        add_interaction(copy_obj)
+        ui_objects["copy"] = copy_obj
+
+# paste
+@buttons[6].click()
+@s.on_key(type="down", keys=["5"])
+def paste():
+    if "copy" in ui_objects:
+        obj = ui_objects["copy"]
+        mouse_pos = s.mouse_pos()
+        obj.pos = [mouse_pos[0] - obj.size[0] / 2, mouse_pos[1] - obj.size[1] / 2]
+        objects.append(obj)
+        
+        ui_objects["copy"] = obj.copy()
+        ui_objects["copy"]._id = get_id()
+        add_interaction(ui_objects["copy"])
+
+# + size x
+@s.on_key(type="down", keys=["right"])
+def add_width():
+    if current[0] != None:
+        current[0].size[0] += 10
+        
+# - size x
+@s.on_key(type="down", keys=["left"])
+def sub_width():
+    if current[0] != None:
+        current[0].size[0] -= 10
+        
+# + size y
+@s.on_key(type="down", keys=["up"])
+def add_width():
+    if current[0] != None:
+        current[0].size[1] += 10
+        
+# - size y
+@s.on_key(type="down", keys=["down"])
+def sub_width():
+    if current[0] != None:
+        current[0].size[1] -= 10
 
 while True:
     s.check_events()

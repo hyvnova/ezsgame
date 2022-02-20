@@ -1,18 +1,20 @@
 import pygame as pg, json
+from ezsgame.premade import get_id
 
 class Animation:
-    def __init__(self, screen, object, start, end, time=50, step=1, loop=False, done_callback=None, args=()):
+    def __init__(self, screen, object, start, end, time=50, step=1, loop=False, done_callback=None):
         self.screen = screen
+        self._id = get_id()
         self.object = object
         self.done = False
         self.done_callback = done_callback
-        self.args = args
         self.start = start
         self.loop = loop
         self.end = end
         self.time = time
         self.step = step    
         self.corrected = False
+        self.name = f"slide_{self.start}_{self.end}_{self._id}"
         self.resolve()
 
     def resolve(self):
@@ -39,9 +41,8 @@ class Slide(Animation):
     @param step: step size
     [If objet is not at start position, it will be moved to start position]
     '''
-    def __init__(self, screen, object, start="current", end=["center", "center"], time=50, step=1, loop=False, done_callback=None, args=()):
-        super().__init__(screen, object, start, end, time, step, loop, done_callback, args)
-        self.name = f"slide_{self.start}_{self.end}"
+    def __init__(self, screen, object, start="current", end=["center", "center"], time=50, step=1, loop=False, done_callback=None):
+        super().__init__(screen, object, start, end, time, step, loop, done_callback)
         self.screen.time.add(name=self.name, time=self.time, callback=self.update)        
 
     def update(self):    
@@ -78,8 +79,6 @@ class Slide(Animation):
             elif self.object.pos[1] < self.end[1]:
                 self.object.pos[1] += self.step
                 
-            
-                
             return True
          
         else:
@@ -92,10 +91,8 @@ class Slide(Animation):
                 self.done = True
                 self.screen.time.remove(self.name)
                 if self.done_callback != None:
-                    if isinstance(self.args, list) or isinstance(self.args, tuple):
-                        self.done_callback(*self.args)
-                    else:
-                        self.done_callback(self.args)
+                    self.done_callback()
+                
                 return False
    
 class AlternateColors:
