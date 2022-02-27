@@ -1,32 +1,20 @@
+# Sounds Test
+
 from ezsgame.main import *
 
-s = Screen(size=(400, 300), title="Test", fps=60, show_fps=True)
+s = Screen()
 
-grid = Grid(pos=[0,0], size=[s.size[0], s.size[1]], grid_size=[15,15], screen=s)
+sound = Sound("sounds/my-ordinary-life.mp3").play()
 
-paint = False
+colors = s.fill_gradient((0,0,0), (255,255,255))
 
-def highlight():
-    global paint
-    item = grid.get_current()
-    if item:
-        if paint:
-            item.color = random_color()
-        else:
-            item.color = "white"
-            
-    
-s.time.add(time=50, callback=lambda: highlight())
-
-@s.on("click")
-def toggle():
-    global paint
-    paint = not paint
+@s.add_interval(150)
+def change_color():
+    global colors
+    colors = s.fill_gradient(colors[-2], random_color())
 
 while True:
-    s.check_events()
-    s.fill("black")
-    
-    grid.draw(s)
-
+    s.check_events()    
+    s.fill_gradient(colors[0], colors[-1])
+        
     s.update()

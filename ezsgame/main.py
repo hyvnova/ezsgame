@@ -4,6 +4,7 @@ from ezsgame.animations import *
 from ezsgame.controller import Controller
 from ezsgame.objects import *
 from ezsgame.physics import *
+from ezsgame.sounds import *
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
@@ -114,20 +115,26 @@ class Screen:
 
     # -----------------------------------------------------------------------------
     
-    def fill_gradient(self, start, end, complexity=200):
+    def fill_gradient(self, start, end, direction="horizontal", complexity=120):
         r'''
         Fill the screen with a gradient
-        @complexity : int. Max : 1000, Min : 3, recomended : 200
+        @complexity : int. Max : 1000, Min : 3, recomended : 100-150
         @start : str. Color of the start of the gradient
         @end : str. Color of the end of the gradient
+        @direction : str. Direction of the gradient ("horizontal", "vertical")
+        
+        -> Returns color list    
+    
         '''
         if complexity < 3:
             complexity = 3
         if complexity > 1000:
             complexity = 1000
-        colors = gradient(self, start, end, complexity)
-        for obj in  colors:
+        objs, colors = gradient(self, start, end, direction, complexity)
+        for obj in objs:
             obj.draw(self)
+            
+        return colors
         
     def delta_time(self):
         r'''
@@ -145,6 +152,12 @@ class Screen:
             self.icon = "ezsgame/assets/img/icon.jpg"
         pg.display.set_icon(pg.image.load(self.icon))
         return self
+
+    def center(self):
+        r'''
+        return the center of the screen
+        '''
+        return self.surface.get_rect().center
 
     def shake(self, force=5):
         r'''

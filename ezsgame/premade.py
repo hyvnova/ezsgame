@@ -38,7 +38,7 @@ def pure_rgb(color):
     return (color[0]/255, color[1]/255, color[2]/255)
         
 
-def gradient(screen, start="green", end="blue", complexity=200):
+def gradient(screen, start="green", end="blue", direction="vertical", complexity=200):
     r'''
     Draw a gradient from start to end.
     - screen: screen to draw on
@@ -46,7 +46,13 @@ def gradient(screen, start="green", end="blue", complexity=200):
     - end: end color
     - complexity: how many times to draw the gradient
     '''
-    grid = screen.div("x", complexity)
+    direction = direction[0].lower()
+    if direction not in ["v", "h"]:
+        raise ValueError("Direction must be either 'vertical' or 'horizontal'")
+    
+    div_dir = "x" if direction == "h" else "y"
+    
+    grid = screen.div(div_dir, complexity)
     
     if isinstance(start, str):
         start = Color(start)
@@ -63,9 +69,16 @@ def gradient(screen, start="green", end="blue", complexity=200):
     colors = list(start.range_to(end,len(grid)))
     objs = []
     for i in range(len(grid)):
-        objs.append(Unit(pos=[grid[i][0], 0], size=[grid[i][1], screen.size[1]], color=adapt_rgb(colors[i].rgb)))
+        if direction == "h":
+            pos = [grid[i][0], 0]
+            size = [grid[i][1], screen.size[1]]
+        else:
+            pos = [0, grid[i][0]]
+            size = [screen.size[0], grid[i][1]]
+
+        objs.append(Unit(pos=pos, size=size, color=adapt_rgb(colors[i].rgb)))
             
-    return objs
+    return objs, colors
         
 def percent(n, total):
     return (n * total)/100
@@ -219,8 +232,11 @@ class Object:
                 return True
         return False
             
-    def copy(self):
-        return copy.copy(self)
+    def copy(self, different=False):
+        obj = copy.copy(self)
+        if different:
+            obj._id = get_id()
+        return obj
 
     def move(self, x=0, y=0):
         r'''
@@ -357,14 +373,14 @@ class Text(Object):
     '''
     def __init__(self, text, pos, fontsize, **styles):  
         self.path = styles.get("path", "")
-        self.fontname = styles.get("fontname", "Arial")
+        self.font = styles.get("font", "Arial")
         self.fontsize = fontsize
         self.color = styles.get("color","white")
         self.text = text    
-        self.text_obj = self.font(text, self.fontname, fontsize, self.color)
+        self.text_obj = self.load_font(text, self.font, fontsize, self.color)
         super().__init__(pos=pos, size=[self.text_obj.get_width(), self.text_obj.get_height()], **styles)
         
-    def font(self, text, name, size, color="white"):
+    def load_font(self, text, name, size, color="white"):
         # load local font 
         pg.font.init()
         name = name.lower()
@@ -380,14 +396,14 @@ class Text(Object):
         self.text = atributes.get("text", self.text)
         self.size = atributes.get("size", [self.text_obj.get_width(), self.text_obj.get_height()])
         self.color = atributes.get("color", self.color)
-        self.fontname = atributes.get("fontname", self.fontname)
+        self.font = atributes.get("font", self.font)
         self.fontsize = atributes.get("fontsize", self.fontsize)
         self.margin = atributes.get("margin", self.margin)
         self.pos = atributes.get("pos", self.pos)
             
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen   
-        self.text_obj = self.font(self.text, self.fontname, self.fontsize, self.color)
+        self.text_obj = self.load_font(self.text, self.font, self.fontsize, self.color)
         screen.surface.blit(self.text_obj, self.get_pos(screen))
 
 class Image(Rect):
@@ -793,7 +809,7 @@ class Button(Circle):
             self.text = styles['text']
             self.fontsize = styles.get("fontsize", 28)
             self.textcolor = styles.get('textcolor', "white")
-            self.font = styles.get("textfont", "Arial")
+            self.font = styles.get("font", "Arial")
             self.text_obj = Text(text=self.text, pos=[self.pos[0], self.pos[1]], fontsize=self.fontsize, color=self.textcolor, fontname=self.font)
             # place text in the center of the button
             self.text_obj.pos = [self.pos[0]-self.text_obj.size[0]/2, self.pos[1]-self.text_obj.size[1]/2]
