@@ -4,11 +4,7 @@ import copy
 
 pg.init()
    
-def unit_size():
-    r'''
-    Returns Unit size
-    '''
-    return 12
+
 
 def random_color():
     return (random.randint(0,255), random.randint(0,255), random.randint(0,255))
@@ -93,15 +89,6 @@ def _to_percent(n, total):
     else:
         return n
     
-def _to_unit(n): 
-    if isinstance(n, str):
-        if re.match(r"[0-9]+(u||U)$", n):
-            n = float(n.replace("u","").replace("U",""))
-            return round(n * unit_size(),2)
-        else:
-            return n
-    else:
-        return n
     
 ID_COUNT = -1        
 def get_id():
@@ -132,7 +119,7 @@ class Object:
             c = text_to_color(c)
         self.color = c
         self.margin = styles.get("margin", [0, 0, 0, 0]) # top, right, bottom, left
-        self.rounded = styles.get("rounded", 0)
+        self.stroke = styles.get("stroke", 0)
         self.pos = pos
         self.size = size
         if styles.get("screen"):
@@ -226,8 +213,8 @@ class Object:
         
         for i in obj_box:
             if draw_collision_box:
-                Rect(pos=[obj_pos[0]-1, obj_pos[1]-1], size=[obj.size[0]+1, obj.size[1]+1], color="red", rounded=2).draw(screen)
-                Rect(pos=[self.pos[0]-1, self.pos[1]-1], size=[self.size[0]+1, self.size[1]+1], color="red", rounded=2).draw(screen)
+                Rect(pos=[obj_pos[0]-1, obj_pos[1]-1], size=[obj.size[0]+1, obj.size[1]+1], color="red", stroke=2).draw(screen)
+                Rect(pos=[self.pos[0]-1, self.pos[1]-1], size=[self.size[0]+1, self.size[1]+1], color="red", stroke=2).draw(screen)
             if (i[0] >= self.pos[0] and i[0] <= self.pos[0]+self.size[0]) and (i[1] >= self.pos[1] and i[1] <= self.pos[1] + self.size[1]):
                 return True
         return False
@@ -264,17 +251,18 @@ class Object:
         screen = self.screen if screen == None else screen
         
         #units, percents and other measures
+        
+        if type(self.size) == tuple:
+            self.size = list(self.size)
+        
         for i in range(len(self.size)):
-            self.size[i] = _to_unit(self.size[i])
             self.size[i] = _to_percent(self.size[i], screen.size[i])
                     
         for i in range(len(self.pos)):
-            self.pos[i] = _to_unit(self.pos[i])
             self.pos[i] = _to_percent(self.pos[i], screen.size[i])
                              
         screen_i = 0
         for i in range(len(self.margin)):
-            self.margin[i] = _to_unit(self.margin[i])
             self.margin[i] = _to_percent(self.margin[i], screen.size[screen_i])
             screen_i += 1
             if screen_i == 2:
@@ -348,7 +336,7 @@ class Rect(Object):
     @Keyword Arguments:
         * color= (R, G, B) ``"white" or tuple(R, G, B)``
         * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
-        * rounded= ``int``
+        * stroke= ``int``
         * screen = ``Screen``
     '''
     def __init__(self, pos, size, **styles):
@@ -356,7 +344,7 @@ class Rect(Object):
                 
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.rounded))
+        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
         
 class Text(Object):
     r'''
@@ -471,6 +459,9 @@ class EventHandler:
                 quit()
                                             
             for base_event in self.base_events:
+                if base_event == "quit":
+                    continue
+                
                 if ev.type == base_event:
                     for item in self.base_events[base_event]:
                         if base_event == pg.KEYDOWN:
@@ -585,8 +576,11 @@ class EventHandler:
         t = types[type]
          
         for key in keys:
-            if len(key) > 1:
+            if key.lower() in ["multiply", "minus", "plus", "enter"]:
+                key = "KP_" + key.upper()
+            elif len(key) > 1:
                 key = key.upper()
+              
             else:
                 key = key.lower()
             
@@ -633,7 +627,6 @@ class Circle(Object):
             if re.match(r"[0-9]+%", radius):
                 raise Exception(f"Radius cannot be a percent (ID : {self._id})")
         
-        radius = _to_unit(radius)
         super().__init__(pos=pos, size=[radius*2, radius*2],  **styles)
         self.radius = radius
         
@@ -693,7 +686,7 @@ class TimeHandler:
 class CheckBox(Rect):
     def __init__(self, pos, size, screen=None, **styles):
         self.state = False
-        styles["rounded"] = 5
+        styles["stroke"] = 5
         styles["screen"] = screen
         super().__init__(pos, size, **styles)
         if screen == None:
@@ -709,7 +702,7 @@ class CheckBox(Rect):
        
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.rounded))
+        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
         if self.state:
             self.checkbox.draw(screen)
         
@@ -727,7 +720,7 @@ class InputBox(Rect):
         self.value = ""
         self.overflow = styles.get("overflow", "hidden")
         self.focus = False
-        self.rounded = styles.get("rounded", 5)
+        self.stroke = styles.get("stroke", 5)
         self.resolve_styles(screen)
         self._eventname_unfocus = f"inputbox.{self._id}.on.mousedown._desactivate"
         self._eventname_focus = f"inputbox.{self._id}.on.keydown._catch_char"
@@ -778,9 +771,9 @@ class InputBox(Rect):
             self.screen.events.remove_base_event(self._eventname_unfocus)            
         
     def _onfocus(self):
-        self.rounded = 1
+        self.stroke = 1
     def _unfocus(self):
-        self.rounded = 5
+        self.stroke = 5
         
     def onfocus(self, callback):
         self.events["onfocus"] = callback
@@ -792,14 +785,13 @@ class InputBox(Rect):
 
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.rounded))
+        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
         self.text.update(text=self.value)
         self.text.draw(screen)
         
 class Button(Circle):
     def __init__(self, pos, radius, screen, **styles):
-        radius = _to_unit(radius)
-        
+      
         styles["screen"] = screen
         super().__init__(pos=pos, radius=radius,  **styles)
         if screen == None:
@@ -826,6 +818,7 @@ class Button(Circle):
         '''
         self.onclick_callback = callback
         self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self.onclick_callback(), name=self._eventname)
+        return self
         
     def click(self, *args, **kwargs):
         r'''

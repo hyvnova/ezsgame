@@ -1,4 +1,4 @@
-import pygame as pg
+import pygame as pg, random
 from ezsgame.premade import *
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core import grid
@@ -6,17 +6,33 @@ from pathfinding.finder.a_star import AStarFinder
 
 pg.init()
 
-class IRect(Rect):
+class IObject(Object):
     def __init__(self,  pos, size, screen, **styles):
         super().__init__(pos, size, **styles)
         if screen == None:
-            raise Exception(f"InputBox object needs screen (ID : {self._id})")
+            raise Exception(f"IObject object needs screen (ID : {self._id})")
         self.screen = screen
         self.objects = Group()
-    
+        self._clicked = False
+        
+    @property
+    def clicked(self):
+        return self._clicked
+    @clicked.setter
+    def clicked(self, value):
+        self._clicked = value
+        
+    def _process_click(self, func, *args, **kwargs):
+        def inner(*args, **kwargs):
+            self.clicked = True
+            func(*args, **kwargs)
+        return inner
+
     def click(self, *args, **kwargs):
         def wrapper(func):
-            self.screen.events.add_event_listener("click", self, func)
+            func = self._process_click(func, *args, **kwargs)
+            self.screen.events.add_event_listener("click", self, func)                
+                    
         return wrapper
     
     def hover(self, *args, **kwargs):
@@ -29,9 +45,18 @@ class IRect(Rect):
             self.screen.events.add_event_listener("unhover", self, func)
         return wrapper
     
+    def _process_unclick(self, func, *args, **kwargs):
+        def inner(*args, **kwargs):
+            if self.clicked:
+                func(*args, **kwargs)
+                self.clicked = False
+            
+        return inner
+    
     def unclick(self, *args, **kwargs):
         def wrapper(func):
-            self.screen.events.add_event_listener("unclick", self, func)
+            func = self._process_unclick(func, *args, **kwargs)
+            self.screen.events.on("mouseup", func)
         return wrapper
     
     def add(self, objects):
@@ -45,12 +70,21 @@ class IRect(Rect):
             
     def remove(self, object):
         self.objects.remove(object)
-            
+
+class IRect(IObject):
+    def __init__(self, pos, size, screen, **styles):
+        super().__init__(pos, size, screen, **styles)
+        
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
-        super().draw(screen)
-        self.objects.draw(screen)
+        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
 
+class ICircle(IObject, Circle):
+    def __init__(self, pos, radius, screen, **styles):
+        size = [radius*2, radius*2]
+        IObject.__init__(self, pos, size, screen, **styles)
+        Circle.__init__(self, pos, radius, **styles)
+        
 class Grid(Object):
     def __init__(self, pos, size, grid_size, screen, **styles):
         super().__init__(pos, size, **styles)
@@ -111,7 +145,7 @@ class Grid(Object):
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
         
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.rounded))
+        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
         for row in self.grid:
             for obj in row:
                 obj.draw(screen)
@@ -221,3 +255,93 @@ def load_custom_object(object):
     obj.add(_get_object_child(obj.objects[0], object))
     return obj
 
+class RangeBar(Object):
+    def __init__(self, pos, size, min, max, value, screen, **styles):
+        for item in (min, max, value):
+            if item < 0 or item > 100:
+                raise ValueError(f"{item} must be between 0 and 100, at RangeBar object")
+        
+        super().__init__(pos=pos, size=size, screen=screen, **styles)
+        
+        radius = styles.get("radius", self.size[1] / 2.5 - self.size[1]//8)
+        wheel_color = styles.get("wheel_color", "white")
+        
+        self.wheel = ICircle(pos=[0,0], radius=radius, color=wheel_color, screen=self.screen)
+        self.bar = Object(pos=pos, size=size, **styles)
+        
+        self.min = (min  * (self.pos[0]+ self.size[0])) / 100 if min != 0 else self.pos[0]
+        self.max = (max * (self.pos[0]+ self.size[0])) / 100
+        self.value = (value * (self.min + self.max)) / 100
+        self.screen = screen        
+        
+        self._evname = f"RangeBar_{self._id}_update_value_[{random.randint(0,255)}]"
+        
+        @self.wheel.click()    
+        def wheel_click():     
+            self._evname = f"RangeBar_{self._id}_update_value_[{random.randint(0,255)}]"
+            self.screen.time.add(time=10, callback=lambda: self._update_value(), name=self._evname) 
+
+        @self.wheel.unclick()
+        def wheel_unclick():
+            if self.wheel.clicked:
+                self.screen.time.remove(name=self._evname)
+                self.wheel.color = "white"
+
+    def _update_value(self):
+        mouse_pos = self.screen.mouse_pos()[0]
+ 
+        if mouse_pos + self.wheel.radius < self.min:
+            self.value = self.min 
+        
+        elif mouse_pos + self.wheel.size[0] > self.max:
+            self.value = self.max
+            
+        else:
+            self.value = mouse_pos 
+            
+        self.wheel.color = "red"
+
+    def _calculate_wheel_pos(self):
+        x = self.value
+        if x == self.min:
+            x = self.min - self.wheel.radius /2 
+            
+        elif x == self.max: 
+            x = self.max + self.wheel.radius /2
+                        
+        self.wheel.pos = [x, self.pos[1]+self.size[1]//2]
+
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+
+        self._calculate_wheel_pos()
+        Rect(pos=[self.pos[0], self.pos[1]+self.size[1]/2], size=[self.size[0]+self.wheel.radius, self.size[1]//8], color=self.color, screen=self.screen).draw()
+        self.wheel.draw(screen)
+    
+    def get_percent(self):
+        if self.value == self.min:
+            return 0
+        elif self.value == self.max:
+            return 100
+        
+        return round( (self.value / ( (self.min + self.wheel.radius) + (self.max - self.wheel.radius) ) ) * 100, 4)
+    
+        
+
+
+def distance_between(screen, a, b):
+    # return the distance between two points in boxes, box size is screen.unit_size
+    
+    y_len = screen.size[1] // screen.unit_size[1]
+    x_len = screen.size[0] // screen.unit_size[0]
+    
+    a_pos = a.get_pos(screen) + [a.size[0]//2, a.size[1]//2]
+    b_pos = b.get_pos(screen) + [b.size[0]//2, b.size[1]//2]
+    
+    matrix = [[] for i in range(y_len)]
+    
+    for row in range(y_len):
+        for col in range(x_len):
+            matrix[row].append(0)
+            
+    

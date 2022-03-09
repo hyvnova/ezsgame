@@ -135,9 +135,9 @@ class AlternateColors:
              
 def create_animation_file(frames, kwargs): 
     """ 
-    "size":[[100,100], [10,10]]
-    "color' : ["white", "red", "blue"]]
-    "rounded : [0, 10]
+    "size":[[100,100], [10,10]] goes from [100,100] to [10,10]
+    "color' : ["white", "red", "blue"]] 
+    "stroke : [0, 10] goes  from 0 to 10
     """
     steps = {}    
     if "color" in kwargs:

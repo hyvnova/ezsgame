@@ -235,6 +235,10 @@ class Screen:
                 self.size = size
           
     def init(self):
+        r'''
+        Initialize the screen, is called automatically
+        '''
+        
         pg.init()
         self.surface = pg.display.set_mode(self.size, 0, self.depth, 0, self.vsync)
         pg.display.set_caption(self.title)
@@ -243,6 +247,10 @@ class Screen:
         self.clock = pg.time.Clock()
         
     def update(self):
+        r'''
+        Update the screen
+        '''
+        
         if self.show_fps:
             pg.display.set_caption(f"{self.title}  FPS : " + f"{int(self.clock.get_fps())}")
         
@@ -250,6 +258,10 @@ class Screen:
         self.clock.tick(self.fps)
         
     def quit(self):
+        r'''
+        Quit the game/App  (Close/Ends the window)
+        '''
+        
         pg.quit()
         quit()
 
@@ -437,5 +449,12 @@ class IScreen(Screen):
         self.update()
 
  
-
-        
+def flat(arr, depth=1):
+    r'''
+    Flatten a list
+    [1,2,[3],4] -> [1,2,3,4]
+    '''
+    if depth == 0:
+        return arr
+    else:
+        return [item for sublist in arr for item in flat(sublist, depth - 1)]

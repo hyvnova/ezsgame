@@ -32,14 +32,11 @@ class Mixer:
         for sound in self.sounds:
             sound.stop()
             
-    def remove(self, id):
-        for sound in self.sounds:
-            if sound._id == id:
-                del sound
-                return
-            
-    def _remove_sound(self, sound_object):
-        self.sounds.remove(sound_object)
+    def remove(self, sound):
+        if sound in self.sounds:
+            self.sounds.remove(sound)
+        else:
+            raise ValueError("Sound not in list")
      
     def clear(self):
         for sound in self.sounds:
@@ -90,7 +87,8 @@ class Sound:
         return f"<Object: Sound, ID: {self._id}>"
     
     def __del__(self):
-        mixer._remove_sound(self)
+        if self in mixer.sounds:
+            mixer.remove(self)
         del self.sound
         
     def raw(self):
