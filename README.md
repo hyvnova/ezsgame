@@ -6,7 +6,7 @@ En general ezsgame Trata de hacer mas simple el proceso de Creacion y manipulaci
 
 - size - Tamaño del objeto en el espacio.  (ancho,alto)
 
-- color - Color del objeto.  (r,g,b) o "nombre_de_color"
+- color - Color del objeto.  (r,g,b) o "nombre de color"
 
 - Screen - Pantalla en la que se dibuja el objeto. Todo sucede en una pantalla.
 
@@ -41,9 +41,3 @@ while True:
     screen.update()
 ```
 
-
-# Atajos Avanzados
-```python   
-# declaring and placing objects in screen in one line
-# Note : this only works if you are using IScreen 
-screen = IScreen(size=(640, 480), title="My Game", objects=[Rect(size=[100,100], pos=["center", "center"])]).run()
