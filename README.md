@@ -3,9 +3,9 @@ En general ezsgame Trata de hacer mas simple el proceso de Creacion y manipulaci
 
 ## Instalacion 
 
-Descargar ezsgame.zip  [aqui](https://github.com/NoxxDev/ezsgame)
-##
-Clonar repositorio [aqui](https://github.com/NoxxDev/ezsgame.git) (https)
+- Descargar ezsgame.zip  [aqui](https://github.com/NoxxDev/ezsgame)
+
+- Clonar repositorio [aqui](https://github.com/NoxxDev/ezsgame.git) (https)
 
 #
 #
