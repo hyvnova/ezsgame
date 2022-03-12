@@ -130,7 +130,9 @@ class Screen:
             complexity = 3
         if complexity > 1000:
             complexity = 1000
-        objs, colors = gradient(self, start, end, direction, complexity)
+            
+        div_dir = "x" if direction == "h" else "y"
+        objs, colors = gradient(self.size, self.div(div_dir, complexity), start, end, direction[0].lower())
         for obj in objs:
             obj.draw(self)
             

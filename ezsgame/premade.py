@@ -34,7 +34,7 @@ def pure_rgb(color):
     return (color[0]/255, color[1]/255, color[2]/255)
         
 
-def gradient(screen, start="green", end="blue", direction="vertical", complexity=200):
+def gradient(size, grid, start="green", end="blue", direction="v"):
     r'''
     Draw a gradient from start to end.
     - screen: screen to draw on
@@ -42,13 +42,8 @@ def gradient(screen, start="green", end="blue", direction="vertical", complexity
     - end: end color
     - complexity: how many times to draw the gradient
     '''
-    direction = direction[0].lower()
     if direction not in ["v", "h"]:
         raise ValueError("Direction must be either 'vertical' or 'horizontal'")
-    
-    div_dir = "x" if direction == "h" else "y"
-    
-    grid = screen.div(div_dir, complexity)
     
     if isinstance(start, str):
         start = Color(start)
@@ -67,10 +62,10 @@ def gradient(screen, start="green", end="blue", direction="vertical", complexity
     for i in range(len(grid)):
         if direction == "h":
             pos = [grid[i][0], 0]
-            size = [grid[i][1], screen.size[1]]
+            size = [grid[i][1], size[1]]
         else:
             pos = [0, grid[i][0]]
-            size = [screen.size[0], grid[i][1]]
+            size = [size[0], grid[i][1]]
 
         objs.append(Unit(pos=pos, size=size, color=adapt_rgb(colors[i].rgb)))
             
