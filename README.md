@@ -1,5 +1,5 @@
 # EZSGAME
-En general ezsgame Trata de hacer mas simple el proceso de Creacion y manipulacion de graficos 2D. Creando y simplificando el proceso lo mas posible. Tratando de hacerlo mas facil, divertudo y comodo para el usuario.
+En general ezsgame Trata de hacer mas simple el proceso de Creacion y manipulacion de graficos 2D. Creando y simplificando el proceso lo mas posible. Tratando de hacerlo mas facil, divertido y comodo para el usuario.
 
 ## Instalacion 
 
