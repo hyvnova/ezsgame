@@ -2,10 +2,28 @@
 En general ezsgame Trata de hacer mas simple el proceso de Creacion y manipulacion de graficos 2D. Creando y simplificando el proceso lo mas posible. Tratando de hacerlo mas facil, divertido y comodo para el usuario.
 
 ## Instalacion 
+- [ 1 ] Crea una carpeta dedica para ezsgame, asi sera mas facil de manejar la instalacion.
 
-- Descargar ezsgame.zip  [aqui](https://github.com/NoxxDev/ezsgame)
+- [ 2 ]  Instalar las dependencias. con el comando:
 
-- Clonar repositorio [aqui](https://github.com/NoxxDev/ezsgame.git) (https)
+```bash
+pip install -r requirements.txt
+```
+
+- [ 3 ] Descargar el repositorio de ezsgame. Debe ir dentro de la carpeta que creaste en el paso 1.
+
+    - Descargar ezsgame.zip  [aqui](https://github.com/NoxxDev/ezsgame)
+
+    - Clonar repositorio [aqui](https://github.com/NoxxDev/ezsgame.git) (https)
+
+- [ 4 ] Creando Archivos, los archivos que usaran ezsgame deben comenzar con la siguiente linea para importar ezsgame:
+
+```python
+from ezsgame.main import *
+
+# Tu codigo aqui
+
+```
 
 #
 #
@@ -47,5 +65,5 @@ while True:
 #
 #
 
-# Documentacion 
+# Documentacion (Aun no completa)
 ## [>> Ir a la documentacion](https://ezsgame-doc.ezsnova.repl.co/)
