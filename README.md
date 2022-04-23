@@ -67,3 +67,16 @@ while True:
 
 # Documentacion (Aun no completa)
 ## [>> Ir a la documentacion](https://ezsgame-doc.ezsnova.repl.co/)
+
+
+#
+#
+# Convicciones 
+- # archivos :
+    - ### Los archivos que usan ezsgame que son el archivo "principal", suelen llamarse:
+        ## demo.py (Recomendado)
+        ## main.py
+        ## game.py
+        ## app.py
+
+
