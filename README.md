@@ -72,11 +72,11 @@ while True:
 #
 #
 # Convicciones 
-- # archivos :
+- ## archivos :
     - ### Los archivos que usan ezsgame que son el archivo "principal", suelen llamarse:
-        ### demo.py (Recomendado)
-        ### main.py
-        ### game.py
-        ### app.py
+        ### demo (Recomendado)
+        ### main
+        ### game
+        ### app
 
 
