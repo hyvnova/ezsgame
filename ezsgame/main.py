@@ -1,10 +1,5 @@
 import pygame as pg, random
 from ezsgame.premade import *
-from ezsgame.animations import *
-from ezsgame.controller import Controller
-from ezsgame.objects import *
-from ezsgame.physics import *
-from ezsgame.sounds import *
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
@@ -460,3 +455,5 @@ def flat(arr, depth=1):
         return arr
     else:
         return [item for sublist in arr for item in flat(sublist, depth - 1)]
+    
+    

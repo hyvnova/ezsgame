@@ -22,42 +22,38 @@ class IObject(Object):
     def clicked(self, value):
         self._clicked = value
         
-    def _process_click(self, func, *args, **kwargs):
-        def inner(*args, **kwargs):
+    def _process_click(self, func):
+        def wrapper():
             self.clicked = True
-            func(*args, **kwargs)
-        return inner
-
-    def click(self, *args, **kwargs):
-        def wrapper(func):
-            func = self._process_click(func, *args, **kwargs)
-            self.screen.events.add_event_listener("click", self, func)                
-                    
-        return wrapper
-    
-    def hover(self, *args, **kwargs):
-        def wrapper(func):
-            self.screen.events.add_event_listener("hover", self, func)
+            func()
+            return func
         return wrapper
 
-    def unhover(self, *args, **kwargs):
-        def wrapper(func):
-            self.screen.events.add_event_listener("unhover", self, func)
-        return wrapper
+
+    def click(self, func):
+         self.screen.events.add_event_listener("click", self, self._process_click(func))                
+         return func
     
-    def _process_unclick(self, func, *args, **kwargs):
-        def inner(*args, **kwargs):
+    def hover(self, func):
+        self.screen.events.add_event_listener("hover", self, func)
+        return func
+
+    def unhover(self, func):
+        self.screen.events.add_event_listener("unhover", self, func)
+        return func
+    
+    def _process_unclick(self, func):
+        def wrapper():
             if self.clicked:
-                func(*args, **kwargs)
                 self.clicked = False
-            
-        return inner
-    
-    def unclick(self, *args, **kwargs):
-        def wrapper(func):
-            func = self._process_unclick(func, *args, **kwargs)
-            self.screen.events.on("mouseup", func)
+                func()
+                return func
         return wrapper
+    
+    def unclick(self, func):
+        func = self._process_unclick(func)
+        self.screen.events.on("mouseup", func)
+        return func
     
     def add(self, objects):
         if type(objects) == list:
@@ -172,7 +168,7 @@ class Grid(Object):
 
         finder = AStarFinder(diagonal_movement=DiagonalMovement.always)
 
-        path, runs = finder.find_path(start=start, end=end, grid=_grid)
+        path, _ = finder.find_path(start=start, end=end, grid=_grid)
         
         return path
 
@@ -224,6 +220,12 @@ class Group:
         for obj in self.objects:
             obj.draw(screen)
 
+    def __del__(self):
+        for obj in self.objects:
+            del obj
+                
+        del self
+
 def _get_object(object):
     args = {k:v for k,v in object.items() if k != "type" and  k != "elements"}
     try:
@@ -271,9 +273,7 @@ class RangeBar(Object):
         
         self.min = (min  * (self.pos[0]+ self.size[0])) / 100 if min != 0 else self.pos[0]
         self.max = (max * (self.pos[0]+ self.size[0])) / 100
-        self.value = (value * (self.min + self.max)) / 100
-        self.screen = screen        
-        
+        self.value = (value * (self.min + self.max)) / 100        
         self._evname = f"RangeBar_{self._id}_update_value_[{random.randint(0,255)}]"
         
         @self.wheel.click()    
@@ -325,23 +325,37 @@ class RangeBar(Object):
             return 100
         
         return round( (self.value / ( (self.min + self.wheel.radius) + (self.max - self.wheel.radius) ) ) * 100, 4)
-    
+
+class Bar(Object):
+    def __init__(self, pos, size, min, max, value, screen, **styles):
+        super().__init__(pos=pos, size=size, screen=screen, **styles)
         
-
-
-def distance_between(screen, a, b):
-    # return the distance between two points in boxes, box size is screen.unit_size
-    
-    y_len = screen.size[1] // screen.unit_size[1]
-    x_len = screen.size[0] // screen.unit_size[0]
-    
-    a_pos = a.get_pos(screen) + [a.size[0]//2, a.size[1]//2]
-    b_pos = b.get_pos(screen) + [b.size[0]//2, b.size[1]//2]
-    
-    matrix = [[] for i in range(y_len)]
-    
-    for row in range(y_len):
-        for col in range(x_len):
-            matrix[row].append(0)
+        self.min = min
+        self.max = max
+        self.value = value
+        
+        self.fill_color = styles.get("fill_color", "white")
+        stroke = styles.get("stroke", 2)
+        
+        self.bar = Rect(pos=self.pos, size=size, color=self.color, screen=self.screen, stroke=stroke)
+        self.fill_bar = Rect(pos=self.pos, size=[0, self.size[1]], color=self.fill_color, screen=self.screen)
+        
+    def _update_value(self):
+        if self.value < self.min:
+            self.value = self.min
+        elif self.value > self.max:
+            self.value = self.max
             
-    
+        p = (self.value * 100)/ self.max
+            
+        self.fill_bar.size = [(p / 100) * self.size[0], self.size[1]]
+
+
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        
+        self._update_value()
+        self.fill_bar.draw(screen)
+        self.bar.draw(screen)
+        
+        

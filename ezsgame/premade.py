@@ -1,22 +1,18 @@
-import pygame as pg, random, time as t, json, re
-from colour import Color
-import copy
+import pygame as pg, random, time as t, json, re, copy
+from colour import Color, color_scale
+from ezsgame.components import ComponentGroup
+from ezsgame.global_data import get_id
 
-pg.init()
-   
-
-
-def random_color():
-    return (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+def random_color(n=1):
+    """
+    Return a random color if n = 1 -> (135, 6, 233)
+    If n is bigger returns a list with random colors -> [(234, 55, 233), ...] 
+    """
+    return [random_color() for i in range(n)] if n > 1 else (random.randint(0,255), random.randint(0,255), random.randint(0,255))
        
-def random_color_list(n):
-    r'''
-    Return a list of n random colors.
-    '''
-    return [[random.randint(0,255), random.randint(0,255), random.randint(0,255)] for i in range(n)]
 
-def adapt_rgb(rgb_color):
-    return tuple([i*255 for i in rgb_color])
+adapt_rgb = lambda rgb: tuple(map(lambda i: i*255, rgb))
+pure_rgb = lambda color: tuple(map(lambda i: i/255, color))
 
 def text_to_color(color):
         r'''
@@ -30,10 +26,16 @@ def text_to_color(color):
         else:
             return color
 
-def pure_rgb(color):
-    return (color[0]/255, color[1]/255, color[2]/255)
-        
+def _check_color(color):
+    if isinstance(color_scale, str):
+            return Color(color)
+   
+    elif not (isinstance(color, tuple) or isinstance(color, list)):
+        raise ValueError("Color must be a tuple or a list, or color name: ", color)
 
+    else:
+        return Color(rgb=pure_rgb(color))
+       
 def gradient(size, grid, start="green", end="blue", direction="v"):
     r'''
     Draw a gradient from start to end.
@@ -42,22 +44,13 @@ def gradient(size, grid, start="green", end="blue", direction="v"):
     - end: end color
     - complexity: how many times to draw the gradient
     '''
-    if direction not in ["v", "h"]:
+    if direction not in ("v", "h"):
         raise ValueError("Direction must be either 'vertical' or 'horizontal'")
     
-    if isinstance(start, str):
-        start = Color(start)
-        
-    elif isinstance(start, list) or isinstance(start, tuple):
-        start = Color(rgb=pure_rgb(start))
-    
-    if isinstance(end, str):
-        end = Color(end)
-    
-    elif isinstance(end, list) or isinstance(end, tuple):
-        end = Color(rgb=pure_rgb(end))
-        
-    colors = list(start.range_to(end,len(grid)))
+    start = _check_color(start)
+    end = _check_color(end)
+            
+    colors = tuple(start.range_to(end,len(grid)))
     objs = []
     for i in range(len(grid)):
         if direction == "h":
@@ -71,26 +64,11 @@ def gradient(size, grid, start="green", end="blue", direction="v"):
             
     return objs, colors
         
-def percent(n, total):
-    return (n * total)/100
 
-def _to_percent(n, total):
-    if isinstance(n, str):
-        if re.match(r"[0-9]+%$", n):
-            n = float(n.replace("%",""))
-            return percent(n, total)
-        else:
-            return n 
-    else:
-        return n
+percent = lambda n, total: (n * total)/100
+_to_percent = lambda n, total: percent(float(n.replace("%", "")), total) if isinstance(n, str) and re.match(r"[0-9]+%$", n) else n
     
-    
-ID_COUNT = -1        
-def get_id():
-    global ID_COUNT
-    ID_COUNT += 1
-    return ID_COUNT
-                     
+                   
 class Unit:
     def __init__(self, pos, size, color, screen=None):
         self.size = size
@@ -108,23 +86,32 @@ class Unit:
 class Object:
     def __init__(self, pos, size, **styles):
         self._id = get_id()
-        # define general style properties
+
         c = styles.get("color", "white")
         if isinstance(c, str):
             c = text_to_color(c)
         self.color = c
+
         self.margin = styles.get("margin", [0, 0, 0, 0]) # top, right, bottom, left
         self.stroke = styles.get("stroke", 0)
+
         self.pos = pos
         self.size = size
+
         if styles.get("screen"):
             self.screen = styles["screen"]
             self.resolve_styles(self.screen)   
+
         if styles.get("name"):
             self.name = styles["name"]    
+
         self._current = 0
         self._animation_done = False
-    
+
+        if "components" in styles:
+            self.components = ComponentGroup(self, styles["components"])
+
+            
     def set(self, property, value):
         r'''
         sets a object property to a valie
@@ -185,33 +172,28 @@ class Object:
                 else:
                     raise Exception(e)
     
-    
     def _get_collision_box(self):
         self.resolve_styles(self.screen)
         return [self.pos, [self.pos[0] + self.size[0], self.pos[1]],
                 [self.pos[0], self.pos[1] + self.size[1]], [self.pos[0] + self.size[0], self.pos[1] + self.size[1]]
                 ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
         
-
     def is_colliding(self, obj, screen=None, draw_collision_box=False):
         r'''
-        returns True if the object is colliding with another object
+        returns True if the object is colliding with another object, False if not
         '''
         
-        screen = self.screen if screen == None else screen
-        
-        self.resolve_styles(screen)
-        obj.resolve_styles(screen)
-        
-        obj_box = obj._get_collision_box()
-        obj_pos = obj_box[0]
-        
-        for i in obj_box:
+        screen = self.screen if screen == None else screen    
+        obj_pos = obj.get_pos(screen)
+    
+        for i in self._get_collision_box():
             if draw_collision_box:
-                Rect(pos=[obj_pos[0]-1, obj_pos[1]-1], size=[obj.size[0]+1, obj.size[1]+1], color="red", stroke=2).draw(screen)
-                Rect(pos=[self.pos[0]-1, self.pos[1]-1], size=[self.size[0]+1, self.size[1]+1], color="red", stroke=2).draw(screen)
-            if (i[0] >= self.pos[0] and i[0] <= self.pos[0]+self.size[0]) and (i[1] >= self.pos[1] and i[1] <= self.pos[1] + self.size[1]):
+                Rect(pos=[obj_pos[0]-2, obj_pos[1]-2], size=[obj.size[0]+4, obj.size[1]+4], color="red", stroke=2).draw(screen)
+                Rect(pos=[self.pos[0]-2, self.pos[1]-2], size=[self.size[0]+4, self.size[1]+4], color="red", stroke=2).draw(screen)
+                
+            if (i[0] >= obj.pos[0] and i[0] <= obj.pos[0]+obj.size[0]) and (i[1] >= obj.pos[1] and i[1] <= obj.pos[1] + obj.size[1]):
                 return True
+            
         return False
             
     def copy(self, different=False):
@@ -224,9 +206,12 @@ class Object:
         r'''
         Adds x,y to the current object position. (Also inverts y )
         '''        
+        if isinstance(x, list) or isinstance(x, tuple):
+            x, y = x
+
         self.pos[0] += x
         self.pos[1] += y * -1
-     
+    
     def is_out(self, screen=None):
         r'''
         Return True if objects is out of bounds and direction of that bound (top, bottom, right, left)
@@ -241,7 +226,7 @@ class Object:
             return True, "top" if self.pos[1] + self.size[1] <= 0 else "bottom"     
         else:
             return False, None
-        
+       
     def resolve_styles(self, screen=None):
         screen = self.screen if screen == None else screen
         
@@ -314,6 +299,10 @@ class Object:
         # apply alpha
         
     def get_pos(self, screen=None):
+        """
+        Returns postion of the object after revolsing styles
+        """
+
         screen = self.screen if screen == None else screen
         self.resolve_styles(screen)
         return self.pos
@@ -323,7 +312,7 @@ class Object:
     
     def __repr__(self):
         return f"<Object: {self.__class__.__name__}, ID: {self._id}>"
-                
+               
 class Rect(Object):
     r'''
     @param pos: position of the text ``list(x, y) or list("left", "top")``
@@ -401,7 +390,11 @@ class Image(Rect):
     '''
     def __init__(self, pos, size, image, **styles):
         super().__init__(pos, size, **styles)
-        self.image = pg.image.load(image)
+        try:
+            self.image = pg.image.load(image)
+        except:
+            raise Exception("Image not found in current directory: ", image)
+    
         self.image = pg.transform.scale(self.image, self.size)
         
     def draw(self, screen=None):
@@ -447,24 +440,21 @@ class EventHandler:
         for ev in event:
             # BASE EVENTS ----------------------------------------------------------------------------------
             if ev.type == pg.QUIT:
-                if "quit" in self.base_events:
-                    for item in self.base_events["quit"]:
-                        item["callback"]()
+                for i in self.base_events.get(pg.QUIT, ""):
+                    if i["type"] == pg.QUIT:
+                        i["callback"]()
+                        break
+                    
                 pg.quit()
                 quit()
-                                            
+                              
             for base_event in self.base_events:
-                if base_event == "quit":
-                    continue
-                
                 if ev.type == base_event:
-                    for item in self.base_events[base_event]:
+                    for item in self.base_events.get(base_event, None):
                         if base_event == pg.KEYDOWN:
                             self.pressed_key = [ev.unicode, ev.key]
                         item["callback"]()
-                        
-                        
-                        
+                                    
             # STORED EVENTS --------------------------------------------------------------------------------
             for key, value in self.events.items():
                 if value["type"] == ev.type:
@@ -495,7 +485,7 @@ class EventHandler:
         @param object: object to be added to the event ``Object``
         @param callback: callback function to be called when the event is triggered ``function``
         '''
-
+     
         event = event.lower()
         event_ = self._convert_to_pgevent(event)
         
@@ -645,6 +635,7 @@ class TimeHandler:
         self.start_time = t.time()
         self.time = 0
         self.to_remove = []
+        self.to_add = []
 
     def add(self, time, callback, name="Default"):
         r'''
@@ -655,7 +646,7 @@ class TimeHandler:
         '''
         time = time / 1000
         name = f"{len(self.intervals)}.{time}" if name == "Default" else name
-        self.intervals[name] = {"callback": callback, "time": time, "last_call": t.time()}
+        self.to_add.append([name, {"callback": callback, "time": time, "last_call": t.time()}])
 
     def remove(self, name):
         r'''
@@ -671,6 +662,12 @@ class TimeHandler:
         for name in self.to_remove:
             if name in self.intervals:
                 del self.intervals[name]
+        self.to_remove = []
+                
+        for item in self.to_add:
+            self.intervals[item[0]] = item[1]
+        self.to_add = []
+        
         
         for key, value in self.intervals.items():
             if t.time() - value["last_call"] >= value["time"]:
@@ -680,13 +677,14 @@ class TimeHandler:
 # objectos interactivos/dinamicos
 class CheckBox(Rect):
     def __init__(self, pos, size, screen=None, **styles):
+        if screen == None:
+            raise Exception(f"CheckBox object needs screen (ID : {self._id})")
+        
+        self.screen = screen
         self.state = False
         styles["stroke"] = 5
         styles["screen"] = screen
         super().__init__(pos, size, **styles)
-        if screen == None:
-            raise Exception(f"CheckBox object needs screen (ID : {self._id})")
-        self.screen = screen
 
         # init 
         self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self.change_state())
@@ -708,7 +706,6 @@ class InputBox(Rect):
         if screen == None:
             raise Exception(f"InputBox object needs screen (ID : {self._id})")
         self.screen = screen
-        self.placeholder = styles.get("placeholder", "")
         self.textsize = styles.get("textsize", 28)
         self.textcolor = styles.get('textcolor', "white")
         self.textfont = styles.get("textfont", "Arial")
@@ -800,28 +797,27 @@ class Button(Circle):
             self.text_obj = Text(text=self.text, pos=[self.pos[0], self.pos[1]], fontsize=self.fontsize, color=self.textcolor, fontname=self.font)
             # place text in the center of the button
             self.text_obj.pos = [self.pos[0]-self.text_obj.size[0]/2, self.pos[1]-self.text_obj.size[1]/2]
-
+            
         
         self.screen = screen
-        self.onclick_callback = lambda: None
         self._eventname = f"button.{self._id}.on.mousedown"
-        screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self.onclick_callback(), name=self._eventname)
-
+        screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: None, name=self._eventname)
+        
     def onclick(self, callback):
         r'''
         Calls the callback function when the button is clicked
         '''
-        self.onclick_callback = callback
-        self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self.onclick_callback(), name=self._eventname)
+        self.screen.events.add_event_listener(event="mousedown", object=self, callback=callback, name=self._eventname)
         return self
         
-    def click(self, *args, **kwargs):
+        
+    def click(self, func):
         r'''
         <Decorator> Calls the callback function when the button is clicked
         '''
-        def wrapper(func):
-            self.onclick(func)
-        return wrapper        
+        self.onclick(func)
+        return func
+        
     
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen

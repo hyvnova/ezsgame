@@ -203,9 +203,3 @@ def create_animation_file(frames, kwargs):
              
         with open("animation.json", "w") as f:
             json.dump(animation, f, indent=4)
-
-    
-create_animation_file(frames=60, kwargs={
-                            "size" : [[10,10], [100,100]],
-                            "pos" : [[0,0],[400,400]]
-                           })

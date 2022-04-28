@@ -27,10 +27,10 @@ class Controller:
         r'''
         Returns the speed of the controller.
         @param type: "all", "simple", "average"
-        @type all: returns a list of all speeds
-        @type simple: return [speed[0] + speed[1], speed[2] + speed[3]]
-        @type average: return average of all speeds
-        @type any: return first speed that is not 0, if all are 0, return 0
+        @type all: returns a list of all speeds -> [n...]
+        @type simple: returns sum of all speeds from 0-half as x and sum of all speeds from half to end as y -> [x,y]
+        @type average: return average of all speeds -> float
+        @type any: return first speed that is not 0, if all are 0, return 0 -> int
         '''
         
         if type == "average":
@@ -38,7 +38,10 @@ class Controller:
 
         if type == "simple":
             if len(self.speed) == 4:
-                return [self.speed[0] + self.speed[1], self.speed[2] + self.speed[3]]
+                return [sum([self.speed[i] for i in range(len(self.speed)//2)]),
+                        sum([self.speed[i] for i in range(len(self.speed)//2, len(self.speed))])
+                       ]
+            
             
         if type == "all":
             return self.speed
