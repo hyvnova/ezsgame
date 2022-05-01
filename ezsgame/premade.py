@@ -3,6 +3,7 @@ from colour import Color, color_scale
 from ezsgame.components import ComponentGroup
 from ezsgame.global_data import get_id
 
+
 def random_color(n=1):
     """
     Return a random color if n = 1 -> (135, 6, 233)
@@ -10,7 +11,6 @@ def random_color(n=1):
     """
     return [random_color() for i in range(n)] if n > 1 else (random.randint(0,255), random.randint(0,255), random.randint(0,255))
        
-
 adapt_rgb = lambda rgb: tuple(map(lambda i: i*255, rgb))
 pure_rgb = lambda color: tuple(map(lambda i: i/255, color))
 
@@ -27,7 +27,7 @@ def text_to_color(color):
             return color
 
 def _check_color(color):
-    if isinstance(color_scale, str):
+    if isinstance(color, str):
             return Color(color)
    
     elif not (isinstance(color, tuple) or isinstance(color, list)):
@@ -36,7 +36,7 @@ def _check_color(color):
     else:
         return Color(rgb=pure_rgb(color))
        
-def gradient(size, grid, start="green", end="blue", direction="v"):
+def gen_gradient(size, grid, start="green", end="blue", direction="v"):
     r'''
     Draw a gradient from start to end.
     - screen: screen to draw on
@@ -64,15 +64,126 @@ def gradient(size, grid, start="green", end="blue", direction="v"):
             
     return objs, colors
         
+class Gradient:
+    def __init__(self, screen, start, end, direction="horizontal", complexity=120):
+        if complexity < 3:
+            complexity = 3
+        if complexity > 1000:
+            complexity = 1000
+            
+        div_dir = "x" if direction == "h" else "y"    
+        self.objs, self.colors = gen_gradient(screen.size, screen.div(div_dir, complexity), start, end, direction[0].lower())
+        
+    def __str__(self):
+        return "<Gradient>"
+    def __repr__(self):
+        return "<Gradient>"
+
 
 percent = lambda n, total: (n * total)/100
 _to_percent = lambda n, total: percent(float(n.replace("%", "")), total) if isinstance(n, str) and re.match(r"[0-9]+%$", n) else n
+ 
+class Vector2:
+    def __init__(self, a=0, b=0):
+        if isinstance(a, list):
+            self.__a = a[0]
+            self.__b = a[1]
+            
+        else:
+            self.__a = a
+            self.__b = b
+   
+    def __str__(self):
+        return [self.__a, self.__b]
+
+    def __repr__(self):
+        return self.__str__()
     
-                   
+    def __iter__(self):
+        self.__current_index = 0
+        return iter([self.__a, self.__b])
+
+    def __next__(self):
+        if self.__current_index == 0:
+            self.__current_index += 1
+            return self.__a
+        elif self.__current_index == 1:
+            self.__current_index += 1
+            return self.__b
+        else:
+            raise StopIteration
+        
+    def __getitem__(self, index):
+        if index == 0:
+            return self.__a
+        elif index == 1:
+            return self.__b
+        else:
+            raise IndexError
+        
+    def __setitem__(self, index, value):
+        if index == 0:
+            self.__a = value
+        elif index == 1:
+            self.__b = value
+        else:
+            raise IndexError
+
+    def __len__(self):
+        return 2
+
+class Size (Vector2):
+    def __init__(self, width=0, height=0):
+        super().__init__(width, height)
+
+        self.width, self.height  = width, height
+
+    @property
+    def width(self):
+        self.width = self.__a
+        return self.__a
+
+    @width.setter
+    def width(self, value):
+        self.__a = value
+
+    @property
+    def height(self):
+        self.height = self.__b
+        return self.__b
+
+    @height.setter
+    def height(self, value):
+        self.__b = value
+
+class Pos (Vector2):
+    def __init__(self, x=0, y=0):
+        super().__init__(x, y)
+
+        self.x, self.y  = x,y
+
+    @property
+    def x(self):
+        self.x = self.__a
+        return self.__a
+
+    @x.setter
+    def x(self, value):
+        self.__a = value
+
+    @property
+    def y(self):
+        self.y = self.__b
+        return self.__b
+
+    @y.setter
+    def y(self, value):
+        self.__b = value
+              
 class Unit:
     def __init__(self, pos, size, color, screen=None):
-        self.size = size
-        self.pos = pos
+        self.size = Size(*size)
+        self.pos = Pos(*pos)
         self.color = color
         self.screen = screen
         self._id = get_id()
@@ -95,8 +206,8 @@ class Object:
         self.margin = styles.get("margin", [0, 0, 0, 0]) # top, right, bottom, left
         self.stroke = styles.get("stroke", 0)
 
-        self.pos = pos
-        self.size = size
+        self.pos = Pos(*pos)
+        self.size = Size(*size)
 
         if styles.get("screen"):
             self.screen = styles["screen"]
@@ -110,7 +221,6 @@ class Object:
 
         if "components" in styles:
             self.components = ComponentGroup(self, styles["components"])
-
             
     def set(self, property, value):
         r'''
@@ -268,7 +378,6 @@ class Object:
             if self.pos[1] not in ["top", "center", "bottom", "top-center", "bottom-center"]:
                 raise ValueError("Invalid y-axis position value", self.pos[1])
         
-        self.size = [self.size[0] - self.margin[0] - self.margin[0], self.size[1] - self.margin[1] - self.margin[1]]
         margin_x = self.margin[3] + self.margin[1]
         margin_y = self.margin[0] + self.margin[2]
         
@@ -418,7 +527,8 @@ class EventHandler:
         
         # remove events
         for name in self.to_remove["events"]:
-            del self.events[name]
+            if name in self.events:
+                del self.events[name]
             
         for name in self.to_remove["base_events"]:
             for i in self.base_events:
@@ -674,153 +784,3 @@ class TimeHandler:
                 self.intervals[key]["last_call"] = t.time()
                 self.intervals[key]["callback"]()
     
-# objectos interactivos/dinamicos
-class CheckBox(Rect):
-    def __init__(self, pos, size, screen=None, **styles):
-        if screen == None:
-            raise Exception(f"CheckBox object needs screen (ID : {self._id})")
-        
-        self.screen = screen
-        self.state = False
-        styles["stroke"] = 5
-        styles["screen"] = screen
-        super().__init__(pos, size, **styles)
-
-        # init 
-        self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self.change_state())
-        self.checkbox = Rect(size=[self.size[0]/2, self.size[1]/2], pos=[self.pos[0]+self.size[0]/4, self.pos[1]+self.size[1]/4], color=self.color)
-            
-    def change_state(self):
-        self.state = not self.state
-       
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
-        if self.state:
-            self.checkbox.draw(screen)
-        
-class InputBox(Rect):
-    def __init__(self, pos, size, screen, **styles):
-        styles["screen"] = screen
-        super().__init__(pos, size, **styles)
-        if screen == None:
-            raise Exception(f"InputBox object needs screen (ID : {self._id})")
-        self.screen = screen
-        self.textsize = styles.get("textsize", 28)
-        self.textcolor = styles.get('textcolor', "white")
-        self.textfont = styles.get("textfont", "Arial")
-        self.value = ""
-        self.overflow = styles.get("overflow", "hidden")
-        self.focus = False
-        self.stroke = styles.get("stroke", 5)
-        self.resolve_styles(screen)
-        self._eventname_unfocus = f"inputbox.{self._id}.on.mousedown._desactivate"
-        self._eventname_focus = f"inputbox.{self._id}.on.keydown._catch_char"
-        self.text = Text(text=self.value, pos=[self.pos[0]+self.size[0]/(self.textsize/2), self.pos[1]+self.size[1]/4], fontsize=self.textsize, color=self.textcolor, fontname=self.textfont)
-        # init 
-        self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self._activate())
-        self.screen.events.on("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
-        self.events = {
-            "onfocus" : lambda: self._onfocus(),
-            "unfocus" : lambda: self._unfocus()
-        } 
-        
-        
-    def _catch_char(self, key):
-        unicode, key = key[0], key[1]
-        if key == 8:
-            self.value = self.value[:-1]
-            return
-        if key == 13:
-            unicode = ""
-        
-        self.value += unicode
-        if self.overflow == "hidden":
-            self._hide_overflow()
-            
-    def _hide_overflow(self):
-        if self.text.size[0] + self.size[0]/(self.textsize/2) > self.size[0]:
-            self.value = self.value[:-1]
-            self.text.update(text=self.value)
-            return self._hide_overflow()
-        else:
-            return
-                
-    def _activate(self):
-        if self.focus == False:
-            self.focus = True    
-            self.screen.events.on("keydown", lambda: self._catch_char(self.screen.events.get_pressed_key()), self._eventname_focus)    
-            self.events["onfocus"]()    
-            self.screen.events.on("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
-
-    def _desactivate(self):
-        if self.focus:
-            self.focus = False
-        self.events["unfocus"]()
-        if "keydown" in self.screen.events.base_events:
-            self.screen.events.remove_base_event(self._eventname_focus)
-        if "mousedown" in self.screen.events.base_events:
-            self.screen.events.remove_base_event(self._eventname_unfocus)            
-        
-    def _onfocus(self):
-        self.stroke = 1
-    def _unfocus(self):
-        self.stroke = 5
-        
-    def onfocus(self, callback):
-        self.events["onfocus"] = callback
-        self.events["onfocus"]()
-        
-    def unfocus(self, callback):
-        self.events["unfocus"] = callback
-        self.events["unfocus"]()       
-
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
-        self.text.update(text=self.value)
-        self.text.draw(screen)
-        
-class Button(Circle):
-    def __init__(self, pos, radius, screen, **styles):
-      
-        styles["screen"] = screen
-        super().__init__(pos=pos, radius=radius,  **styles)
-        if screen == None:
-            raise Exception(f"Button object needs screen (ID : {self._id})")
-        self.radius = radius
-        if "text" in styles:
-            self.text = styles['text']
-            self.fontsize = styles.get("fontsize", 28)
-            self.textcolor = styles.get('textcolor', "white")
-            self.font = styles.get("font", "Arial")
-            self.text_obj = Text(text=self.text, pos=[self.pos[0], self.pos[1]], fontsize=self.fontsize, color=self.textcolor, fontname=self.font)
-            # place text in the center of the button
-            self.text_obj.pos = [self.pos[0]-self.text_obj.size[0]/2, self.pos[1]-self.text_obj.size[1]/2]
-            
-        
-        self.screen = screen
-        self._eventname = f"button.{self._id}.on.mousedown"
-        screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: None, name=self._eventname)
-        
-    def onclick(self, callback):
-        r'''
-        Calls the callback function when the button is clicked
-        '''
-        self.screen.events.add_event_listener(event="mousedown", object=self, callback=callback, name=self._eventname)
-        return self
-        
-        
-    def click(self, func):
-        r'''
-        <Decorator> Calls the callback function when the button is clicked
-        '''
-        self.onclick(func)
-        return func
-        
-    
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-        pg.draw.circle(screen.surface, self.color, self.pos, self.radius)
-        if hasattr(self, "text"):
-            self.text_obj.draw(screen)

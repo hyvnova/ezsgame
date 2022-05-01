@@ -21,7 +21,11 @@ class Screen:
         self.load_icon(icon)
         self.init()
         
-        
+    def __str__(self):
+        return "<Screen>"
+    def __repr__(self):
+        return "<Screen>"
+   
     # time decorators  ------------------------------------------------------------
     def add_interval(self, *args, **kwargs):
         r'''    
@@ -109,29 +113,6 @@ class Screen:
         return wrapper
 
     # -----------------------------------------------------------------------------
-    
-    def fill_gradient(self, start, end, direction="horizontal", complexity=120):
-        r'''
-        Fill the screen with a gradient
-        @complexity : int. Max : 1000, Min : 3, recomended : 100-150
-        @start : str. Color of the start of the gradient
-        @end : str. Color of the end of the gradient
-        @direction : str. Direction of the gradient ("horizontal", "vertical")
-        
-        -> Returns color list    
-    
-        '''
-        if complexity < 3:
-            complexity = 3
-        if complexity > 1000:
-            complexity = 1000
-            
-        div_dir = "x" if direction == "h" else "y"
-        objs, colors = gradient(self.size, self.div(div_dir, complexity), start, end, direction[0].lower())
-        for obj in objs:
-            obj.draw(self)
-            
-        return colors
         
     def delta_time(self):
         r'''
@@ -269,13 +250,16 @@ class Screen:
         color = self.color if color == None else color
         if isinstance(color, str):
             color = text_to_color(color)
-            
-        if size == [0, 0]:
-            size = self.size
-        if pos == [0, 0]:
-            pos = [0, 0]
-        pg.draw.rect(self.surface, color, pg.Rect(pos, size))
+
+            if size == [0, 0]:
+                size = self.size
+            pg.draw.rect(self.surface, color, pg.Rect(pos, size))
       
+
+        elif isinstance(color, Gradient):
+            for obj in color.objs:
+                obj.draw(self)      
+        
     def grid_div(self, cols=3, rows=3, transpose=False):
         r'''
         Returns the division of the screen into a grid -> [[x, y, w, h], [x, y, w, h], ...]

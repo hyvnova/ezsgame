@@ -202,7 +202,51 @@ class Group:
             self.objects = [objects]
         if screen != None:
             self.screen = screen
+           
+    def __len__(self):
+        return len(self.objects)
+
+    def __iter__(self):
+        self.__current_index = 0
+        return iter(self.objects)
+    
+    def __next__(self):
+        if self.__current_index >= len(self.objects):
+            raise StopIteration
+        else:
+            self.__current_index += 1
+            return self.objects[self.__current_index - 1]
+    
+    def __getitem__(self, other):
+        if isinstance(other, int):
+            return self.objects[other]
+        elif isinstance(other, slice):
+            return self.__getslice__(other)
+        else:
+            raise TypeError("Index must be an integer or slice")
+        
+    def __contains__(self, thing):
+        return thing in self.objects
+
+    def __getslice__(self, other):
+        return self.objects[other.start:other.stop:other.step]
+
+    def __delitem__(self, other):
+        if isinstance(other, int):
+            del self.objects[other]
+
+        elif isinstance(other, slice):
+            self.__delslice__(other)
             
+        else:
+             raise KeyError("Index must be an integer or slice")
+         
+    def __delslice__(self, other):
+        del self.objects[other.start:other.stop:other.step]
+         
+    def __setitem__(self, other, item):
+        self.objects[other] = item
+
     def add(self, objs):
         if type(objs) == list:
             self.objects += objs
@@ -225,6 +269,22 @@ class Group:
             del obj
                 
         del self
+
+    def map(self, func):
+        for obj in self.objects:
+            func(obj)
+
+    def __str__(self):
+        t = ", ".join([str(i) for i in self.objects])
+        return f"<Group : {t} >"
+    
+    def __repr__(self):
+        return self.__str__()
+   
+    def filter(self, func):
+        return Group([obj for obj in self.objects if func(obj)])
+        
+
 
 def _get_object(object):
     args = {k:v for k,v in object.items() if k != "type" and  k != "elements"}
@@ -358,4 +418,154 @@ class Bar(Object):
         self.fill_bar.draw(screen)
         self.bar.draw(screen)
         
+# objectos interactivos/dinamicos
+class CheckBox(Rect):
+    def __init__(self, pos, size, screen=None, **styles):
+        if screen == None:
+            raise Exception(f"CheckBox object needs screen (ID : {self._id})")
         
+        self.screen = screen
+        self.state = False
+        styles["stroke"] = 5
+        styles["screen"] = screen
+        super().__init__(pos, size, **styles)
+
+        # init 
+        self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self.change_state())
+        self.checkbox = Rect(size=[self.size[0]/2, self.size[1]/2], pos=[self.pos[0]+self.size[0]/4, self.pos[1]+self.size[1]/4], color=self.color)
+            
+    def change_state(self):
+        self.state = not self.state
+       
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
+        if self.state:
+            self.checkbox.draw(screen)
+        
+class InputBox(Rect):
+    def __init__(self, pos, size, screen, **styles):
+        styles["screen"] = screen
+        super().__init__(pos, size, **styles)
+        if screen == None:
+            raise Exception(f"InputBox object needs screen (ID : {self._id})")
+        self.screen = screen
+        self.textsize = styles.get("textsize", 28)
+        self.textcolor = styles.get('textcolor', "white")
+        self.textfont = styles.get("textfont", "Arial")
+        self.value = ""
+        self.overflow = styles.get("overflow", "hidden")
+        self.focus = False
+        self.stroke = styles.get("stroke", 5)
+        self.resolve_styles(screen)
+        self._eventname_unfocus = f"inputbox.{self._id}.on.mousedown._desactivate"
+        self._eventname_focus = f"inputbox.{self._id}.on.keydown._catch_char"
+        self.text = Text(text=self.value, pos=[self.pos[0]+self.size[0]/(self.textsize/2), self.pos[1]+self.size[1]/4], fontsize=self.textsize, color=self.textcolor, fontname=self.textfont)
+        # init 
+        self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self._activate())
+        self.screen.events.on("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
+        self.events = {
+            "onfocus" : lambda: self._onfocus(),
+            "unfocus" : lambda: self._unfocus()
+        } 
+        
+        
+    def _catch_char(self, key):
+        unicode, key = key[0], key[1]
+        if key == 8:
+            self.value = self.value[:-1]
+            return
+        if key == 13:
+            unicode = ""
+        
+        self.value += unicode
+        if self.overflow == "hidden":
+            self._hide_overflow()
+            
+    def _hide_overflow(self):
+        if self.text.size[0] + self.size[0]/(self.textsize/2) > self.size[0]:
+            self.value = self.value[:-1]
+            self.text.update(text=self.value)
+            return self._hide_overflow()
+        else:
+            return
+                
+    def _activate(self):
+        if self.focus == False:
+            self.focus = True    
+            self.screen.events.on("keydown", lambda: self._catch_char(self.screen.events.get_pressed_key()), self._eventname_focus)    
+            self.events["onfocus"]()    
+            self.screen.events.on("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
+
+    def _desactivate(self):
+        if self.focus:
+            self.focus = False
+        self.events["unfocus"]()
+        if "keydown" in self.screen.events.base_events:
+            self.screen.events.remove_base_event(self._eventname_focus)
+        if "mousedown" in self.screen.events.base_events:
+            self.screen.events.remove_base_event(self._eventname_unfocus)            
+        
+    def _onfocus(self):
+        self.stroke = 1
+    def _unfocus(self):
+        self.stroke = 5
+        
+    def onfocus(self, callback):
+        self.events["onfocus"] = callback
+        self.events["onfocus"]()
+        
+    def unfocus(self, callback):
+        self.events["unfocus"] = callback
+        self.events["unfocus"]()       
+
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
+        self.text.update(text=self.value)
+        self.text.draw(screen)
+        
+class Button(Circle):
+    def __init__(self, pos, radius, screen, **styles):
+      
+        styles["screen"] = screen
+        super().__init__(pos=pos, radius=radius,  **styles)
+        if screen == None:
+            raise Exception(f"Button object needs screen (ID : {self._id})")
+        self.radius = radius
+        if "text" in styles:
+            self.text = styles['text']
+            self.fontsize = styles.get("fontsize", 28)
+            self.textcolor = styles.get('textcolor', "white")
+            self.font = styles.get("font", "Arial")
+            
+        self.screen = screen
+        self._eventname = f"button.{self._id}.on.mousedown"
+        screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: None, name=self._eventname)
+        
+    def _gen_text_obj(self):
+        self.text_obj = Text(text=self.text, pos=[self.pos[0], self.pos[1]], fontsize=self.fontsize, color=self.textcolor, fontname=self.font)
+        self.text_obj.pos = [self.pos[0]-self.text_obj.size[0]/2, self.pos[1]-self.text_obj.size[1]/2]
+
+    def onclick(self, callback):
+        r'''
+        Calls the callback function when the button is clicked
+        '''
+        self.screen.events.add_event_listener(event="mousedown", object=self, callback=callback, name=self._eventname)
+        return self
+        
+        
+    def click(self, func):
+        r'''
+        <Decorator> Calls the callback function when the button is clicked
+        '''
+        self.onclick(func)
+        return func
+        
+    
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        pg.draw.circle(screen.surface, self.color, self.pos, self.radius)
+        if hasattr(self, "text"):
+            self._gen_text_obj()
+            self.text_obj.draw(screen)

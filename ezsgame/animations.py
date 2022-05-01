@@ -41,7 +41,7 @@ class Slide(Animation):
     @param step: step size
     [If objet is not at start position, it will be moved to start position]
     '''
-    def __init__(self, screen, object, start="current", end=["center", "center"], time=50, step=1, loop=False, done_callback=None):
+    def __init__(self, screen, object, start="current", end=["center", "center"], time=10, step=1, loop=False, done_callback=None):
         super().__init__(screen, object, start, end, time, step, loop, done_callback)
         self.screen.time.add(name=self.name, time=self.time, callback=self.update)        
 

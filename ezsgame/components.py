@@ -3,30 +3,110 @@ from ezsgame.primitive_objects import PRect
 class ComponentGroup:
     def __init__(self, object, components=None):
         self.object = object
-        self.components = []
+        self.components = {}
         
         if components:
             self.add(*components)
-     
-    def add(self, *components):
-        for comp in components:
-            if comp not in self.components:
-                self.components.append(comp)
-                comp(self.object)
-
-
+    
     def __str__(self):
-        t = " ,".join([comp.__str__() for comp in self.components])
-        return f"<Component Group : [{t}]>"
+        t = ", ".join([*map(str,self.components.values())])
+        return f"<Component Group : [{t}] >"
         
     def __repr__(self):
         return self.__str__()
-   
-    def remove(self, component):
-        comp =  self.components[self.components.index(component)]
-        comp.remove()
-            
 
+    def clear(self):
+        for comp in self.components:
+            self.remove(comp)
+           
+    def remove(self, *components):
+        for component in components:
+            comp = self.components.get(component, None)
+            if comp:
+                del self.components[component]
+                comp.remove()
+                
+    def add(self, *components):
+        for comp in components:
+            if comp not in self.components:
+                self.components[comp] = comp(self.object)
+                
+    def __contains__(self, thing):
+        return thing in self.components
+
+    def toggle(self, component):
+        if component in self.components:
+            self.remove(component)
+            return False
+        else:
+            self.add(component)
+            return True
+
+    def __getitem__(self, other):
+        if isinstance(other, int):
+            return self.components[other] 
+        elif isinstance(other, slice):
+            return self.__getslice__(other)
+    
+        else:
+            if other in self.components:
+                return self.components[other]
+            else:
+                raise KeyError(f"Cannot get Component <{other}>  because not found in {self}")
+
+    def __delitem__(self, other):
+        if isinstance(other, int):
+            del self.components[list(self.components.keys())[other]]
+
+        elif isinstance(other, slice):
+            self.__delslice__(other)
+            
+        else:
+            if other in self.components:
+                self.remove(other)
+            else:
+                raise KeyError(f"Cannot delete Component <{other}>  because not found in {self}")
+        
+    def __getslice__(self, other):
+       return [*self.components.values()][other.start:other.stop:other.step]
+            
+    def __get_components_keys(self, other):
+       return [*self.components.keys()][other.start:other.stop:other.step]
+   
+
+    def __delslice__(self, other):
+        for comp in self.__get_components_keys(other):
+            self.remove(comp)
+            
+    def __get_key_by_index(self, index):
+        return list(self.components.keys())[index]
+            
+    def __setitem__(self, other, item):
+        if item not in self.components:
+            try:
+                comp = self.__get_key_by_index(other)
+                self.remove(comp)
+                self.add(item)
+            except:
+                raise TypeError("ComponentGroup can only contain Components")
+                
+        else:
+            del self.components[other]
+        
+    def __len__(self):
+        return len(self.components)
+
+    def __iter__(self):
+        self.__current_index = 0
+        return iter(self.components.values())
+
+    def __next__(self):
+        if self.__current_index >= len(self.components):
+            raise StopIteration
+        else:
+            self.__current_index += 1
+            return self.components.values()[self.__current_index - 1]
+                  
 class Component:
     def __init__(self):
         self.name = self.__class__.__name__
@@ -37,8 +117,14 @@ class Component:
     def __repr__(self):
         return self.__str__()
 
+    def remove(self):
+       del self
 
 class Resizable (Component):
+    def __call__(self, object):
+        self.__init__(object)
+        
+    
     def __init__(self, object):
         if "screen" not in object.__dict__:
             raise Exception(f"Resizable components requires object (ID : {object._id}) to have screen attribute")
@@ -50,10 +136,10 @@ class Resizable (Component):
 
         self.focus = False
 
-        self._eventname_unfocus = "ResizableComponent.on.mousedown._unfocus.{self.object._id}"
-        self._eventname_focus = "ResizableComponent.on.keydown._focus.{self.object._id}"
-        self._eventname_resize = "ResizableComponent.on.keydown._resize.{self.object._id}"
-        self._eventname_event_listener = "ResizableComponent.event_listener.{self.object._id}"
+        self._eventname_unfocus = f"ResizableComponent.on.mousedown._unfocus.{self.object._id}"
+        self._eventname_focus = f"ResizableComponent.on.keydown._focus.{self.object._id}"
+        self._eventname_resize = f"ResizableComponent.on.keydown._resize.{self.object._id}"
+        self._eventname_event_listener = f"ResizableComponent.event_listener.{self.object._id}"
         
         self.screen.events.add_event_listener(event="mousedown", object=self.object, callback=lambda: self._activate(),name=self._eventname_event_listener)
         self.screen.events.on("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
@@ -70,7 +156,6 @@ class Resizable (Component):
         size = [self.object.size[0]*1.5, self.object.size[1]*1.5]
         pos = [self.object.pos[0] - size[0]//2 + self.object.size[0]//2, self.object.pos[1] - size[1]//2 + self.object.size[1]//2]
         self.resize_obj = PRect(size=size, pos=pos, screen=self.screen, color="red", stroke=2)
-        
         
     def _resize(self):
         start = self.object.pos.copy()
@@ -110,9 +195,12 @@ class Resizable (Component):
         self.object.draw = self._object_draw_func
         self._desactivate()
         self.screen.events.remove(self._eventname_event_listener)
+        del self
 
-
-class Drageable(Component):
+class Draggable(Component):
+    def __call__(self, object):
+        self.__init__(object)
+    
     def __init__(self, object):
         if "screen" not in object.__dict__:
             raise Exception(f"Resizable components requires object (ID : {object._id}) to have screen attribute")
@@ -124,10 +212,10 @@ class Drageable(Component):
 
         self.focus = False
 
-        self._eventname_unfocus = "DrageableComponent.on.mousedown._unfocus.{self.object._id}"
-        self._eventname_focus = "DrageableComponent.on.keydown._focus.{self.object._id}"
-        self._eventname_move = "DrageableComponent.on.keydown._move.{self.object._id}"
-        self._eventname_event_listener = "DrageableComponent.event_listener.{self.object._id}"
+        self._eventname_unfocus = f"DrageableComponent.on.mousedown._unfocus.{self.object._id}"
+        self._eventname_focus = f"DrageableComponent.on.keydown._focus.{self.object._id}"
+        self._eventname_move = f"DrageableComponent.on.keydown._move.{self.object._id}"
+        self._eventname_event_listener = f"DrageableComponent.event_listener.{self.object._id}"
         
         self.screen.events.on("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
         self.screen.events.add_event_listener(event="mousedown", object=self.object, callback=lambda: self._activate(),name=self._eventname_event_listener)
@@ -139,20 +227,17 @@ class Drageable(Component):
         
         self.object.draw = self.draw(self.object.draw)
                                 
-
     def gen_resize_obj(self):
         size = [self.object.size[0]*1.5, self.object.size[1]*1.5]
         pos = [self.object.pos[0] - size[0]//2 + self.object.size[0]//2, self.object.pos[1] - size[1]//2 + self.object.size[1]//2]
         self.resize_obj = PRect(size=size, pos=pos, screen=self.screen, color="red", stroke=1)
-        
-        
+              
     def _move(self):
         pos = self.screen.mouse_pos()
         self.object.pos[0] = pos[0] - self.object.size[0] // 2 
         self.object.pos[1] = pos[1] - self.object.size[1] // 2 
 
         self.gen_resize_obj()
-
 
     def _activate(self):
         if self.focus == False:
@@ -172,9 +257,7 @@ class Drageable(Component):
             self.screen.events.remove_base_event(self._eventname_focus)
         if "mousedown" in self.screen.events.base_events:
             self.screen.events.remove_base_event(self._eventname_unfocus)  
-            
-
-    
+                
     def draw(self, func):
         def wrapper(*args, **kwargs):
             if self.focus:
@@ -188,3 +271,11 @@ class Drageable(Component):
         self.object.draw = self._object_draw_func
         self._desactivate()
         self.screen.events.remove(self._eventname_event_listener)
+        self.screen.time.remove(self._eventname_move)
+        del self
+
+
+class TestComponent(Component):
+    def __init__(self, object):
+        super().__init__()
+        self.object = object
