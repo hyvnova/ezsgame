@@ -67,7 +67,7 @@ while True:
 
 # Documentacion (Aun no completa)
 ## Pagina : [>> Ir a la documentacion](https://ezsgame-doc.ezsnova.repl.co/)
-## FigJam : [>> Ir al Diagrama](https://www.figma.com/file/vHhSPgAOwStoZT8OkZZHM3/pypage-%3E-Tree?node-id=0%3A1)
+## FigJam : [>> Ir al Diagrama](https://www.figma.com/file/EpJeUfdcxbwZSO5c4lr6rT/ezsgame-doc?node-id=1%3A2)
 
 
 #
