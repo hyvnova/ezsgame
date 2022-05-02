@@ -19,7 +19,7 @@ pip install -r requirements.txt
 - [ 4 ] Creando Archivos, los archivos que usaran ezsgame deben comenzar con la siguiente linea para importar ezsgame:
 
 ```python
-from ezsgame.main import *
+from ezsgame.all import *
 
 # Tu codigo aqui
 
