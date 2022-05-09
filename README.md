@@ -75,9 +75,9 @@ while True:
 # Convicciones 
 - ## archivos :
     - ### Los archivos que usan ezsgame que son el archivo "principal", suelen llamarse:
-        ### demo (Recomendado)
-        ### main
-        ### game
-        ### app
+        - #### demo (Recomendado)
+        - #### main
+        - #### game
+        - #### app
 
 
