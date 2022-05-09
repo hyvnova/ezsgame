@@ -1,5 +1,5 @@
 import pygame as pg, random, time as t
-from ezsgame.objects import Size, text_to_color, Gradient, random_color, Object, Unit
+from ezsgame.objects import Size, text_to_color, Gradient, random_color, Object, PRect
 from functools import wraps
 import concurrent.futures as futures
 
@@ -343,7 +343,7 @@ class IScreen(Screen):
         c = 0
         for i in self.grid:
             color = colors[c]
-            Unit(pos=i[:2], size=i[2:], color=color).draw(self)
+            PRect(pos=i[:2], size=i[2:], color=color).draw(self)
             c += 1
    
         return self
@@ -378,7 +378,7 @@ class IScreen(Screen):
                 for obj in objects:
                     self.objects.append({"object": obj, "z-index":1})
                     
-            elif isinstance(objects, Object) or isinstance(objects, Unit):
+            elif isinstance(objects, Object) or isinstance(objects, PRect):
                 self.objects.append({"object": objects, "z-index":1})
 
             else:
