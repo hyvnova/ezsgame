@@ -46,7 +46,7 @@ from ezsgame.all import *
 screen = Screen(size=(640, 480), title="Mi App")
 
 # Declarar un objeto
-mi_rect =  Rect(pos=["center", "center"], size=(100, 100), color="red")
+mi_rect =  Rect(pos=["center", "center"], size=(100, 100), color="red", screen=screen)
 
 # Bucle principal
 while True:
@@ -57,7 +57,7 @@ while True:
     screen.fill("black")
 
     # Dibujar el objeto
-    mi_rect.draw(screen)
+    mi_rect.draw()
 
     # Actualizar la pantalla
     screen.update()
