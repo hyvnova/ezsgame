@@ -1,14 +1,17 @@
 from ezsgame.all import *
 
-screen = Screen(show_fps=True)
+screen = Screen(title="Sample Demo")
 
-rect = Rect(pos=["center", "center"], size=[50,50], components=[Drageable], screen=screen)
-   
+obj = Rect(pos=[0,0], size=[50,50], screen=screen, components=[Draggable])
+
+gradient = Gradient(screen, "blue", "pink", complexity=70)
+
 while True:
     screen.check_events()
-    screen.fill("black")
-   
-    rect.draw(screen)
+    screen.fill(gradient)
     
+    
+    obj.draw()
+    
+
     screen.update()
- 

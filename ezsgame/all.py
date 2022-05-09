@@ -1,4 +1,5 @@
-from ezsgame.main import *
+from ezsgame.base import *
+from ezsgame.iobjects import *
 from ezsgame.objects import *
 from ezsgame.physics import *
 from ezsgame.sounds import *

@@ -1,5 +1,6 @@
-import pygame as pg, json
-from ezsgame.premade import get_id
+import json
+from ezsgame.global_data import get_id
+from ezsgame.objects import Pos
 
 class Animation:
     def __init__(self, screen, object, start, end, time=50, step=1, loop=False, done_callback=None):
@@ -9,8 +10,8 @@ class Animation:
         self.done = False
         self.done_callback = done_callback
         self.start = start
-        self.loop = loop
         self.end = end
+        self.loop = loop
         self.time = time
         self.step = step    
         self.corrected = False
@@ -18,19 +19,19 @@ class Animation:
         self.resolve()
 
     def resolve(self):
-        obj_pos = self.object.get_pos(self.screen)
+        obj_pos = self.object.get_pos(self.screen)    
         if self.start == "current":
             self.start = obj_pos.copy()
         if self.end == "current":
             self.end = obj_pos.copy()      
-        if isinstance(self.start, list) or isinstance(self.start, tuple):
+        else:
             self.object.pos = self.start.copy()
             self.start = self.object.get_pos(self.screen)
             
             self.object.pos = self.end.copy()
             self.end = self.object.get_pos(self.screen)
-        
-            self.object.pos = obj_pos.copy()
+            
+            self.object.pos(obj_pos)
         
 class Slide(Animation):
     f'''
@@ -41,44 +42,88 @@ class Slide(Animation):
     @param step: step size
     [If objet is not at start position, it will be moved to start position]
     '''
-    def __init__(self, screen, object, start="current", end=["center", "center"], time=10, step=1, loop=False, done_callback=None):
+    def __init__(self, screen, object, start="current", end=["center", "center"], time=30, step=5, loop=False, done_callback=None):
         super().__init__(screen, object, start, end, time, step, loop, done_callback)
         self.screen.time.add(name=self.name, time=self.time, callback=self.update)        
 
     def update(self):    
         if self.done:
             return
+
+        # object pos ref
+        pos = self.object.pos.ref()
          
-        # start
+        # going start
         if self.corrected == False:
-            # go to start position
-            if self.object.pos != self.start:
-                if self.object.pos[0] > self.start[0]:
-                    self.object.pos[0] -= self.step
-                elif self.object.pos[0] < self.start[0]:
-                    self.object.pos[0] += self.step                
+
+            # going  to start position if object in different position
+            if pos != self.start:
+
+                start = self.start.ref()
+
+                # X axis
                 
-                if self.object.pos[1] > self.start[1]:
-                    self.object.pos[1] -= self.step
-                elif self.object.pos[1] < self.start[1]:
-                    self.object.pos[1] += self.step
+                #  going left or right
+                if (pos.x > start.x) and (self.step > 0):
+                    self.step *= -1
+
+                # if adding step passes start point x
+                if (pos.x + self.step < start.x):
+                    pos.x = start.x
+                    
+                else:
+                    pos.x += self.step
+     
+                # Y axis
+
+                # going up or down
+                if (pos.y < start.y) and (self.step > 0):
+                    self.step *= -1
+
+                # if adding step passes start point y
+                if (pos.y + self.step < start.y):
+                    pos.y  = start.y
+
+                else:
+                    pos.y += self.step
                             
+                # Exit function
                 return True
             else:
                 self.corrected = True
                 
-        # end
+        # going end
         if self.object.pos != self.end:
-            if self.object.pos[0] > self.end[0]:
-                self.object.pos[0] -= self.step
-            elif self.object.pos[0] < self.end[0]:
-                self.object.pos[0] += self.step
 
-            if self.object.pos[1] > self.end[1]:
-                self.object.pos[1] -= self.step
-            elif self.object.pos[1] < self.end[1]:
-                self.object.pos[1] += self.step
-                
+            end = self.end.ref()
+
+            # X axis
+
+            #  going left or right
+            if (pos.x < end.x) and (self.step < 0):
+                self.step *= -1
+
+            # if adding step passes start point x
+            if (pos.x + self.step > end.x):
+                pos.x = end.x
+                    
+            else:
+                pos.x += self.step
+     
+            # Y axis
+            
+            # going up or down
+            if (pos.y > end.y) and (self.step < 0):
+                self.step *= -1
+
+            # if adding step passes start point y
+            if (pos.y + self.step > end.y):
+                pos.y  = end.y
+
+            else:
+                pos.y += self.step
+
+            # Exit funcionn
             return True
          
         else:

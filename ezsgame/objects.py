@@ -1,571 +1,550 @@
-import pygame as pg, random
-from ezsgame.premade import *
-from pathfinding.core.diagonal_movement import DiagonalMovement
-from pathfinding.core import grid
-from pathfinding.finder.a_star import AStarFinder
-
-pg.init()
-
-class IObject(Object):
-    def __init__(self,  pos, size, screen, **styles):
-        super().__init__(pos, size, **styles)
-        if screen == None:
-            raise Exception(f"IObject object needs screen (ID : {self._id})")
-        self.screen = screen
-        self.objects = Group()
-        self._clicked = False
-        
-    @property
-    def clicked(self):
-        return self._clicked
-    @clicked.setter
-    def clicked(self, value):
-        self._clicked = value
-        
-    def _process_click(self, func):
-        def wrapper():
-            self.clicked = True
-            func()
-            return func
-        return wrapper
+import pygame as pg, json, re, copy, random
+from colour import Color
+from ezsgame.components import ComponentGroup
+from ezsgame.global_data import get_id
+from ezsgame.primitive_objects import PRect
 
 
-    def click(self, func):
-         self.screen.events.add_event_listener("click", self, self._process_click(func))                
-         return func
-    
-    def hover(self, func):
-        self.screen.events.add_event_listener("hover", self, func)
-        return func
+def random_color(n=1):
+    """
+    Return a random color if n = 1 -> (135, 6, 233)
+    If n is bigger returns a list with random colors -> [(234, 55, 233), ...] 
+    """
+    return [random_color() for i in range(n)] if n > 1 else (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+       
+adapt_rgb = lambda rgb: tuple(map(lambda i: i*255, rgb))
+pure_rgb = lambda color: tuple(map(lambda i: i/255, color))
 
-    def unhover(self, func):
-        self.screen.events.add_event_listener("unhover", self, func)
-        return func
-    
-    def _process_unclick(self, func):
-        def wrapper():
-            if self.clicked:
-                self.clicked = False
-                func()
-                return func
-        return wrapper
-    
-    def unclick(self, func):
-        func = self._process_unclick(func)
-        self.screen.events.on("mouseup", func)
-        return func
-    
-    def add(self, objects):
-        if type(objects) == list:
-            for object in objects:
-                object.pos = [object.pos[0] + self.pos[0], object.pos[1] + self.pos[1]]
-                self.objects.add(object)
-        else:
-            objects.pos = [objects.pos[0] + self.pos[0], objects.pos[1] + self.pos[1]]
-            self.objects.add(objects)            
-            
-    def remove(self, object):
-        self.objects.remove(object)
-
-class IRect(IObject):
-    def __init__(self, pos, size, screen, **styles):
-        super().__init__(pos, size, screen, **styles)
-        
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
-
-class ICircle(IObject, Circle):
-    def __init__(self, pos, radius, screen, **styles):
-        size = [radius*2, radius*2]
-        IObject.__init__(self, pos, size, screen, **styles)
-        Circle.__init__(self, pos, radius, **styles)
-        
-class Grid(Object):
-    def __init__(self, pos, size, grid_size, screen, **styles):
-        super().__init__(pos, size, **styles)
-        self.box_color = styles.get("box_color", "white")
-        self.screen = screen
-        self.grid_size = grid_size
-        self.matrix = self.grid_div(*self.grid_size) 
-        self.grid = self.grid_split(self.matrix, self.grid_size[1])
-        self.colors_grid = [[obj.color for obj in row] for row in self.grid]
-          
-    def div(self, axis, q):
+def text_to_color(color):
         r'''
-        Return list of division points of the screen -> [[x1, x2], [x1, x2], ...]
+        Convert a text color to rgb; "white" -> (255, 255, 255)
+        - color need to exist in Color class
+        @param color: color name. Example: "red"
         '''
-        divs = []
-        if axis == "x":
-            # should append [start, end] for each division
-            for i in range(q):
-                divs.append([round(i * self.size[0] / q, 1), round((i + 1) * self.size[0] / q, 1)])
-        elif axis == "y":
-            # should append [start, end] for each division
-            for i in range(q):
-                divs.append([round(i * self.size[1] / q, 1), round((i + 1) * self.size[1] / q, 1)])
+        if isinstance(color, str):
+            color = Color(color)
+            return adapt_rgb(color.rgb)
+        else:
+            return color
+
+def _check_color(color):
+    if isinstance(color, str):
+            return Color(color)
+   
+    elif not (isinstance(color, tuple) or isinstance(color, list)):
+        raise ValueError("Color must be a tuple or a list, or color name: ", color)
+
+    else:
+        return Color(rgb=pure_rgb(color))
+       
+def gen_gradient(size, grid, start="green", end="blue", direction="v"):
+    r'''
+    Draw a gradient from start to end.
+    - screen: screen to draw on
+    - start: start color
+    - end: end color
+    - complexity: how many times to draw the gradient
+    '''
+    if direction not in ("v", "h"):
+        raise ValueError("Direction must be either 'vertical' or 'horizontal'")
+    
+    start = _check_color(start)
+    end = _check_color(end)
             
-        return divs
+    colors = tuple(start.range_to(end,len(grid)))
+    objs = []
+    for i in range(len(grid)):
+        if direction == "h":
+            pos = [grid[i][0], 0]
+            size = [grid[i][1], size[1]]
+        else:
+            pos = [0, grid[i][0]]
+            size = [size[0], grid[i][1]]
+
+        objs.append(PRect(pos=pos, size=size, color=adapt_rgb(colors[i].rgb)))
+                    
+    return objs, colors
         
-    def grid_div(self, cols=3, rows=3, transpose=False):
-        r'''
-        Returns the division of the screen into a grid -> [[x, y, w, h], [x, y, w, h], ...]
-        '''
-        grid = []
-        divs_x = self.div("x", cols)
-        box_width = divs_x[-1][0] - divs_x[-2][0]
-        divs_y = self.div("y", rows)
-        box_height = divs_y[-1][0] - divs_y[-2][0]
-        self.grid_size = [rows, cols]
-        
-        for i in range(cols):
-            for j in range(rows):
-                if transpose:
-                    grid.append([divs_x[j][0], divs_y[i][0], box_width, box_height])
-                else:
-                    grid.append([divs_x[i][0], divs_y[j][0], box_width, box_height])
-        self.grid_space = len(grid)
-        self.grid_box_size = [box_width, box_height]
-        return grid
-    
-    def grid_split(self, matrix, grid_size):
-        r'''
-        Splits a matrix into a grid : [1,2,3,4,5,6,7,8,9] -> [[Unit,Unit,Unit], [Unit,Unit,Unit], [Unit,Unit,Unit]]
-        '''
-        if isinstance(grid_size, list) or isinstance(grid_size, tuple):
-            grid_size = grid_size[1]
-        
-        grid = [matrix[i:i+grid_size] for i in range(0, len(matrix), grid_size)]
-        return [[Unit(pos=i[:2], size=i[2:], color=self.box_color)  for i in row] for row in grid]
-    
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-        
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
-        for row in self.grid:
-            for obj in row:
-                obj.draw(screen)
+class Gradient:
+    def __init__(self, screen, start, end, direction="horizontal", complexity=120):
+        if complexity < 3:
+            complexity = 3
+        if complexity > 1000:
+            complexity = 1000
             
-    def highlight_current(self, color="red"):
-        for i in range(len(self.colors_grid)):
-            for j in range(len(self.colors_grid[i])):
-                if self.colors_grid[i][j] != color:
-                    self.grid[i][j].color = self.colors_grid[i][j]
+        div_dir = "x" if direction == "h" else "y"    
+        self.objs, self.colors = gen_gradient(screen.size, screen.div(div_dir, complexity), start, end, direction[0].lower())
         
-        mouse_pos = self.screen.mouse_pos()
-        pos = int(mouse_pos[0] // self.grid_box_size[0]), int(mouse_pos[1] // self.grid_box_size[1])
-        # select the current box
-        
-        if pos[0] < self.grid_size[0] and pos[1] < self.grid_size[1]:
-            self.grid[pos[0]][pos[1]].color = color
+    def __str__(self):
+        return "<Gradient>"
+    def __repr__(self):
+        return "<Gradient>"
 
-    def get_path(self, start,end):
-        int_grid = [[1 for x in j] for j in self.grid]
-    
-        _grid = grid.Grid(matrix=int_grid)
-        start = _grid.node(*start)
-        end = _grid.node(*end)
 
-        finder = AStarFinder(diagonal_movement=DiagonalMovement.always)
-
-        path, _ = finder.find_path(start=start, end=end, grid=_grid)
-        
-        return path
-
-    def highlight_path(self, start, end, color="red"):
-        if  0 > (start[0] or start[1]) or start[1] > self.grid_size[1] or start[0] > self.grid_size[0]:
-            raise Exception("Start position is out of bounds")
-        if 0 > (end[0] or end[1]) or end[1] > self.grid_size[1] or end[0] > self.grid_size[0]:
-            raise Exception("End position is out of bounds")
-        if start == end:
-            raise Exception("Start and end positions must be different")
-        
-        path = self.get_path(start, end)
-        for i in range(len(path)):
-            self.grid[path[i][0]][path[i][1]].color = color
-    
-
-    def get_current(self):
-        mouse_pos = self.screen.mouse_pos()
-        pos = int(mouse_pos[0] // self.grid_box_size[0]), int(mouse_pos[1] // self.grid_box_size[1])
-        # select the current box
-        if pos[0] < self.grid_size[0] and pos[1] < self.grid_size[1]:
-            return self.grid[pos[0]][pos[1]]
-        else:
-            return None
-
-class Group:
-    def __init__(self, objects=[], screen=None):
-        if isinstance(objects, list):
-            self.objects = objects
-        else:
-            self.objects = [objects]
-        if screen != None:
-            self.screen = screen
-           
-    def __len__(self):
-        return len(self.objects)
-
-    def __iter__(self):
-        self.__current_index = 0
-        return iter(self.objects)
-    
-    def __next__(self):
-        if self.__current_index >= len(self.objects):
-            raise StopIteration
-        else:
-            self.__current_index += 1
-            return self.objects[self.__current_index - 1]
-    
-    def __getitem__(self, other):
-        if isinstance(other, int):
-            return self.objects[other]
-        elif isinstance(other, slice):
-            return self.__getslice__(other)
-        else:
-            raise TypeError("Index must be an integer or slice")
-        
-    def __contains__(self, thing):
-        return thing in self.objects
-
-    def __getslice__(self, other):
-        return self.objects[other.start:other.stop:other.step]
-
-    def __delitem__(self, other):
-        if isinstance(other, int):
-            del self.objects[other]
-
-        elif isinstance(other, slice):
-            self.__delslice__(other)
+percent = lambda n, total: (n * total)/100
+_to_percent = lambda n, total: percent(float(n.replace("%", "")), total) if isinstance(n, str) and re.match(r"[0-9]+%$", n) else n
+ 
+class Vector2:
+    def __init__(self, a=0, b=0):
+        self.__call__(a,b)
+   
+    def __call__(self, a=0, b=0):
+        if isinstance(a, list) or isinstance(a, tuple) or isinstance(a, Vector2):
+            self._a = a[0]
+            self._b = a[1]
             
         else:
-             raise KeyError("Index must be an integer or slice")
-         
-    def __delslice__(self, other):
-        del self.objects[other.start:other.stop:other.step]
-         
-    def __setitem__(self, other, item):
-        self.objects[other] = item
-
-    def add(self, objs):
-        if type(objs) == list:
-            self.objects += objs
-        else:
-            self.objects.append(objs)    
-
-    def remove(self, obj):
-        self.objects.remove(obj)
-    
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-        if screen == None:
-            raise Exception("Screen is not set, need screen to draw")
-        
-        for obj in self.objects:
-            obj.draw(screen)
-
-    def __del__(self):
-        for obj in self.objects:
-            del obj
-                
-        del self
-
-    def map(self, func):
-        for obj in self.objects:
-            func(obj)
+            self._a = a
+            self._b = b
+            
 
     def __str__(self):
-        t = ", ".join([str(i) for i in self.objects])
-        return f"<Group : {t} >"
-    
+        return f"<Vector2 : {self._a}, {self._b}>"
+
     def __repr__(self):
         return self.__str__()
-   
-    def filter(self, func):
-        return Group([obj for obj in self.objects if func(obj)])
-        
-
-
-def _get_object(object):
-    args = {k:v for k,v in object.items() if k != "type" and  k != "elements"}
-    try:
-        obj = eval(object["type"].capitalize())(**args)
-    except Exception as e:
-        raise Exception("Could not load object: " + str(e))
-                
-    return obj
-
-def _get_object_child(parent, object, childs=[]):
-    for key,value in object["elements"].items():
-        if "pos" in value:
-            value["pos"] = [value["pos"][0] + parent.pos[0], value["pos"][1] + parent.pos[1]]
-        
-        parent = _get_object(value)
-        childs.append(parent)
-   
-    for value in object["elements"].values():
-        if "elements" in value:   
-            _get_object_child(parent, value, childs)
     
-    return childs
-    
-def load_custom_object(object):
-    r'''
-    Load a custom object from a object of json file
-    '''
-    obj = Group(_get_object(object))   
-    obj.add(_get_object_child(obj.objects[0], object))
-    return obj
+    def __iter__(self):
+        self.__current_index = 0
+        return iter([self._a, self._b])
 
-class RangeBar(Object):
-    def __init__(self, pos, size, min, max, value, screen, **styles):
-        for item in (min, max, value):
-            if item < 0 or item > 100:
-                raise ValueError(f"{item} must be between 0 and 100, at RangeBar object")
-        
-        super().__init__(pos=pos, size=size, screen=screen, **styles)
-        
-        radius = styles.get("radius", self.size[1] / 2.5 - self.size[1]//8)
-        wheel_color = styles.get("wheel_color", "white")
-        
-        self.wheel = ICircle(pos=[0,0], radius=radius, color=wheel_color, screen=self.screen)
-        self.bar = Object(pos=pos, size=size, **styles)
-        
-        self.min = (min  * (self.pos[0]+ self.size[0])) / 100 if min != 0 else self.pos[0]
-        self.max = (max * (self.pos[0]+ self.size[0])) / 100
-        self.value = (value * (self.min + self.max)) / 100        
-        self._evname = f"RangeBar_{self._id}_update_value_[{random.randint(0,255)}]"
-        
-        @self.wheel.click()    
-        def wheel_click():     
-            self._evname = f"RangeBar_{self._id}_update_value_[{random.randint(0,255)}]"
-            self.screen.time.add(time=10, callback=lambda: self._update_value(), name=self._evname) 
-
-        @self.wheel.unclick()
-        def wheel_unclick():
-            if self.wheel.clicked:
-                self.screen.time.remove(name=self._evname)
-                self.wheel.color = "white"
-
-    def _update_value(self):
-        mouse_pos = self.screen.mouse_pos()[0]
- 
-        if mouse_pos + self.wheel.radius < self.min:
-            self.value = self.min 
-        
-        elif mouse_pos + self.wheel.size[0] > self.max:
-            self.value = self.max
-            
+    def __next__(self):
+        if self.__current_index == 0:
+            self.__current_index += 1
+            return self._a
+        elif self.__current_index == 1:
+            self.__current_index += 1
+            return self._b
         else:
-            self.value = mouse_pos 
-            
-        self.wheel.color = "red"
-
-    def _calculate_wheel_pos(self):
-        x = self.value
-        if x == self.min:
-            x = self.min - self.wheel.radius /2 
-            
-        elif x == self.max: 
-            x = self.max + self.wheel.radius /2
-                        
-        self.wheel.pos = [x, self.pos[1]+self.size[1]//2]
-
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-
-        self._calculate_wheel_pos()
-        Rect(pos=[self.pos[0], self.pos[1]+self.size[1]/2], size=[self.size[0]+self.wheel.radius, self.size[1]//8], color=self.color, screen=self.screen).draw()
-        self.wheel.draw(screen)
-    
-    def get_percent(self):
-        if self.value == self.min:
-            return 0
-        elif self.value == self.max:
-            return 100
+            raise StopIteration
         
-        return round( (self.value / ( (self.min + self.wheel.radius) + (self.max - self.wheel.radius) ) ) * 100, 4)
-
-class Bar(Object):
-    def __init__(self, pos, size, min, max, value, screen, **styles):
-        super().__init__(pos=pos, size=size, screen=screen, **styles)
-        
-        self.min = min
-        self.max = max
-        self.value = value
-        
-        self.fill_color = styles.get("fill_color", "white")
-        stroke = styles.get("stroke", 2)
-        
-        self.bar = Rect(pos=self.pos, size=size, color=self.color, screen=self.screen, stroke=stroke)
-        self.fill_bar = Rect(pos=self.pos, size=[0, self.size[1]], color=self.fill_color, screen=self.screen)
-        
-    def _update_value(self):
-        if self.value < self.min:
-            self.value = self.min
-        elif self.value > self.max:
-            self.value = self.max
-            
-        p = (self.value * 100)/ self.max
-            
-        self.fill_bar.size = [(p / 100) * self.size[0], self.size[1]]
-
-
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-        
-        self._update_value()
-        self.fill_bar.draw(screen)
-        self.bar.draw(screen)
-        
-# objectos interactivos/dinamicos
-class CheckBox(Rect):
-    def __init__(self, pos, size, screen=None, **styles):
-        if screen == None:
-            raise Exception(f"CheckBox object needs screen (ID : {self._id})")
-        
-        self.screen = screen
-        self.state = False
-        styles["stroke"] = 5
-        styles["screen"] = screen
-        super().__init__(pos, size, **styles)
-
-        # init 
-        self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self.change_state())
-        self.checkbox = Rect(size=[self.size[0]/2, self.size[1]/2], pos=[self.pos[0]+self.size[0]/4, self.pos[1]+self.size[1]/4], color=self.color)
-            
-    def change_state(self):
-        self.state = not self.state
-       
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
-        if self.state:
-            self.checkbox.draw(screen)
-        
-class InputBox(Rect):
-    def __init__(self, pos, size, screen, **styles):
-        styles["screen"] = screen
-        super().__init__(pos, size, **styles)
-        if screen == None:
-            raise Exception(f"InputBox object needs screen (ID : {self._id})")
-        self.screen = screen
-        self.textsize = styles.get("textsize", 28)
-        self.textcolor = styles.get('textcolor', "white")
-        self.textfont = styles.get("textfont", "Arial")
-        self.value = ""
-        self.overflow = styles.get("overflow", "hidden")
-        self.focus = False
-        self.stroke = styles.get("stroke", 5)
-        self.resolve_styles(screen)
-        self._eventname_unfocus = f"inputbox.{self._id}.on.mousedown._desactivate"
-        self._eventname_focus = f"inputbox.{self._id}.on.keydown._catch_char"
-        self.text = Text(text=self.value, pos=[self.pos[0]+self.size[0]/(self.textsize/2), self.pos[1]+self.size[1]/4], fontsize=self.textsize, color=self.textcolor, fontname=self.textfont)
-        # init 
-        self.screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: self._activate())
-        self.screen.events.on("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
-        self.events = {
-            "onfocus" : lambda: self._onfocus(),
-            "unfocus" : lambda: self._unfocus()
-        } 
-        
-        
-    def _catch_char(self, key):
-        unicode, key = key[0], key[1]
-        if key == 8:
-            self.value = self.value[:-1]
-            return
-        if key == 13:
-            unicode = ""
-        
-        self.value += unicode
-        if self.overflow == "hidden":
-            self._hide_overflow()
-            
-    def _hide_overflow(self):
-        if self.text.size[0] + self.size[0]/(self.textsize/2) > self.size[0]:
-            self.value = self.value[:-1]
-            self.text.update(text=self.value)
-            return self._hide_overflow()
+    def __getitem__(self, index):
+        if index == 0:
+            return self._a
+        elif index == 1:
+            return self._b
         else:
-            return
-                
-    def _activate(self):
-        if self.focus == False:
-            self.focus = True    
-            self.screen.events.on("keydown", lambda: self._catch_char(self.screen.events.get_pressed_key()), self._eventname_focus)    
-            self.events["onfocus"]()    
-            self.screen.events.on("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
+            raise IndexError
+        
+    def __setitem__(self, index, value):
+        if index == 0:
+            self._a = value
+        elif index == 1:
+            self._b = value
+        else:
+            raise IndexError
 
-    def _desactivate(self):
-        if self.focus:
-            self.focus = False
-        self.events["unfocus"]()
-        if "keydown" in self.screen.events.base_events:
-            self.screen.events.remove_base_event(self._eventname_focus)
-        if "mousedown" in self.screen.events.base_events:
-            self.screen.events.remove_base_event(self._eventname_unfocus)            
-        
-    def _onfocus(self):
-        self.stroke = 1
-    def _unfocus(self):
-        self.stroke = 5
-        
-    def onfocus(self, callback):
-        self.events["onfocus"] = callback
-        self.events["onfocus"]()
-        
-    def unfocus(self, callback):
-        self.events["unfocus"] = callback
-        self.events["unfocus"]()       
+    def __len__(self):
+        return 2
+    
+    def copy(self):
+        return Vector2(self._a, self._b)
 
-    def draw(self, screen=None):
-        screen = self.screen if screen == None else screen
-        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
-        self.text.update(text=self.value)
-        self.text.draw(screen)
-        
-class Button(Circle):
-    def __init__(self, pos, radius, screen, **styles):
-      
-        styles["screen"] = screen
-        super().__init__(pos=pos, radius=radius,  **styles)
-        if screen == None:
-            raise Exception(f"Button object needs screen (ID : {self._id})")
-        self.radius = radius
-        if "text" in styles:
-            self.text = styles['text']
-            self.fontsize = styles.get("fontsize", 28)
-            self.textcolor = styles.get('textcolor', "white")
-            self.font = styles.get("font", "Arial")
-            
-        self.screen = screen
-        self._eventname = f"button.{self._id}.on.mousedown"
-        screen.events.add_event_listener(event="mousedown", object=self, callback=lambda: None, name=self._eventname)
-        
-    def _gen_text_obj(self):
-        self.text_obj = Text(text=self.text, pos=[self.pos[0], self.pos[1]], fontsize=self.fontsize, color=self.textcolor, fontname=self.font)
-        self.text_obj.pos = [self.pos[0]-self.text_obj.size[0]/2, self.pos[1]-self.text_obj.size[1]/2]
-
-    def onclick(self, callback):
-        r'''
-        Calls the callback function when the button is clicked
-        '''
-        self.screen.events.add_event_listener(event="mousedown", object=self, callback=callback, name=self._eventname)
+    def ref(self):
         return self
+
+    def __eq__(self, other):
+        if isinstance(other, Vector2):
+            return self._a == other._a and self._b == other._b
+        else:
+            return False
+             
         
+    def __ne__(self, other):
+        return not self == other
+
+class Size (Vector2):
+    def __init__(self, width=0, height=0):
+        super().__init__(width, height)
+
+    @property
+    def width(self):
+        return self._a
+
+    @width.setter
+    def width(self, value):
+        self._a = value
+
+    @property
+    def height(self):
+        return self._b
+
+    @height.setter
+    def height(self, value):
+        self._b = value
+
+class Pos (Vector2):
+    def __init__(self, x=0, y=0):
+        super().__init__(x,y)
         
-    def click(self, func):
+    @property
+    def x(self):
+        return self._a
+
+    @x.setter
+    def x(self, value):
+        self._a = value
+
+    @property
+    def y(self):
+        return self._b
+
+    @y.setter
+    def y(self, value):
+        self._b = value
+
+            
+class Object:
+    def __init__(self, pos, size, **styles):
+        self._id = get_id()
+
+        c = styles.get("color", "white")
+        if isinstance(c, str):
+            c = text_to_color(c)
+        self.color = c
+
+        self.margin = styles.get("margin", [0, 0, 0, 0]) # top, right, bottom, left
+        self.stroke = styles.get("stroke", 0)
+
+        self.pos = Pos(*pos)
+        self.size = Size(*size)
+
+        if styles.get("screen"):
+            self.screen = styles["screen"]
+            self.resolve_styles(self.screen)   
+
+        if styles.get("name"):
+            self.name = styles["name"]    
+
+        self._current = 0
+        self._animation_done = False
+
+        if "components" in styles:
+            self.components = ComponentGroup(self, styles["components"])
+            
+    def set(self, property, value):
         r'''
-        <Decorator> Calls the callback function when the button is clicked
+        sets a object property to a valie
         '''
-        self.onclick(func)
-        return func
-        
+        if self.__dict__.get(property, None) != value and value:
+            self.__dict__[property] = value
+        else:
+            return
     
+    def load_style_pack(self, pack, ignore_exceptions=True):
+            try:
+                for k,v in pack.items():
+                    if k == "color":
+                        if isinstance(v, str):
+                            v = adapt_rgb(Color(v).get_rgb())
+                    self.set(k,v)
+            except Exception as e:
+                if ignore_exceptions:
+                    return
+                else:
+                    raise Exception(e)
+    
+    def load_animation(self, file, time, screen, repeat=False, ignore_exceptions=True):
+        screen = self.screen if screen == None else screen
+        if screen == None:
+            raise Exception(f"load_animation function needs screen (ID : {self._id})")
+        
+        self._repeat_animation = repeat
+        
+        self._animation_eventname = f"object.{self._id}.load_animation.{time}"
+        screen.time.add(time, lambda:self._load_animation(file, screen, ignore_exceptions), self._animation_eventname)
+
+    def _load_animation(self, file, screen, ignore_exceptions):
+        try:
+            if self._animation_done:
+                if self._repeat_animation:
+                    self._current = 0
+                    self._animation_done = False
+                else:
+                    screen.time.remove(self._animation_eventname) 
+                    return
+                
+            with open(file, "r") as f:
+                animation  = json.load(f)
+            
+            try:
+                self._current_animation_point = [*animation.keys()][self._current] 
+            except:
+                self._animation_done = True 
+                return
+                
+            self.load_style_pack(animation[self._current_animation_point])
+            self._current += 1
+            
+        except Exception as e:
+                if ignore_exceptions:
+                    return
+                else:
+                    raise Exception(e)
+    
+    def _get_collision_box(self):
+        self.resolve_styles(self.screen)
+        return [self.pos, [self.pos[0] + self.size[0], self.pos[1]],
+                [self.pos[0], self.pos[1] + self.size[1]], [self.pos[0] + self.size[0], self.pos[1] + self.size[1]]
+                ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
+        
+    def is_colliding(self, obj, screen=None, draw_collision_box=False):
+        r'''
+        returns True if the object is colliding with another object, False if not
+        '''
+        
+        screen = self.screen if screen == None else screen    
+        obj_pos = obj.get_pos(screen)
+    
+        for i in self._get_collision_box():
+            if draw_collision_box:
+                Rect(pos=[obj_pos[0]-2, obj_pos[1]-2], size=[obj.size[0]+4, obj.size[1]+4], color="red", stroke=2).draw(screen)
+                Rect(pos=[self.pos[0]-2, self.pos[1]-2], size=[self.size[0]+4, self.size[1]+4], color="red", stroke=2).draw(screen)
+                
+            if (i[0] >= obj.pos[0] and i[0] <= obj.pos[0]+obj.size[0]) and (i[1] >= obj.pos[1] and i[1] <= obj.pos[1] + obj.size[1]):
+                return True
+            
+        return False
+            
+    def copy(self, different=False):
+        obj = copy.copy(self)
+        if different:
+            obj._id = get_id()
+        return obj
+
+    def move(self, x=0, y=0):
+        r'''
+        Adds x,y to the current object position. (Also inverts y )
+        '''        
+        if isinstance(x, list) or isinstance(x, Vector2):
+            x, y = x
+
+        self.pos[0] += x
+        self.pos[1] += y * -1
+    
+    def is_out(self, screen=None):
+        r'''
+        Return True if objects is out of bounds and direction of that bound (top, bottom, right, left)
+        -> [bool, "direction"]
+        '''
+        screen = self.screen if screen == None else screen
+        self.resolve_styles(screen)
+        
+        if self.pos[0] + self.size[0] < 0 or self.pos[0] - self.size[0]/4 > screen.size[0]:
+            return True, "left" if self.pos[0] + self.size[0]/2 <= 0 else "right"
+        elif self.pos[1] + self.size[1] < 0 or self.pos[1] - self.size[1]/4 > screen.size[1]:
+            return True, "top" if self.pos[1] + self.size[1] <= 0 else "bottom"     
+        else:
+            return False, None
+       
+    def resolve_styles(self, screen=None):
+        screen = self.screen if screen == None else screen
+
+        # measures
+        
+        if type(self.size) == tuple:
+            self.size = list(self.size)
+        
+        for i in range(len(self.size)):
+            self.size[i] = _to_percent(self.size[i], screen.size[i])
+                    
+        for i in range(len(self.pos)):
+            self.pos[i] = _to_percent(self.pos[i], screen.size[i])
+                             
+        screen_i = 0
+        for i in range(len(self.margin)):
+            self.margin[i] = _to_percent(self.margin[i], screen.size[screen_i])
+            screen_i += 1
+            if screen_i == 2:
+                screen_i = 0
+         
+        # colors
+        if isinstance(self.color, str):
+            self.color = adapt_rgb(Color(self.color).get_rgb())
+    
+        if isinstance(self.size, tuple):
+            self.size = [self.size[0], self.size[1]]
+        if isinstance(self.pos, tuple):
+            self.pos = [self.pos[0], self.pos[1]]
+            
+        
+        if isinstance(self.pos[0], str):
+            self.pos[0] = self.pos[0].lower()
+            if self.pos[0] not in ["left", "center", "right", "left-center", "right-center"]:
+                raise ValueError("Invalid x-axis position value", self.pos[0])
+            
+        if isinstance(self.pos[1], str):
+            self.pos[1] = self.pos[1].lower()
+            if self.pos[1] not in ["top", "center", "bottom", "top-center", "bottom-center"]:
+                raise ValueError("Invalid y-axis position value", self.pos[1])
+        
+        margin_x = self.margin[3] + self.margin[1]
+        margin_y = self.margin[0] + self.margin[2]
+        
+        # align position x
+        if self.pos[0] == "center":
+            self.pos[0] =   screen.size[0]/2 - self.size[0]/2
+        elif self.pos[0] == "right":
+            self.pos[0] = screen.size[0] - self.size[0] - margin_x
+        elif self.pos[0] == "right-center":
+            self.pos[0] = screen.size[0] - self.size[0] / 2 - screen.center()[0]/2 - margin_x
+        elif self.pos[0] == "left":
+            self.pos[0] = margin_x
+        elif self.pos[0] == "left-center":
+            self.pos[0] = screen.center()[0] /2 - self.size[0] / 2 + margin_x
+        
+        # align position y
+        if self.pos[1] == "center":
+            self.pos[1] = screen.size[1]/2 - self.size[1]/2
+        elif self.pos[1] == "top":
+            self.pos[1] = margin_y
+        elif self.pos[1] == "top-center":
+            self.pos[1] = screen.center()[1] / 2 - self.size[1]/2  + margin_y 
+        elif self.pos[1] == "bottom":
+            self.pos[1] = screen.size[1] - self.size[1] - margin_y
+        elif self.pos[1] == "bottom-center":
+            self.pos[1] = screen.size[1] - self.size[1]/2 - screen.center()[1]/2 - margin_y
+            
+        
+    def get_pos(self, screen=None, ref=False):
+        """
+        Returns postion of the object after revolsing styles
+        """
+
+        screen = self.screen if screen == None else screen
+        self.resolve_styles(screen)
+        self.pos = Pos(*self.pos)
+        return self.pos.ref() if ref else Pos(self.pos.copy())
+
+    def get_size(self, screen=None, ref=False):
+        """
+        Returns size of the object after revolsing styles
+        """
+        screen = self.screen if screen == None else screen
+        self.resolve_styles(screen)
+        self.size = Size(*self.size)
+        return self.size.ref() if ref else Size(self.size.copy())
+             
+    def __str__(self):
+        return f"<Object: {self.__class__.__name__}, ID: {self._id}>"
+    
+    def __repr__(self):
+        return f"<Object: {self.__class__.__name__}, ID: {self._id}>"
+               
+class Rect(Object):
+    r'''
+    @param pos: position of the text ``list(x, y) or list("left", "top")``
+    @param size: size of the figure ``list(width, height)``
+    @Keyword Arguments:
+        * color= (R, G, B) ``"white" or tuple(R, G, B)``
+        * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
+        * stroke= ``int``
+        * screen = ``Screen``
+    '''
+    def __init__(self, pos, size, **styles):
+        super().__init__(pos, size, **styles)
+                
     def draw(self, screen=None):
         screen = self.screen if screen == None else screen
-        pg.draw.circle(screen.surface, self.color, self.pos, self.radius)
-        if hasattr(self, "text"):
-            self._gen_text_obj()
-            self.text_obj.draw(screen)
+        pg.draw.rect(screen.surface, self.color, [*self.get_pos(screen), *self.size], int(self.stroke))
+        
+class Text(Object):
+    r'''
+    @param text: text to be rendered ``str``
+    @param pos: position of the text ``list(x, y) or list("left", "top")``
+    @param fontsize: text size ``int``
+    @param fontname: font name ``str``
+    @param path: Path to Local Fonts are stored
+    @Keyword Arguments:
+        * color= (R, G, B) ``"white" or tuple(R, G, B)``
+        * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
+        * path = path to font folder ``str``
+        * screen = ``Screen``
+    '''
+    def __init__(self, text, pos, fontsize, **styles):  
+        self.path = styles.get("path", "")
+        self.font = styles.get("font", "Arial")
+        self.fontsize = fontsize
+        self.color = styles.get("color","white")
+        self.text = text    
+        self.text_obj = self.load_font(text, self.font, fontsize, self.color)
+        super().__init__(pos=pos, size=[self.text_obj.get_width(), self.text_obj.get_height()], **styles)
+        
+    def load_font(self, text, name, size, color="white"):
+        # load local font 
+        pg.font.init()
+        name = name.lower()
+        # if font in system fonts
+        if name in pg.font.get_fonts():
+            font = pg.font.SysFont(name, size)
+        else:
+            raise Exception("Font not found", name)
+                
+        return font.render(text, True, color)
+            
+    def update(self, **atributes):
+        self.text = atributes.get("text", self.text)
+        self.size = atributes.get("size", [self.text_obj.get_width(), self.text_obj.get_height()])
+        self.color = atributes.get("color", self.color)
+        self.font = atributes.get("font", self.font)
+        self.fontsize = atributes.get("fontsize", self.fontsize)
+        self.margin = atributes.get("margin", self.margin)
+        self.pos = atributes.get("pos", self.pos)
+            
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen   
+        self.text_obj = self.load_font(self.text, self.font, self.fontsize, self.color)
+        screen.surface.blit(self.text_obj, self.get_pos(screen))
+
+class Image(Rect):
+    r'''
+    @param image: image to be rendered ``str``
+    @param pos: position of the image ``list(x, y) or list("left", "top")``
+    @param size: size of the image ``int``
+    @Keyword Arguments:
+        * color= (R, G, B) ``"white" or tuple(R, G, B)``
+        * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
+        * screen = ``Screen``
+    '''
+    def __init__(self, pos, size, image, **styles):
+        super().__init__(pos, size, **styles)
+        try:
+            self.image = pg.image.load(image)
+        except:
+            raise Exception("Image not found in current directory: ", image)
+    
+        self.image = pg.transform.scale(self.image, self.size)
+        
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        screen.surface.blit(self.image, self.get_pos(screen))
+      
+
+class Circle(Object):
+    r'''
+    @param pos: position of the circle ``list(x, y) or list("left", "top")``
+    @param radius: radius of the circle ``int``
+    @Keyword Arguments:
+        * color= (R, G, B) ``"white" or tuple(R, G, B)``
+        * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
+        * screen = ``Screen`` 
+    '''
+    def __init__(self, pos, radius, **styles):
+        if isinstance(radius, str):
+            if re.match(r"[0-9]+%", radius):
+                raise Exception(f"Radius cannot be a percent (ID : {self._id})")
+        
+        super().__init__(pos=pos, size=[radius*2, radius*2],  **styles)
+        self.radius = radius
+        
+    def draw(self, screen=None):
+        screen = self.screen if screen == None else screen
+        pos = self.get_pos(screen)
+        pg.draw.circle(screen.surface, self.color, pos, self.radius)
+    
+    def _get_collision_box(self):
+        pos = [self.pos[0] - self.size[0]/2, self.pos[1] - self.size[1] /2]
+        return [pos, [pos[0] + self.size[0], pos[1]],
+                            [pos[0], pos[1] + self.size[1]], [pos[0] + self.size[0], pos[1] + self.size[1]]
+                           ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
+         

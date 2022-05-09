@@ -1,4 +1,4 @@
-from ezsgame.premade import get_id
+from ezsgame.global_data import get_id
 
 class Controller:
     def __init__(self, screen, keys=["a","d","w","s"], speed=[-5,5,5,-5]):
@@ -9,7 +9,7 @@ class Controller:
         self.screen = screen
         self.keys = keys
         self._speeds = speed
-        self.speed = [0 for x in range(len(speed))]
+        self.speed = [0]*len(speed)
 
         for i in range(len(keys)):
             self._add_events(i)
@@ -64,3 +64,12 @@ class Controller:
         Inverts all speeds.
         '''
         self.speed = [-x for x in self.speed]
+
+    def disable(self):
+        self.__speed = self._speed 
+        self.stop()
+        self._speed = [0 for x in range(len(self._speed))]
+
+    def enable(self):
+        self._speed = self.__speed
+          

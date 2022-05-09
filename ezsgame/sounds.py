@@ -1,5 +1,5 @@
 import pygame as pg
-from ezsgame.premade import get_id
+from ezsgame.global_data import get_id
 
 
 pg.mixer.init()
