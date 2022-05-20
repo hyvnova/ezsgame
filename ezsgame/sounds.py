@@ -1,9 +1,7 @@
 import pygame as pg
 from ezsgame.global_data import get_id
 
-
 pg.mixer.init()
-
 
 class Mixer:
     def __init__(self):

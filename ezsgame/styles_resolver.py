@@ -1,0 +1,106 @@
+from colour import Color
+from ezsgame.global_data import get_screen
+
+adapt_rgb = lambda rgb: tuple(map(lambda i: i*255, rgb))
+
+def resolve_color(color):   
+    if isinstance(color, str):
+        if color.startswith("#"):
+            return adapt_rgb(Color(color).rgb)
+        
+        return adapt_rgb(Color(color).get_rgb())
+    
+    return color
+    
+def resolve_margin(margin):
+    screen = get_screen()
+
+    for i,m in enumerate(margin):
+        screen_i = 0 if i%2 == 0 else 1        
+        
+        if isinstance(m, str):
+            if m.endswith("%"):
+                margin[i] = float(m[:-1]) * screen.size[screen_i] / 100
+
+            else:
+                raise ValueError("Invalid margin value", m)
+
+    return margin
+
+def resolve_size(size):
+    screen = get_screen()
+
+    for i,s in enumerate(size):
+        screen_i = 0 if i%2 == 0 else 1
+        
+        if isinstance(s, str):
+            if s.endswith("%"):
+                size[i] = float(s[:-1]) * screen.size[screen_i] / 100
+
+            else:
+                raise ValueError("Invalid size value", s)
+     
+   
+    return size
+
+def resolve_pos(pos,size, margin):
+    screen = get_screen()
+    
+    margin_x = margin[3] + margin[1]
+    margin_y = margin[0] + margin[2]
+    
+    # align position x
+    
+    if isinstance(pos[0], int) or isinstance(pos[0], float):
+        pos[0] += margin_x 
+
+    elif isinstance(pos[0], str):
+        if pos[0].endswith("%"):
+            pos[0] = float(pos[0][:-1]) * screen.width / 100
+
+        else:
+            pos[0] = pos[0].lower()
+            
+            if pos[0] not in ["left", "center", "right", "left-center", "right-center"]:
+                    raise ValueError("Invalid x-axis position value", pos[0])
+                
+            if pos[0] == "center":
+                pos[0] =   screen.size[0]/2 - size[0]/2
+            elif pos[0] == "right":
+                pos[0] = screen.size[0] - size[0] - margin_x
+            elif pos[0] == "right-center":
+                pos[0] = screen.size[0] - size[0] / 2 - screen.center()[0]/2 - margin_x
+            elif pos[0] == "left":
+                pos[0] = margin_x
+            elif pos[0] == "left-center":
+                pos[0] = screen.center()[0] /2 - size[0] / 2 + margin_x
+        
+        
+    # align position y
+    if isinstance(pos[1], int) or isinstance(pos[1], float):
+        pos[1] += margin_y
+    
+    elif isinstance(pos[1], str):
+        if pos[1].endswith("%"):
+            pos[1] = float(pos[1][:-1]) * screen.height / 100
+        
+        else:
+            pos[1] = pos[1].lower()        
+            
+            if pos[1] not in ["top", "center", "bottom", "top-center", "bottom-center"]:
+                raise ValueError("Invalid y-axis position value", pos[1])
+            
+            if pos[1] == "center":
+                pos[1] = screen.size[1]/2 - size[1]/2
+            elif pos[1] == "top":
+                pos[1] = margin_y
+            elif pos[1] == "top-center":
+                pos[1] = screen.center()[1] / 2 - size[1]/2  + margin_y 
+            elif pos[1] == "bottom":
+                pos[1] = screen.size[1] - size[1] - margin_y
+            elif pos[1] == "bottom-center":
+                pos[1] = screen.size[1] - size[1]/2 - screen.center()[1]/2 - margin_y
+                    
+                    
+    return pos
+

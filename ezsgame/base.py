@@ -1,12 +1,12 @@
 import pygame as pg, random, time as t
-from ezsgame.objects import Size, text_to_color, Gradient, random_color, Object, PRect
-from functools import wraps
-import concurrent.futures as futures
-
+from ezsgame.objects import Size, Gradient, random_color, Object, PRect, resolve_color
+from ezsgame.global_data import DATA, get_screen
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
-                 show_fps : bool = False, vsync = False, depth=32, color="black", fullscreen=False, resizable=False):
+                 show_fps : bool = False, vsync:bool = False, depth:int=32, color="black", fullscreen:bool=False,
+                 resizable:bool=False):
+        
         self.size = Size(*size)
         self.title = title
         self.icon = icon
@@ -19,100 +19,81 @@ class Screen:
         self.fps = fps
         self.depth = depth
         self.show_fps = show_fps
-        self.resolve_size(size)        
-        self.events = EventHandler(self)
-        self.time = TimeHandler()
+        
         self.load_icon(icon)
+             
+        self.events = EventHandler()
+        self.time = TimeHandler()
 
         # init screen
         self.init()
-  
+        
+        # Set screen globally
+        DATA(screen=self)
         
     def __str__(self):
         return "<Screen>"
     
+    
     # time decorators  ------------------------------------------------------------
-    def add_interval(self, *args, **kwargs):
+    def add_interval(self, time:int, name:str = "Default"):
         r'''    
-        Add an interval to the time handler, call the function every <time> seconds
-        @params : time (int) : time in milliseconds
-        @params : name (str) : name of the interval
-        '''
-        
-        time = kwargs.get("time", None)
-        if time == None:
-            time = args[0]
-        if time == None:
-            raise Exception("Time must be specified")
-        
+        - Adds an `interval` to the time handler, calls the function every `time` milliseconds
+        - `time` : time in milliseconds
+        - `name` : name of the interval (Optional)
+        '''        
 
-        name = kwargs.get("name", "Default")
         if name == "Default":
-            name = args[1] if len(args) > 1 else "Default"
-        name = f"{len(self.time.intervals)}.{time}" if name == "Default" else name
+            name = f"{len(self.time.intervals)}.{time}" if name == "Default" else name
         
         def wrapper(func):
             self.time.add(time, func, name)
+            return func
+            
         return wrapper  
     
     def remove_interval(self, name : str):
         r'''
-        Remove an interval from the time handler
-        @params : name (str) : name of the interval
+        #### Removes an `interval` from the time handler
+        - `name` : name of the interval
         '''
         self.time.remove(name)
     
     # -----------------------------------------------------------------------------
     
     # event decorators ------------------------------------------------------------
-    def on_key(self, **kwargs):
+    def on_key(self, type:str, keys : list):
         r'''
-        Calls the function when the key event is triggered
-        @params : type (str) : type of the event (up, down)
-        @params : keys (list) : key/keys to listen to ["w", "a", "s", "d"]
+        #### Calls the function when the key event is triggered
+        - `type` : type of the event. `up` or `down`
+            - Event types : `up` (when the key is released), `down` (when the key is pressed)
+        - `keys` : key/keys to listen to
+        - `name` : name of the event (Optional) 
         '''
-        type = kwargs.get("type", None)
-        keys = kwargs.get("keys", None)
-            
-        if type == None:
-            raise Exception("Event Type must be specified")
-        
-        if keys == None:
-            raise Exception("Keys must be specified")
-        
         if not isinstance(keys, list):
             keys = [keys]
+                
+        def wrapper(func):
+            self.events.on_key(type, keys, func)
+            return func
         
-        def decorate(fn):
-            self.events.on_key(type, keys, fn)
-            @wraps(fn)
-            def wrapper(*args, **kwargs):
-                print(fn.__name__)
-                return fn(*args, **kwargs)
-            return wrapper
-        return decorate
-       
-       
-    def on(self, *args, **kwargs):
+        return wrapper
+           
+    def on_event(self, event:str, name:str = "Default"):
         r'''
-        Call funcion when the event is triggered
-        @params : event (str) : event to listen to
+        #### Calls funcion when the event is triggered, (Base Event)
+        - `event` : event to listen to
+            - Events : `quit`, `mousemotion`, `mousedown`, `mouseup`, `keydown`, `keyup`, `mousewheel`
+        - `name` : name of the event (Optional)
         '''
-        
-        event = kwargs.get("event", None)
-
-        if event == None:
-            event = args[0]
             
-        if event == None:
-            raise Exception("Event type must be specified")
-            
-        name = kwargs.get("name", "Default")
-        name = f"base_event.{event}.{len(self.events.base_events)}" if name == "Default" else name
+        if name == "Default":
+            name = f"base_event.{event}.{len(self.events.base_events)}" if name == "Default" else name
         
         def wrapper(func):
-            self.events.on(event, func, name)
+            self.events.on_event(event, func, name)
             return func
+        
         return wrapper
 
     # -----------------------------------------------------------------------------
@@ -125,8 +106,8 @@ class Screen:
          
     def load_icon(self, icon : str):
         r'''
-        Loads an icon for the screen
-        @params : icon (str) : path to the icon
+        #### Loads an icon for the screen
+        - `icon` :  path to the icon
         '''
         self.icon = icon
         if icon == "":
@@ -136,8 +117,8 @@ class Screen:
 
     def shake(self, force=5):
         r'''
-        Shake the screen
-        @params : force (int) : force of the shake
+        #### Shakes the screen
+        - `force` : force of the shake
         '''
         if force <= 0:
             return
@@ -151,88 +132,130 @@ class Screen:
         
     def get_fps(self):
         r'''
-        Returns the current FPS
+        #### Returns the current screen FPS
         '''
         return self.clock.get_fps()
 
     def check_events(self):
         r'''
-        Check and Manage the events, should be called in the main loop
+        #### Checks and Manage the events, should be called in the main loop
         '''
-        self.events.check(self.events.get(), self)
+        self.events.check()
         self.time.check()
+
+        DATA.drawn_objects = []
 
     @staticmethod
     def mouse_pos():
         r'''
-        Returns the mouse position
+        #### Returns the mouse position
         '''
         return pg.mouse.get_pos()
 
     def wait(self, time : int):
         r'''
-        Wait for a certain amount of time
-        @params : time (milliseconds)
+        #### Waits for a certain amount of time
+        - `time` : time to wait for, in milliseconds
         '''
         pg.time.wait(time)
             
-    def div(self, axis, q):
+    def div(self, axis : str, q : int, size : list = None):
         r'''
-        Return list of division points of the screen -> [[x1, x2], [x1, x2], ...]
+        #### Returns a list of division points of the screen in the given axis
+        
+        - `axis` : axis to divide the screen in (`x` or `y`)
+        - `q` : number of divisions
+        - `size` : Size of where to divide the screen, works as a delimiter (Optional)
         '''
+        
+        _size = size if size != None else self.size
+        
+        _size = Object(pos=[0,0], size=_size).get_size()
+        
         divs = []
         if axis == "x":
-            # should append [start, end] for each division
-            for i in range(q):
-                divs.append([round(i * self.size[0] / q, 1), round((i + 1) * self.size[0] / q, 1)])
-        elif axis == "y":
-            # should append [start, end] for each division
-            for i in range(q):
-                divs.append([round(i * self.size[1] / q, 1), round((i + 1) * self.size[1] / q, 1)])
+            step = _size[0] / q
             
+            for i in range(q):
+                divs.append([round(i * step, 1), round((i + 1) * step, 1)])
+                
+                # if overflows 
+                if divs[-1][1] > _size[0]:
+                    break
+                
+        elif axis == "y":
+            step = _size[1] / q
+
+            for i in range(q):
+                divs.append([round(i * step, 1), round((i + 1) * step, 1)])
+        
+                # if overflows
+                if divs[-1][1] > _size[1]:
+                    break
+                
         return divs
     
     def resolve_size(self, size : list):
         if self.fullscreen:
-            self.size = [pg.display.get_surface().get_width(), pg.display.get_surface().get_height()]
-            return self
-        
+            self.__size = Size(size)
+            self.size = pg.display.list_modes()[0]
+            return
+
+        else:
+            # returns to size before fullscreen
+            try:
+                self.size = self.__size
+                return
+            except:
+                pass
+                
         if size == []:
             raise Exception("You must specify a size for the screen")
+        
         elif len(size) == 1:
-            if size[0] == "max" or size[0] == "full":
-                self.size = pg.display.get_surface().get_size()
+            if size[0] in ("max", "full", "100%"):
+                self.size = pg.display.list_modes()[0]
             else:
                 raise Exception("Screen size should \"max\" || \"full\" or list [width, height] ")
             
         elif len(size) == 2:
-            if size[0] == "max" or size[0] == "full":
-                self.size[0] = pg.display.get_surface().get_width()
-            elif size[1] == "max" or size[1] == "full":
-                self.size[1] = pg.display.get_surface().get_height()        
+            if size[0] in ("max", "full", "100%"):
+                self.size[0] = pg.display.list_modes()[0][0]    
+            elif size[1] in ("max", "full", "100%"):
+                self.size[1] = pg.display.list_modes()[0][1] 
             else:
-                self.size = size
+                self.size = Size(size[0], size[1])
         
     def init(self):
         r'''
-        Initialize the screen, is called automatically
+        #### Initializes the screen, is called automatically
         '''
         
         pg.init()
+        self.resolve_size(self.size)
                         
-        if self.resizable:
-            self.surface = pg.display.set_mode(self.size, 0, self.depth, 0, self.vsync, pg.RESIZABLE)
-        else:
-            self.surface = pg.display.set_mode(self.size, 0, self.depth, 0, self.vsync)
-                                           
+        if self.resizable and self.fullscreen:
+            raise ValueError("You can't resize and fullscreen at the same time")
+        
+        display_type = 0
+        if self.fullscreen:
+            display_type = pg.FULLSCREEN
+            
+        elif self.resizable:
+            display_type = pg.RESIZABLE    
+    
+        self.surface = pg.display.set_mode(self.size, display_type, self.depth, 0, self.vsync)                     
+                       
         pg.display.set_caption(self.title)
         if self.icon != "":
             pg.display.set_icon(pg.image.load(self.icon))
         self.clock = pg.time.Clock()
         
+        self.size = Size(self.size)
+        
     def update(self):
         r'''
-        Update the screen
+        #### Updates the screen
         '''
         
         if self.show_fps:
@@ -243,32 +266,36 @@ class Screen:
         
     def quit(self):
         r'''
-        Quit the game/App  (Close/Ends the window)
+        #### Quits the game/App  (Closse/Ends the window)
         '''
         
         pg.quit()
         quit()
 
-    def fill(self, color=None, pos=[0, 0], size=[0, 0]):
+    def fill(self, color = None, pos : list=[0, 0], size:list=[0, 0]):
         r'''
-        Fill the screen with a color or gradient
+        #### Fill the screen with a `color` or `gradient`
+        - `color` : color to fill the screen with, or a `Gradient`  (Optional)
+        - `pos` : position of the fill start (Optional)
+        - `size` : size of the fill (Optional)
         '''
         color = self.color if color == None else color
-        if isinstance(color, str):
-            color = text_to_color(color)
-
-            if size == [0, 0]:
-                size = self.size
-            pg.draw.rect(self.surface, color, pg.Rect(pos, size))
-      
-
-        elif isinstance(color, Gradient):
+        if size == [0, 0]:
+            size = self.size
+        
+        if isinstance(color, Gradient):
             for obj in color.objs:
-                obj.draw(self)      
-                
-    def grid_div(self, cols=3, rows=3, transpose=False):
+                obj.draw()      
+        else:
+            color = resolve_color(color)
+            pg.draw.rect(self.surface, color, pg.Rect(pos, size))
+        
+    def grid_div(self, cols:int=3, rows:int=3, transpose:bool=False):
         r'''
-        Returns the division of the screen into a grid -> [[x, y, w, h], [x, y, w, h], ...]
+        #### Returns the division of the screen into a grid -> `[[x, y, w, h], [x, y, w, h], ...]`
+        - `cols` : number of columns
+        - `rows` : number of rows
+        - `transpose` : if True, the grid will be transposed
         '''
         grid = []
         divs_x = self.div("x", cols)
@@ -287,6 +314,14 @@ class Screen:
         self.grid_box_size = [box_width, box_height]
         return grid
     
+    def toggle_fullscreen(self):
+        r'''
+        #### Toggles the fullscreen mode
+        '''
+        self.fullscreen = not self.fullscreen
+        self.init()
+        
+
 class IScreen(Screen):
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
                  show_fps : bool = False, objects = [], color : str = "black", depth : int = 0, vsync : bool = False):
@@ -327,8 +362,8 @@ class IScreen(Screen):
         self.grid = self.grid_div(*grid)
         fill_color = self.color if fill_color == None else fill_color
         if isinstance(fill_color, str):
-            fill_color = text_to_color(fill_color)
-                
+            fill_color = resolve_color(fill_color)
+                        
         while True:
             self.check_events()
             self.fill(fill_color)
@@ -434,17 +469,10 @@ class IScreen(Screen):
             obj["object"].draw(self)
     
         self.update()
+
+
+# Manager Objects
         
-def flat(arr, depth=1):
-    r'''
-    Flatten a list
-    [1,2,[3],4] -> [1,2,3,4]
-    '''
-    if depth == 0:
-        return arr
-    else:
-        return [item for sublist in arr for item in flat(sublist, depth - 1)]
-    
 def add_args(func, *args, **kwargs):
     def inner(*_, **__):
         try:
@@ -457,16 +485,16 @@ class EventHandler:
     r'''
     - Manages events on the app 
     '''
-    def __init__(self, screen):
-        self.screen = screen
+    def __init__(self):
         self.events  = {}
         self.base_events = {}
         self.to_remove = {"events": [], "base_events": []}
         self.to_add = {"events": [], "base_events": []}
-
                                             
-    def check(self, event, screen=None):
-        screen = self.screen if screen == None else screen
+    def check(self):
+        screen = get_screen()
+        event = self._get_events()
+        
         self.events = {k:v for k,v in self.events.items() if v != None}
         
         # remove events
@@ -519,20 +547,20 @@ class EventHandler:
                     
                     else:
                         if value.get("evname",None) == "unhover":
-                            if self.is_hovering(value["object"]) == False:  
-                                    self.events[key]["callback"]()
+                            if not self.is_hovering(value["object"]) and value["object"]._id in DATA.drawn_objects:
+                                self.events[key]["callback"]()
                         else:               
-                            if self.is_hovering(value["object"]):
+                            if self.is_hovering(value["object"]) and value["object"]._id in DATA.drawn_objects:
                                 value["callback"]()
                                             
-    def add_event_listener(self, event, object, callback, name="Default"):
+    def add_event(self, event:str, object:Object, callback, name:str="Default"):
         r'''
-        - Adds a event listener to a object
-        @param event: event to be added ``str``
-            --events : (mousedown or click), hover, unhover, (mouseup or unclick).
-        @param name: name of the event ``str``
-        @param object: object to be added to the event ``Object``
-        @param callback: callback function to be called when the event is triggered ``function``
+        #### Adds a event listener to a object
+        - `event` : event to be added 
+            - Events : `click`, `hover`, `unhover`, `unclick`.
+        - `name` : name of the event 
+        - `object` : object to be added to the event 
+        - `callback` : function to be called when the event is triggered
         '''
      
         event = event.lower()
@@ -543,17 +571,17 @@ class EventHandler:
             
         self.to_add["events"].append([name, {"type": event_, "object": object, "callback": callback, "evname" : event}])
 
-    def remove(self, name):
+    def remove_event(self, name:str):
         f'''
-        - Removes an event from the event list so it won't be called anymore
-        @param name: name of the event to be removed ``str``
+        #### Removes an event from the event list so it won't be called anymore
+        -  `name` : name of the event to be removed 
         '''
         self.to_remove["events"].append(name)
 
-    def is_hovering(self, object):
+    def is_hovering(self, object:Object) -> bool:
         r'''
-        - Checks if the mouse is hovering over the object
-        @param object: object to be checked ``Object``
+        #### Checks if the mouse is hovering over the object
+        - `object` : object to check if the mouse is hovering over it
         '''
         mouse_pos = pg.mouse.get_pos()
         box = object._get_collision_box()
@@ -564,20 +592,20 @@ class EventHandler:
             
         return False
             
-    def get(self):
+    def _get_events(self):
         f"""
-        - Return Current Events, should be in the main loop
+        #### Returns Current Events, Is called automatically
         """
         # return current event
         return pg.event.get()
     
-    def on(self, event, callback, name="Default"):
+    def on_event(self, event : str, callback , name:str = "Default"):
         r'''
-        - Called when event is triggered
-        @param event: event to be added ``str``
-            --events : quit, mousemotion, mousedown, mouseup, keydown, keyup, mousewheel
-        @param callback: callback function to be called when the event is triggered ``function``
-        @param name: name of event object, used to removed the event if needed
+        #### Adds a `Base Event` to the event list, Calls function when event is triggered. 
+        - `event`: event to be added 
+            - Events : `quit`, `mousemotion`, `mousedown`, `mouseup`, `keydown`, `keyup`, `mousewheel`
+        -  `callback`: function to be called when the event is triggered ``function``
+        - `name`: name of event (optional)
         '''
         event = event.lower()
     
@@ -589,25 +617,29 @@ class EventHandler:
         
         self.to_add["base_events"].append([event_, {"type": event_, "callback": callback, "name":name}])
         
-    def remove_base_event(self, name):
+    def remove_base_event(self, name : str):
+        r'''
+        #### Removes a `Base Event` from the event list, so it won't be called anymore
+        - `name` : name of the event to be removed
+        '''
+        
         self.to_remove["base_events"].append(name)
                    
-    def on_key(self, type, keys, callback):
+    def on_key(self, type : str, keys : list, callback):
         r'''
-        - Called when key event is triggered
-        @param type: type of event to be added ``str``
-            --events : down, up
-        @param keys: keys to be added to the event ``list``
-        @param callback: callback function to be called when the event is triggered ``function``
+        #### Calls function when key event is triggered.
+        -  `type`: type of `Event` to be added
+                - Events : `down` (when key is down), `up` (when key released)
+        - `keys`: keys to be added to the event 
+        -  `callback`:  function to be called when the event is triggered 
         '''
         types = {
             "down" : pg.KEYDOWN,
             "up" : pg.KEYUP
-        }
-        if type not in types:
-            raise Exception(f"{type} is not a valid on_key event type.")
-        
-        t = types[type]
+        }        
+        t = types.get(type, None)
+        if not t:
+            raise ValueError("Invalid type: ", type)
          
         for key in keys:
             if key.lower() in ["multiply", "minus", "plus", "enter"]:
@@ -658,27 +690,26 @@ class TimeHandler:
         self.to_remove = []
         self.to_add = []
 
-    def add(self, time, callback, name="Default"):
+    def add(self, time : int, callback, name:str ="Default"):
         r'''
-        - Adds event that will be called every time the time is reached
-        @param name: name of the event ``str``
-        @param time: time to be called ``int`` in miliseconds
-        @param callback: callback function to be called when the event is triggered ``function``
+        #### Adds a `interval` that will be called every `time` milliseconds
+        - `name` : name of the event 
+        - `time` : amount of time in milliseconds that the event will be called after
+        - `callback` : function to be called when the event is triggered 
         '''
-        time = time / 1000
         name = f"{len(self.intervals)}.{time}" if name == "Default" else name
         self.to_add.append([name, {"callback": callback, "time": time, "last_call": t.time()}])
 
-    def remove(self, name):
+    def remove(self, name:str):
         r'''
-        - Removes an event from the event list so it won't be called anymore
-        @param name: name of the event to be removed ``str``
+        #### Removes an `interval` from the event list so it won't be called anymore
+        - `name` : name of the event to be removed 
         '''
         self.to_remove.append(name)
         
     def check(self):
         r'''
-        - Checks if the time is reached and calls the event
+        #### Manages the time events
         '''
         for name in self.to_remove:
             if name in self.intervals:
@@ -695,3 +726,12 @@ class TimeHandler:
                 self.intervals[key]["last_call"] = t.time()
                 self.intervals[key]["callback"]()
     
+def flat(arr, depth=1):
+    r'''
+    Flattens a list
+    [1,2,[3],4] -> [1,2,3,4]
+    '''
+    if depth == 0:
+        return arr
+    else:
+        return [item for sublist in arr for item in flat(sublist, depth - 1)]
