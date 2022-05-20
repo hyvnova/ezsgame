@@ -42,11 +42,14 @@ from ezsgame.all import *
 # Inicio
 
 ```python
+# importar ezsgame
+from ezsgame.basics import *
+
 # Declara la pantalla
 screen = Screen(size=(640, 480), title="Mi App")
 
 # Declarar un objeto
-mi_rect =  Rect(pos=["center", "center"], size=(100, 100), color="red", screen=screen)
+mi_rect =  Rect(pos=["center", "center"], size=(100, 100), color="red")
 
 # Bucle principal
 while True:
@@ -70,14 +73,5 @@ while True:
 ## FigJam : [>> Ir a Figma](https://www.figma.com/file/EpJeUfdcxbwZSO5c4lr6rT/ezsgame-doc?node-id=1%3A2)
 
 
-#
-#
-# Convicciones 
-- ## archivos :
-    - ### Los archivos que usan ezsgame que son el archivo "principal", suelen llamarse:
-        - #### demo (Recomendado)
-        - #### main
-        - #### game
-        - #### app
 
 
