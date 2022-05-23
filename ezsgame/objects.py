@@ -263,15 +263,17 @@ class Object:
         except:
             pass
     
-    def on_draw(self, func, name:str = "Default"):
+    def on_draw(self, func, name:str = "Default", pass_object=False):
         r"""
         #### Adds a function to be called after the object is drawn         
         #### Parameters
         - `func`: function to be called
         - `name`: name of the function (default: `function name`)
+        - `pass_object`: if True, the function will be called with the object as the first parameter
+
         """
         name = name if name else func.__name__
-        self.__on_draw[name] = func
+        self.__on_draw[name] = lambda: func(self) if pass_object else func
 
     def remove_on_draw(self, name:str):
         r"""

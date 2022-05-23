@@ -1,0 +1,9 @@
+- `Draggable` component now can freeze `x or y` axis
+- `Resizable` component now can freeze `width or height`.
+- `funcs` module now is imported `basics`.
+
+- Added : `Controllable` component, Moves the object with keyboard.
+- Fix : `Controller` class now deletes it's events when it's destroyed.
+- Fix : `Components` now can work in "harmony"
+
+- Added : `outline` function to `funcs` module.

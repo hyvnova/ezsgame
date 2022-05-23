@@ -10,16 +10,24 @@ class Controller:
         self.keys = keys
         self._speeds = speed
         self.speed = [0]*len(speed)
+        
+        self._evnames = []
 
         for i in range(len(keys)):
             self._add_events(i)
         
     def _add_events(self, index):
-        @self.screen.on_key(type="down", keys=[self.keys[index]])
+        evname = f"Contoller.keydown.{self._id}.{index}"
+        self._evnames.append(evname)
+        
+        @self.screen.on_key(type="down", keys=[self.keys[index]], name=evname)
         def keydown():
             self.speed[index] = self._speeds[index]
 
-        @self.screen.on_key(type="up", keys=[self.keys[index]])
+        evname = f"Contoller.keyup.{self._id}.{index}"
+        self._evnames.append(evname)
+        
+        @self.screen.on_key(type="up", keys=[self.keys[index]], name=evname)
         def keyup():
             self.speed[index] = 0
         
@@ -39,9 +47,7 @@ class Controller:
         if type == "simple":
             if len(self.speed) == 4:
                 return [sum([self.speed[i] for i in range(len(self.speed)//2)]),
-                        sum([self.speed[i] for i in range(len(self.speed)//2, len(self.speed))])
-                       ]
-            
+                        sum([self.speed[i] for i in range(len(self.speed)//2, len(self.speed))])]
             
         if type == "all":
             return self.speed
@@ -75,4 +81,10 @@ class Controller:
             self._speeds = self.__speeds
         except:
             return 
+        
+    def __del__(self):
+        for evname in self._evnames:
+            self.screen.remove_event(name=evname)
+            
+        del self
               

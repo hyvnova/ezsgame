@@ -1,5 +1,7 @@
 from ezsgame.global_data import get_screen
-from ezsgame.primitive_objects import PRect
+from ezsgame.extra.controller import Controller
+from ezsgame.funcs import outline
+
 
 class ComponentGroup:
     def __init__(self, object, components=None):
@@ -123,10 +125,15 @@ class Component:
 
 class Resizable (Component):
     def __call__(self, object):
-        self.__init__(object)
+        self.__init__(object, self.__dict__.get("freeze_width", False), self.__dict__.get("freeze_height", False))
         
-    
-    def __init__(self, object):
+    def __init__(self, object=None, freeze_width:bool=False, freeze_height:bool=False):
+        self.freeze_width = freeze_width
+        self.freeze_height = freeze_height
+        
+        if not object:
+            return
+        
         if "screen" not in object.__dict__:
             setattr(object, "screen", get_screen())
 
@@ -142,45 +149,39 @@ class Resizable (Component):
         self._eventname_resize = f"ResizableComponent.on.keydown._resize.{self.object._id}"
         self._eventname_event_listener = f"ResizableComponent.event_listener.{self.object._id}"
         
-        self.screen.events.add_event(event="mousedown", object=self.object, callback= self._activate,name=self._eventname_event_listener)
-        self.screen.events.on_event("mousedown", self._desactivate, self._eventname_unfocus)
-
-        self.gen_resize_obj()
+        self.screen.events.add_event(event="mousedown", object=self.object, callback= self.activate,name=self._eventname_event_listener)
+        self.screen.events.on_event("mousedown", self.desactivate, self._eventname_unfocus)
         
-        self.object.on_draw(self.draw, self._eventname_event_listener)
-
-    def gen_resize_obj(self):
-        size = [self.object.size[0]*1.5, self.object.size[1]*1.5]
-        pos = [self.object.pos[0] - size[0]//2 + self.object.size[0]//2, self.object.pos[1] - size[1]//2 + self.object.size[1]//2]
-        self.resize_obj = PRect(size=size, pos=pos, color="red", stroke=2)
+        self.object.on_draw(self.draw, self._eventname_event_listener, True)
         
     def _resize(self):
         start = self.object.pos.copy()
         current = self.screen.mouse_pos()   
         
         x,y = current[0] - start[0], current[1] - start[1]
-        if x < 0:
-            self.object.pos[0] = current[0]
-            self.object.size[0] = abs(x)
-        else:
-            self.object.size[0] = x
-        
-        if y < 0:   
-            self.object.pos[1] = current[1]
-            self.object.size[1] = abs(y)
-        else:
-            self.object.size[1] = y
+    
+        if not self.freeze_width:
+            if x < 0:
+                self.object.pos[0] = current[0] 
+                self.object.size[0] = abs(x) + self.object.size[0]
+            else:
+                self.object.size[0] = x
             
-        self.gen_resize_obj()
+        if not self.freeze_height:
+            if y < 0:   
+                self.object.pos[1] = current[1]
+                self.object.size[1] = abs(y)
+            else:
+                self.object.size[1] = y
+            
 
-
-    def _activate(self):
+    def activate(self):
         if self.focus == False:
             self.focus = True        
-            self.screen.events.on_event("mousedown", self._desactivate, self._eventname_unfocus)
+            self.screen.events.on_event("mousedown", self.desactivate, self._eventname_unfocus)
             self.screen.time.add(10, self._resize, self._eventname_resize)
 
-    def _desactivate(self):
+    def desactivate(self):
         if self.focus:
             self.focus = False
         if "keydown" in self.screen.events.base_events:
@@ -190,21 +191,27 @@ class Resizable (Component):
             
         self.screen.time.remove(self._eventname_resize)
                 
-    def draw(self):
+    def draw(self, obj):
         if self.focus:
-            self.resize_obj.draw()
+            outline(obj)
 
     def remove(self):
         self.object.remove_on_draw(self._eventname_event_listener)
-        self._desactivate()
+        self.desactivate()
         self.screen.events.remove(self._eventname_event_listener)
         del self
 
 class Draggable(Component):
     def __call__(self, object):
-        self.__init__(object)
+        self.__init__(object, self.__dict__.get("freeze_x", False), self.__dict__.get("freeze_y", False))
     
-    def __init__(self, object):
+    def __init__(self, object=None, freeze_x:bool=False, freeze_y:bool=False):
+        self.freeze_x = freeze_x
+        self.freeze_y = freeze_y
+        
+        if not object:
+            return
+        
         if "screen" not in object.__dict__:
             setattr(object, "screen", get_screen())
 
@@ -220,53 +227,78 @@ class Draggable(Component):
         self._eventname_move = f"DrageableComponent.on.keydown._move.{self.object._id}"
         self._eventname_event_listener = f"DrageableComponent.event_listener.{self.object._id}"
         
-        self.screen.events.on_event("mousedown", self._desactivate, self._eventname_unfocus)
-        self.screen.events.add_event(event="mousedown", object=self.object, callback= self._activate, name=self._eventname_event_listener)
-
-        self.gen_resize_obj()
-        
-        self.object.on_draw(self.draw, self._eventname_move)
-                                
-    def gen_resize_obj(self):
-        size = [self.object.size[0]*1.5, self.object.size[1]*1.5]
-        pos = [self.object.pos[0] - size[0]//2 + self.object.size[0]//2, self.object.pos[1] - size[1]//2 + self.object.size[1]//2]
-        self.resize_obj = PRect(size=size, pos=pos, color="red", stroke=1)
+        self.screen.events.add_event(event="mousedown", object=self.object, callback= self.activate, name=self._eventname_event_listener)
+        self.object.on_draw(self.draw, self._eventname_move, True)
               
     def _move(self):
         pos = self.screen.mouse_pos()
-        self.object.pos[0] = pos[0] - self.object.size[0] // 2 
-        self.object.pos[1] = pos[1] - self.object.size[1] // 2 
+        if not self.freeze_x:
+            self.object.pos[0] = pos[0] - self.object.size[0] // 2 
+            
+        if not self.freeze_y:
+            self.object.pos[1] = pos[1] - self.object.size[1] // 2 
 
-        self.gen_resize_obj()
-
-    def _activate(self):
+    def activate(self):
         if self.focus == False:
             self.focus = True        
-            self.screen.events.on_event("mousedown", self._desactivate, self._eventname_unfocus)
+            self.screen.events.on_event("mousedown", self.desactivate, self._eventname_unfocus)
             self.screen.time.add(10, self._move, self._eventname_move)
             
             self.screen.events.remove_event(self._eventname_event_listener)
 
-    def _desactivate(self):
+    def desactivate(self):
         if self.focus:
             self.focus = False
             self.screen.time.remove(self._eventname_move)
-            self.screen.events.add_event(event="mousedown", object=self.object, callback=self._activate, name=self._eventname_event_listener)
+            self.screen.events.add_event(event="mousedown", object=self.object, callback=self.activate, name=self._eventname_event_listener)
 
         if "keydown" in self.screen.events.base_events:
             self.screen.events.remove_base_event(self._eventname_focus)
         if "mousedown" in self.screen.events.base_events:
             self.screen.events.remove_base_event(self._eventname_unfocus)  
                 
-    def draw(self):
+    def draw(self, obj):
         if self.focus:
-            self.resize_obj.draw()
+            outline(obj)
 
     def remove(self):
         self.object.remove_on_draw(self._eventname_move)
-        self._desactivate()
+        self.desactivate()
         self.screen.events.remove_event(self._eventname_event_listener)
         self.screen.time.remove(self._eventname_move)
         del self
 
+class Controllable(Component):
+    def __call__(self, object):
+        self.__init__(object)
+        
+    def __init__(self, object=None, keys:list=["a", "d", "w", "s"], speed:list =[-5,5,5,-5]):
+        self.keys = keys
+        self.speed = speed
+        
+        if not object:
+            return
+    
+        super().__init__()
+                         
+        self.screen = object.screen
+        self.object = object
 
+        self.controller = Controller(keys=keys, speed=speed)
+        self.object.on_draw(self._move, f"ControllableComponent.on.draw.{self.object._id}")
+        
+    def activate(self):
+        self.controller.enable()
+        
+    def deactivate(self):
+        self.controller.disable()
+    
+    def _move(self):
+        speed = self.controller.get_speed("simple")
+        self.object.pos = [self.object.pos[0] + speed[0], self.object.pos[1] + (speed[1] * -1)]
+    
+    def remove(self):
+        self.object.remove_on_draw(f"ControllableComponent.on.draw.{self.object._id}")
+        del self.controller
+        del self    
+    

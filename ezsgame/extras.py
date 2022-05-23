@@ -2,7 +2,7 @@ from ezsgame.extra.animations import *
 from ezsgame.extra.hot_reload import *
 from ezsgame.extra.components import *
 from ezsgame.extra.controller import *
-from ezsgame.extra.funcs import *
+from ezsgame.funcs import *
 from ezsgame.extra.iobjects import *
 from ezsgame.extra.require import Require
 from ezsgame.extra.scenes import Scene
