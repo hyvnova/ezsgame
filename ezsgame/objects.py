@@ -5,7 +5,6 @@ from ezsgame.global_data import get_id, get_screen, get_drawn_objects
 from ezsgame.primitive_objects import PRect
 from ezsgame.styles_resolver import resolve_color, resolve_margin, resolve_size, resolve_pos
 
-
 def random_color(n=1):
     """
     Return a random color if n = 1 -> (135, 6, 233)
@@ -65,6 +64,18 @@ def gen_gradient(size, grid, start="green", end="blue", direction="v"):
     return objs, colors
         
 class Gradient:
+    r'''
+    #### Gradient
+    #### Parameters 
+    - `start`: start color `white` or `(R, G, B)`
+    - `end`: end color `black` or `(R, G, B)`
+    
+    #### Optional Arguments (Keyword Arguments)
+    - `direction`: direction of the gradient `"horizontal"` or `"vertical"`
+    - `complexity`: space between each color stripe (higher -> load time) `int`
+    - `size`: size of the gradient `[width, height]` (default: screen size)
+    '''
+    
     def __init__(self, start, end, direction="horizontal", complexity=120, size=None):
         if complexity < 3:
             complexity = 3
@@ -89,6 +100,9 @@ class Gradient:
         return "<Gradient>"
 
 class Vector2:
+    r"""
+    #### 2 Values Vector, parent of `Pos` and `Size`
+    """
     def __init__(self, a=0, b=0):
         self.__call__(a,b)
    
@@ -158,6 +172,13 @@ class Vector2:
         return not self == other
 
 class Size (Vector2):
+    r"""
+    #### Size
+    #### Parameters
+    - `width`: width  `int` or `[width, height]`
+    - `height`: height `int` or `[width, height]`   
+    """
+    
     def __init__(self, width=0, height=0):
         super().__init__(width, height)
 
@@ -178,6 +199,13 @@ class Size (Vector2):
         self._b = value
 
 class Pos (Vector2):
+    r"""
+    #### Position
+    #### Parameters
+    - `x`: x position `number` or `[x, y]`
+    - `y`: y position `number`
+    """
+    
     def __init__(self, x=0, y=0):
         super().__init__(x,y)
         
@@ -198,6 +226,11 @@ class Pos (Vector2):
         self._b = value
             
 class Object:
+    r"""
+    Object is a base class for all objects in the game.
+    Cannot be instantiated.
+    """
+    
     def __init__(self, pos : Pos, size : Size, **styles):
         self._id = get_id()
 
@@ -211,10 +244,9 @@ class Object:
 
         self.screen = get_screen()  
 
-        if styles.get("name"):
-            self.name = styles["name"]    
-
         self.resolve_styles()
+        
+        self.__on_draw = {}
         
         if "components" in styles:
             self.components = ComponentGroup(self, styles["components"])         
@@ -222,13 +254,33 @@ class Object:
         # Calls _draw() before draw()
         def _draw_before(draw_func):
             def wrapper():
-                self._draw()
                 draw_func()
+                self._draw()
+                
             return wrapper
         try:
             self.draw = _draw_before(self.draw)
         except:
             pass
+    
+    def on_draw(self, func, name:str = "Default"):
+        r"""
+        #### Adds a function to be called after the object is drawn         
+        #### Parameters
+        - `func`: function to be called
+        - `name`: name of the function (default: `function name`)
+        """
+        name = name if name else func.__name__
+        self.__on_draw[name] = func
+
+    def remove_on_draw(self, name:str):
+        r"""
+        #### Removes a function from being called after the object is drawn       
+        #### Parameters
+        - `name`: name of the function
+        """
+        if name in self.__on_draw:
+            del self.__on_draw[name]
     
     def _get_collision_box(self):
         self.resolve_styles()
@@ -236,7 +288,11 @@ class Object:
                 [self.pos[0], self.pos[1] + self.size[1]], 
                 [self.pos[0] + self.size[0], self.pos[1] + self.size[1]] ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
             
-    def resolve_styles(self):        
+    def resolve_styles(self):    
+        r"""
+        #### Resolves the styles of the object (Ex. size, margin, stroke)
+        """
+            
         if not isinstance(self.size, Size):
             self.size = Size(*self.size)
         if not isinstance(self.pos, Pos):
@@ -253,7 +309,10 @@ class Object:
 
     def get_pos(self, ref=False):
         """
-        Returns postion of the object after revolsing styles
+        #### Returns postion of the object after revolsing styles
+        
+        #### Parameters
+        - `ref`: if True, returns a "reference" to the position `bool`(default: False)
         """
         self.resolve_styles()
         self.pos = Pos(*self.pos)
@@ -261,7 +320,10 @@ class Object:
 
     def get_size(self, ref=False):
         """
-        Returns size of the object after revolsing styles
+        #### Returns size of the object after revolsing styles
+        
+        #### Parameters
+        - `ref`: if True, returns a "reference" to the size `bool`(default: False)
         """
         self.size = Size(*self.size)
         return self.size.ref() if ref else Size(self.size.copy())
@@ -271,18 +333,26 @@ class Object:
                  
     def _draw(self):
         r'''
-        manages Object draw method
+        manages Object draw method and calls `on_draw` functions
         '''
+        for func in self.__on_draw.values():
+            func()
+        
         get_drawn_objects().append(self._id)
               
 class Rect(Object):
     r'''
-    @param pos: position of the text ``list(x, y) or list("left", "top")``
-    @param size: size of the figure ``list(width, height)``
-    @Keyword Arguments:
-        * color= (R, G, B) ``"white" or tuple(R, G, B)``
-        * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
-        * stroke= ``int``
+    #### Rect
+    #### Parameters 
+    - `pos`: position of the rect `[x, y]`
+    - `size`: size of the rect `[width, height]`
+    
+    #### Optional Arguments (Keyword Arguments)
+    - `color`: color of the rect `"white" or (R, G, B)`
+    - `stroke`: stroke of the rect `int`
+    - `margin`: margin of the rect `[top, right, bottom, left]`   
+    - `border_radius`: border radius of the rect `[top-left, top-right, bottom-right, bottom-left]`
+    - `components` : components to add in the rect `[Component, ..]`
     '''
     def __init__(self, pos : Pos, size : Size, **styles):
         super().__init__(pos, size, **styles)
@@ -298,18 +368,19 @@ class Rect(Object):
         
 class Text(Object):
     r'''
-    @param text: text to be rendered ``str``
-    @param pos: position of the text ``list(x, y) or list("left", "top")``
-    @param fontsize: text size ``int``
-    @param fontname: font name ``str``
-    @param path: Path to Local Fonts are stored
-    @Keyword Arguments:
-        * color= (R, G, B) ``"white" or tuple(R, G, B)``
-        * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
-        * path = path to font folder ``str``
+    #### Text
+    #### Parameters 
+    - `text`: text to be displayed
+    - `pos`: position of the text `[x, y]`
+    - `fontsize`: font size of the text
+    
+    #### Optional Arguments (Keyword Arguments)
+    - `font` : font of the text `"Arial or "path/to/font.ttf"`  
+    - `color`: color of the text `"white" or (R, G, B)`
+    - `margin`: margin of the text `[top, right, bottom, left]`   
+    - `components` : components to add in the object `[Component, ..]`
     '''
     def __init__(self, text, pos, fontsize, **styles):  
-        self.path = styles.get("path", "")
         self.font = styles.get("font", "Arial")
         self.fontsize = fontsize
         self.color = styles.get("color","white")
@@ -330,19 +401,22 @@ class Text(Object):
         # if font in system fonts
         if name in pg.font.get_fonts():
             font = pg.font.SysFont(name, size)
+            
+        # if font is a path
+        elif name.endswith(".ttf"):
+            font = pg.font.Font(name, size)
+            
         else:
             raise Exception("Font not found", name)
                 
         return font.render(text, True, color)
             
     def update(self, **atributes):
-        self.text = atributes.get("text", self.text)
-        self.size = atributes.get("size", [self.text_obj.get_width(), self.text_obj.get_height()])
-        self.color = atributes.get("color", self.color)
-        self.font = atributes.get("font", self.font)
-        self.fontsize = atributes.get("fontsize", self.fontsize)
-        self.margin = atributes.get("margin", self.margin)
-        self.pos = atributes.get("pos", self.pos)
+        if "text" in atributes:
+            self.text = atributes["text"]
+            self.text_obj = self.load_font(self.text, self.font, self.fontsize, self.color)
+            self.size = [self.text_obj.get_width(), self.text_obj.get_height()]
+        super().update(**atributes)
             
     def draw(self):
         self.text_obj = self.load_font(self.text, self.font, self.fontsize, self.color)
@@ -350,12 +424,16 @@ class Text(Object):
 
 class Image(Rect):
     r'''
-    @param image: image to be rendered ``str``
-    @param pos: position of the image ``list(x, y) or list("left", "top")``
-    @param size: size of the image ``int``
-    @Keyword Arguments:
-        * color= (R, G, B) ``"white" or tuple(R, G, B)``
-        * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
+    #### Image
+    #### Parameters 
+    - `pos`: position of the image `[x, y]`
+    - `size` : size of the image `[width, height]`
+    - `image` : path to image file `str`
+    
+    #### Optional Arguments (Keyword Arguments)
+    - `scale` : scale the image to the size `bool`
+    - `margin`: margin of the image `[top, right, bottom, left]`   
+    - `components` : components to add in the object `[Component, ..]`
     '''
     def __init__(self, pos, size, image, scale=True, **styles):
         super().__init__(pos, size, **styles)
@@ -372,11 +450,16 @@ class Image(Rect):
       
 class Circle(Object):
     r'''
-    @param pos: position of the circle ``list(x, y) or list("left", "top")``
-    @param radius: radius of the circle ``int``
-    @Keyword Arguments:
-        * color= (R, G, B) ``"white" or tuple(R, G, B)``
-        * margin= [top, right, bottom, left] ``list(top, right, bottom, left)``
+    #### Circle
+    #### Parameters 
+    - `pos`: position of the circle `[x, y]`
+    - `radius`: radius of the circle `number`
+    
+    #### Optional Arguments (Keyword Arguments)
+    - `color`: color of the circle `"white" or (R, G, B)`
+    - `stroke`: stroke of the circle `int`
+    - `margin`: margin of the circle `[top, right, bottom, left]`   
+    - `components` : components to add in the object `[Component, ..]`
     '''
     def __init__(self, pos, radius, **styles):
         if isinstance(radius, str):
@@ -388,11 +471,17 @@ class Circle(Object):
         
     def draw(self):
         pos = self.get_pos()
-        pg.draw.circle(self.screen.surface, self.color, pos, self.radius)
+        pg.draw.circle(self.screen.surface, self.color, pos, self.radius, int(self.stroke))
     
     def _get_collision_box(self):
         pos = [self.pos[0] - self.size[0]/2, self.pos[1] - self.size[1] /2]
         return [pos, [pos[0] + self.size[0], pos[1]],
                             [pos[0], pos[1] + self.size[1]], [pos[0] + self.size[0], pos[1] + self.size[1]]
                            ] # esquina superior izq, superior derecha, infeior izq, inferior derecha       
-         
+        
+class Ellipse(Object):
+    def __init__(self, pos : Pos, size : Size, **styles):
+        super().__init__(pos=pos, size=size, **styles)
+        
+    def draw(self):
+        pg.draw.ellipse(self.screen.surface, self.color, [*self.get_pos(), *self.size], int(self.stroke))

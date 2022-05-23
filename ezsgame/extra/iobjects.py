@@ -403,8 +403,8 @@ class Bar(Object):
         screen = self.screen 
         
         self._update_value()
-        self.fill_bar.draw(screen)
-        self.bar.draw(screen)
+        self.fill_bar.draw()
+        self.bar.draw()
         
 # objectos interactivos/dinamicos
 class CheckBox(Rect):
@@ -436,7 +436,7 @@ class InputBox(Rect):
         self.overflow = styles.get("overflow", "hidden")
         self.focus = False
         self.stroke = styles.get("stroke", 5)
-        self.resolve_styles(self.screen)
+        self.resolve_styles()
         self._eventname_unfocus = f"inputbox.{self._id}.on.mousedown._desactivate"
         self._eventname_focus = f"inputbox.{self._id}.on.keydown._catch_char"
         self.text = Text(text=self.value, pos=[self.pos[0]+self.size[0]/(self.textsize/2), self.pos[1]+self.size[1]/4], fontsize=self.textsize, color=self.textcolor, fontname=self.textfont)
@@ -454,6 +454,7 @@ class InputBox(Rect):
         if key == 8:
             self.value = self.value[:-1]
             return
+        
         if key == 13:
             unicode = ""
         
@@ -502,7 +503,7 @@ class InputBox(Rect):
         screen = self.screen
         pg.draw.rect(screen.surface, self.color, [*self.get_pos(), *self.size], int(self.stroke))
         self.text.update(text=self.value)
-        self.text.draw(screen)
+        self.text.draw()
         
 class Button(Circle):
     def __init__(self, pos, radius, **styles):

@@ -1,6 +1,6 @@
 import pygame as pg, random, time as t
 from ezsgame.objects import Size, Gradient, random_color, Object, PRect, resolve_color
-from ezsgame.global_data import DATA, get_screen
+from ezsgame.global_data import DATA
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
@@ -41,11 +41,7 @@ class Screen:
         - Adds an `interval` to the time handler, calls the function every `time` milliseconds
         - `time` : time in milliseconds
         - `name` : name of the interval (Optional)
-        '''        
-
-        if name == "Default":
-            name = f"{len(self.time.intervals)}.{time}" if name == "Default" else name
-        
+        '''                
         def wrapper(func):
             self.time.add(time, func, name)
             return func
@@ -62,7 +58,7 @@ class Screen:
     # -----------------------------------------------------------------------------
     
     # event decorators ------------------------------------------------------------
-    def on_key(self, type:str, keys : list):
+    def on_key(self, type:str, keys : list, name:str = "Default"):
         r'''
         #### Calls the function when the key event is triggered
         - `type` : type of the event. `up` or `down`
@@ -74,7 +70,7 @@ class Screen:
             keys = [keys]
                 
         def wrapper(func):
-            self.events.on_key(type, keys, func)
+            self.events.on_key(type, keys, func, name)
             return func
         
         return wrapper
@@ -140,9 +136,8 @@ class Screen:
         r'''
         #### Checks and Manage the events, should be called in the main loop
         '''
-        self.events.check()
         self.time.check()
-
+        self.events.check()
         DATA.drawn_objects = []
 
     @staticmethod
@@ -473,11 +468,11 @@ class IScreen(Screen):
 
 # Manager Objects
         
-def add_args(func, *args, **kwargs):
+def add_args(func, **kwargs):
     def inner(*_, **__):
         try:
-            return func(*args, **kwargs)
-        except:
+            return func(**kwargs)
+        except Exception as e:
             return func()
     return inner
     
@@ -492,7 +487,6 @@ class EventHandler:
         self.to_add = {"events": [], "base_events": []}
                                             
     def check(self):
-        screen = get_screen()
         event = self._get_events()
         
         self.events = {k:v for k,v in self.events.items() if v != None}
@@ -514,8 +508,12 @@ class EventHandler:
         for item in self.to_add["events"]:
             self.events[item[0]] = item[1]
             
+        names = []
         for item in self.to_add["base_events"]:
-            self.base_events[item[0]].append(item[1])
+            
+            if item[1]["name"] not in names:
+                self.base_events[item[0]].append(item[1])
+                names.append(item[1]["name"])
         
         self.to_add = {"events": [], "base_events": []}
         
@@ -533,11 +531,12 @@ class EventHandler:
             for base_event in self.base_events:
                 if ev.type == base_event:
                     for item in self.base_events.get(base_event, None):
-                        if base_event == pg.KEYDOWN:
-                            item["callback"] = add_args(item["callback"], key=ev.key, unicode=ev.unicode)
-                        item["callback"]()
+                        if base_event == (pg.KEYDOWN or pg.KEYUP):
+                            add_args(item["callback"], key=ev.key, unicode=ev.unicode)()
+                        
+                        else:
+                            item["callback"]()
                            
-   
             # STORED EVENTS --------------------------------------------------------------------------------
             for key, value in self.events.items():
                 if value["type"] == ev.type:
@@ -625,13 +624,14 @@ class EventHandler:
         
         self.to_remove["base_events"].append(name)
                    
-    def on_key(self, type : str, keys : list, callback):
+    def on_key(self, type : str, keys : list, callback, name:str = "Default"):
         r'''
         #### Calls function when key event is triggered.
         -  `type`: type of `Event` to be added
                 - Events : `down` (when key is down), `up` (when key released)
         - `keys`: keys to be added to the event 
         -  `callback`:  function to be called when the event is triggered 
+        - `name`: name of event (optional)
         '''
         types = {
             "down" : pg.KEYDOWN,
@@ -641,17 +641,19 @@ class EventHandler:
         if not t:
             raise ValueError("Invalid type: ", type)
          
-        for key in keys:
-            if key.lower() in ["multiply", "minus", "plus", "enter"]:
-                key = "KP_" + key.upper()
+        for key in keys:    
+            if key.lower() == "enter":
+                key = "RETURN"
+                
             elif len(key) > 1:
                 key = key.upper()
-              
-            else:
-                key = key.lower()
+
             
             k = eval("pg.K_" + key)
-            self.events[f"{key}_{type}_{len(self.events)}"] = {"type": t, "key": k, "callback": callback}
+            
+            name = f"{key}_{type}_{len(self.events)}" if name == "Default" else name
+        
+            self.events[name] = {"type": t, "key": k, "callback": callback}
             
     def _base_event_index(self, type, item):
         for i in range(len(self.base_events[type])):
@@ -698,7 +700,7 @@ class TimeHandler:
         - `callback` : function to be called when the event is triggered 
         '''
         name = f"{len(self.intervals)}.{time}" if name == "Default" else name
-        self.to_add.append([name, {"callback": callback, "time": time, "last_call": t.time()}])
+        self.to_add.append([name, {"callback": callback, "time": time//1000, "last_call": t.time()}])
 
     def remove(self, name:str):
         r'''
@@ -720,11 +722,11 @@ class TimeHandler:
             self.intervals[item[0]] = item[1]
         self.to_add = []
         
-        
-        for key, value in self.intervals.items():
+        for value in self.intervals.values():
             if t.time() - value["last_call"] >= value["time"]:
-                self.intervals[key]["last_call"] = t.time()
-                self.intervals[key]["callback"]()
+                value["last_call"] = t.time()
+                value["callback"]()
+                
     
 def flat(arr, depth=1):
     r'''

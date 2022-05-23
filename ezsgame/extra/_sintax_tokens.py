@@ -1,3 +1,11 @@
+
+
+# ----------------------------------------------------------------------------
+
+# TOKENS FOR STRUCTURED OBJECTS MODULE
+
+# ----------------------------------------------------------------------------
+
 # ALL TOKENS MUST BE UNIQUE OR IT CAN CAUSE ERRORS, RUN THIS FILE TO SEE IF ANY TOKEN IS DUPLICATE
 # DO NOT REMOVE ANY TOKEN
 

@@ -142,16 +142,12 @@ class Resizable (Component):
         self._eventname_resize = f"ResizableComponent.on.keydown._resize.{self.object._id}"
         self._eventname_event_listener = f"ResizableComponent.event_listener.{self.object._id}"
         
-        self.screen.events.add_event(event="mousedown", object=self.object, callback=lambda: self._activate(),name=self._eventname_event_listener)
-        self.screen.events.on_event("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
+        self.screen.events.add_event(event="mousedown", object=self.object, callback= self._activate,name=self._eventname_event_listener)
+        self.screen.events.on_event("mousedown", self._desactivate, self._eventname_unfocus)
 
         self.gen_resize_obj()
         
-        # saves the function to restore it is component is deleted
-        self._object_draw_func = self.object.draw
-        
-        self.object.draw = self.draw(self.object.draw)
-                                
+        self.object.on_draw(self.draw, self._eventname_event_listener)
 
     def gen_resize_obj(self):
         size = [self.object.size[0]*1.5, self.object.size[1]*1.5]
@@ -160,17 +156,20 @@ class Resizable (Component):
         
     def _resize(self):
         start = self.object.pos.copy()
-        current = self.screen.mouse_pos()
-        
+        current = self.screen.mouse_pos()   
         
         x,y = current[0] - start[0], current[1] - start[1]
         if x < 0:
             self.object.pos[0] = current[0]
             self.object.size[0] = abs(x)
+        else:
+            self.object.size[0] = x
         
         if y < 0:   
             self.object.pos[1] = current[1]
             self.object.size[1] = abs(y)
+        else:
+            self.object.size[1] = y
             
         self.gen_resize_obj()
 
@@ -178,7 +177,7 @@ class Resizable (Component):
     def _activate(self):
         if self.focus == False:
             self.focus = True        
-            self.screen.events.on_event("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
+            self.screen.events.on_event("mousedown", self._desactivate, self._eventname_unfocus)
             self.screen.time.add(10, self._resize, self._eventname_resize)
 
     def _desactivate(self):
@@ -191,17 +190,12 @@ class Resizable (Component):
             
         self.screen.time.remove(self._eventname_resize)
                 
-    def draw(self, func):
-        def wrapper(*args, **kwargs):
-            if self.focus:
-                self.resize_obj.draw()
-            func(*args, **kwargs)
-            return func
-
-        return wrapper
+    def draw(self):
+        if self.focus:
+            self.resize_obj.draw()
 
     def remove(self):
-        self.object.draw = self._object_draw_func
+        self.object.remove_on_draw(self._eventname_event_listener)
         self._desactivate()
         self.screen.events.remove(self._eventname_event_listener)
         del self
@@ -226,15 +220,12 @@ class Draggable(Component):
         self._eventname_move = f"DrageableComponent.on.keydown._move.{self.object._id}"
         self._eventname_event_listener = f"DrageableComponent.event_listener.{self.object._id}"
         
-        self.screen.events.on_event("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
-        self.screen.events.add_event(event="mousedown", object=self.object, callback=lambda: self._activate(),name=self._eventname_event_listener)
+        self.screen.events.on_event("mousedown", self._desactivate, self._eventname_unfocus)
+        self.screen.events.add_event(event="mousedown", object=self.object, callback= self._activate, name=self._eventname_event_listener)
 
         self.gen_resize_obj()
         
-        # saves the function to restore it is component is deleted
-        self._object_draw_func = self.object.draw
-        
-        self.object.draw = self.draw(self.object.draw)
+        self.object.on_draw(self.draw, self._eventname_move)
                                 
     def gen_resize_obj(self):
         size = [self.object.size[0]*1.5, self.object.size[1]*1.5]
@@ -251,7 +242,7 @@ class Draggable(Component):
     def _activate(self):
         if self.focus == False:
             self.focus = True        
-            self.screen.events.on_event("mousedown", lambda: self._desactivate(), self._eventname_unfocus)
+            self.screen.events.on_event("mousedown", self._desactivate, self._eventname_unfocus)
             self.screen.time.add(10, self._move, self._eventname_move)
             
             self.screen.events.remove_event(self._eventname_event_listener)
@@ -260,24 +251,19 @@ class Draggable(Component):
         if self.focus:
             self.focus = False
             self.screen.time.remove(self._eventname_move)
-            self.screen.events.add_event(event="mousedown", object=self.object, callback=lambda: self._activate(),name=self._eventname_event_listener)
+            self.screen.events.add_event(event="mousedown", object=self.object, callback=self._activate, name=self._eventname_event_listener)
 
         if "keydown" in self.screen.events.base_events:
             self.screen.events.remove_base_event(self._eventname_focus)
         if "mousedown" in self.screen.events.base_events:
             self.screen.events.remove_base_event(self._eventname_unfocus)  
                 
-    def draw(self, func):
-        def wrapper(*args, **kwargs):
-            if self.focus:
-                self.resize_obj.draw()
-            func(*args, **kwargs)
-            return func
-
-        return wrapper
+    def draw(self):
+        if self.focus:
+            self.resize_obj.draw()
 
     def remove(self):
-        self.object.draw = self._object_draw_func
+        self.object.remove_on_draw(self._eventname_move)
         self._desactivate()
         self.screen.events.remove_event(self._eventname_event_listener)
         self.screen.time.remove(self._eventname_move)
