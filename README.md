@@ -46,10 +46,10 @@ from ezsgame.all import *
 from ezsgame.basics import *
 
 # Declara la pantalla
-screen = Screen(size=(640, 480), title="Mi App")
+screen = Screen(size=[640, 480], title="Mi App")
 
 # Declarar un objeto
-mi_rect =  Rect(pos=["center", "center"], size=(100, 100), color="red")
+mi_rect =  Rect(pos=["center", "center"], size=[100, 100], color="red")
 
 # Bucle principal
 while True:
