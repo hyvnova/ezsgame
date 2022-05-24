@@ -4,10 +4,24 @@ from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core import grid
 from pathfinding.finder.a_star import AStarFinder
 from ezsgame.primitive_objects import PRect
-
-pg.init()
+from ezsgame.global_data import get_screen
 
 class IObject(Object):
+    @staticmethod
+    def extend(object):
+        styles = {k:v for k,v in object.__dict__.items() if k not in ["size", "pos", "id"] and not k.startswith("__")}
+        
+        iobject = IObject(object.pos, object.size, **styles)
+        
+        for k in dir(iobject):
+            if k not in ["size", "pos", "id"] and not k.startswith("__"):
+                setattr(object, k, getattr(iobject, k))
+        
+        del iobject
+        del styles
+        
+        return object
+    
     def __init__(self,  pos, size, **styles):
         super().__init__(pos, size, **styles)
         self.objects = Group()
@@ -68,21 +82,7 @@ class IObject(Object):
             
     def remove(self, object):
         self.objects.remove(object)
-
-class IRect(IObject):
-    def __init__(self, pos, size, **styles):
-        super().__init__(pos, size, **styles)
-        
-    def draw(self):
-        self._draw()
-        pg.draw.rect(self.screen.surface, self.color, [*self.get_pos(), *self.size], int(self.stroke))
-
-class ICircle(IObject, Circle):
-    def __init__(self, pos, radius, **styles):
-        size = [radius*2, radius*2]
-        IObject.__init__(self, pos, size, **styles)
-        Circle.__init__(self, pos, radius, **styles)
-        
+   
 class Grid(Object):
     def __init__(self, pos, size, grid_size, **styles):
         super().__init__(pos, size, **styles)
@@ -275,7 +275,6 @@ class Group:
         return Group([obj for obj in self.objects if func(obj)])
         
 
-
 def _get_object(object):
     args = {k:v for k,v in object.items() if k != "type" and  k != "elements"}
     try:
@@ -318,17 +317,18 @@ class RangeBar(Object):
         radius = styles.get("radius", self.size[1] / 2.5 - self.size[1]//8)
         wheel_color = styles.get("wheel_color", "white")
         
-        self.wheel = ICircle(pos=[0,0], radius=radius, color=wheel_color)
+        self.wheel = IObject(Circle(pos=[0,0], radius=radius, color=wheel_color))
+        
         self.bar = Object(pos=pos, size=size, **styles)
         
         self.min = (min  * (self.pos[0]+ self.size[0])) / 100 if min != 0 else self.pos[0]
         self.max = (max * (self.pos[0]+ self.size[0])) / 100
         self.value = (value * (self.min + self.max)) / 100        
-        self._evname = f"RangeBar_{self._id}_update_value_[{random.randint(0,255)}]"
+        self._evname = f"RangeBar_{self.id}_update_value_[{random.randint(0,255)}]"
         
         @self.wheel.click()    
         def wheel_click():     
-            self._evname = f"RangeBar_{self._id}_update_value_[{random.randint(0,255)}]"
+            self._evname = f"RangeBar_{self.id}_update_value_[{random.randint(0,255)}]"
             self.screen.time.add(time=10, callback=lambda: self._update_value(), name=self._evname) 
 
         @self.wheel.unclick()
@@ -406,7 +406,6 @@ class Bar(Object):
         self.fill_bar.draw()
         self.bar.draw()
         
-# objectos interactivos/dinamicos
 class CheckBox(Rect):
     def __init__(self, pos, size, **styles):
         self.state = False
@@ -437,8 +436,8 @@ class InputBox(Rect):
         self.focus = False
         self.stroke = styles.get("stroke", 5)
         self.resolve_styles()
-        self._eventname_unfocus = f"inputbox.{self._id}.on.mousedown._desactivate"
-        self._eventname_focus = f"inputbox.{self._id}.on.keydown._catch_char"
+        self._eventname_unfocus = f"inputbox.{self.id}.on.mousedown._desactivate"
+        self._eventname_focus = f"inputbox.{self.id}.on.keydown._catch_char"
         self.text = Text(text=self.value, pos=[self.pos[0]+self.size[0]/(self.textsize/2), self.pos[1]+self.size[1]/4], fontsize=self.textsize, color=self.textcolor, fontname=self.textfont)
         # init 
         self.screen.events.add_event(event="mousedown", object=self, callback=lambda: self._activate())
@@ -505,20 +504,24 @@ class InputBox(Rect):
         self.text.update(text=self.value)
         self.text.draw()
         
-class Button(Circle):
-    def __init__(self, pos, radius, **styles):
-        self.screen = get_screen()
+class Button(Rect):
+    def __init__(self, pos, size, **styles):
+        if "border_radius" in styles:
+            self.border_radius = styles["border_radius"]
+            del styles["border_radius"]
+            
+        else:
+            self.border_radius = [5] * 4
 
-        super().__init__(pos=pos, radius=radius,  **styles)
+        super().__init__(pos=pos, size=size, **styles)
         
-        self.radius = radius
         if "text" in styles:
             self.text = styles['text']
             self.fontsize = styles.get("fontsize", 28)
             self.textcolor = styles.get('textcolor', "white")
             self.font = styles.get("font", "Arial")
             
-        self._eventname = f"button.{self._id}.on.mousedown"
+        self._eventname = f"button.{self.id}.on.mousedown"
         self.screen.events.add_event(event="mousedown", object=self, callback=lambda: None, name=self._eventname)
         
     def _gen_text_obj(self):
@@ -539,11 +542,9 @@ class Button(Circle):
         '''
         self.onclick(func)
         return func
-        
     
     def draw(self):
-        screen = self.screen 
-        pg.draw.circle(screen.surface, self.color, self.pos, self.radius)
+        super().draw()
         if hasattr(self, "text"):
             self._gen_text_obj()
             self.text_obj.draw()

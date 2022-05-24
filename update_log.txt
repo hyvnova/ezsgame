@@ -7,3 +7,7 @@
 - Fix : `Components` now can work in "harmony"
 
 - Added : `outline` function to `funcs` module.
+
+- Now buttons are rect-like objects.
+ 
+- `IRect`, `ICircle` and any other `IObject` child, were replaced by `IObject.extend()` method.

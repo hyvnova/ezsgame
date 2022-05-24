@@ -232,7 +232,7 @@ class Object:
     """
     
     def __init__(self, pos : Pos, size : Size, **styles):
-        self._id = get_id()
+        self.id = get_id()
 
         self.color = styles.get("color", "white")
 
@@ -331,7 +331,7 @@ class Object:
         return self.size.ref() if ref else Size(self.size.copy())
              
     def __str__(self):
-        return f"<Object: {self.__class__.__name__}, ID: {self._id}>"
+        return f"<Object: {self.__class__.__name__}, ID: {self.id}>"
                  
     def _draw(self):
         r'''
@@ -340,7 +340,7 @@ class Object:
         for func in self.__on_draw.values():
             func()
         
-        get_drawn_objects().append(self._id)
+        get_drawn_objects().append(self.id)
               
 class Rect(Object):
     r'''

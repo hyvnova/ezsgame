@@ -1,6 +1,6 @@
 from ezsgame.global_data import get_screen
 from ezsgame.extra.controller import Controller
-from ezsgame.funcs import outline
+from ezsgame.funcs import outline, move
 
 
 class ComponentGroup:
@@ -144,10 +144,10 @@ class Resizable (Component):
 
         self.focus = False
 
-        self._eventname_unfocus = f"ResizableComponent.on.mousedown._unfocus.{self.object._id}"
-        self._eventname_focus = f"ResizableComponent.on.keydown._focus.{self.object._id}"
-        self._eventname_resize = f"ResizableComponent.on.keydown._resize.{self.object._id}"
-        self._eventname_event_listener = f"ResizableComponent.event_listener.{self.object._id}"
+        self._eventname_unfocus = f"ResizableComponent.on.mousedown._unfocus.{self.object.id}"
+        self._eventname_focus = f"ResizableComponent.on.keydown._focus.{self.object.id}"
+        self._eventname_resize = f"ResizableComponent.on.keydown._resize.{self.object.id}"
+        self._eventname_event_listener = f"ResizableComponent.event_listener.{self.object.id}"
         
         self.screen.events.add_event(event="mousedown", object=self.object, callback= self.activate,name=self._eventname_event_listener)
         self.screen.events.on_event("mousedown", self.desactivate, self._eventname_unfocus)
@@ -222,10 +222,10 @@ class Draggable(Component):
 
         self.focus = False
 
-        self._eventname_unfocus = f"DrageableComponent.on.mousedown._unfocus.{self.object._id}"
-        self._eventname_focus = f"DrageableComponent.on.keydown._focus.{self.object._id}"
-        self._eventname_move = f"DrageableComponent.on.keydown._move.{self.object._id}"
-        self._eventname_event_listener = f"DrageableComponent.event_listener.{self.object._id}"
+        self._eventname_unfocus = f"DrageableComponent.on.mousedown._unfocus.{self.object.id}"
+        self._eventname_focus = f"DrageableComponent.on.keydown._focus.{self.object.id}"
+        self._eventname_move = f"DrageableComponent.on.keydown._move.{self.object.id}"
+        self._eventname_event_listener = f"DrageableComponent.event_listener.{self.object.id}"
         
         self.screen.events.add_event(event="mousedown", object=self.object, callback= self.activate, name=self._eventname_event_listener)
         self.object.on_draw(self.draw, self._eventname_move, True)
@@ -285,7 +285,7 @@ class Controllable(Component):
         self.object = object
 
         self.controller = Controller(keys=keys, speed=speed)
-        self.object.on_draw(self._move, f"ControllableComponent.on.draw.{self.object._id}")
+        self.object.on_draw(self._move, f"ControllableComponent.on.draw.{self.object.id}", True)
         
     def activate(self):
         self.controller.enable()
@@ -293,12 +293,12 @@ class Controllable(Component):
     def deactivate(self):
         self.controller.disable()
     
-    def _move(self):
+    def _move(self, obj):
         speed = self.controller.get_speed("simple")
-        self.object.pos = [self.object.pos[0] + speed[0], self.object.pos[1] + (speed[1] * -1)]
-    
+        move(obj, speed)
+
     def remove(self):
-        self.object.remove_on_draw(f"ControllableComponent.on.draw.{self.object._id}")
+        self.object.remove_on_draw(f"ControllableComponent.on.draw.{self.object.id}")
         del self.controller
         del self    
     

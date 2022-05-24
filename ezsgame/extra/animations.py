@@ -4,7 +4,7 @@ from ezsgame.global_data import get_id, get_screen
 class Animation:
     def __init__(self, object, start, end, time=50, step=1, loop=False, done_callback=None):
         self.screen = get_screen()
-        self._id = get_id()
+        self.id = get_id()
         self.object = object
         self.done = False
         self.done_callback = done_callback
@@ -14,7 +14,7 @@ class Animation:
         self.time = time
         self.step = step    
         self.corrected = False
-        self.name = f"slide_{self.start}_{self.end}_{self._id}"
+        self.name = f"slide_{self.start}_{self.end}_{self.id}"
         self.resolve()
 
     def resolve(self):

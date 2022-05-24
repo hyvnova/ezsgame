@@ -5,7 +5,7 @@ class Controller:
         if len(keys) != len(speed):
             raise Exception(f"Number of keys and speed must be the same. ({len(keys)}) keys != ({len(speed)}) speeds")  
         
-        self._id = get_id()
+        self.id = get_id()
         self.screen = get_screen()
         self.keys = keys
         self._speeds = speed
@@ -17,14 +17,14 @@ class Controller:
             self._add_events(i)
         
     def _add_events(self, index):
-        evname = f"Contoller.keydown.{self._id}.{index}"
+        evname = f"Contoller.keydown.{self.id}.{index}"
         self._evnames.append(evname)
         
         @self.screen.on_key(type="down", keys=[self.keys[index]], name=evname)
         def keydown():
             self.speed[index] = self._speeds[index]
 
-        evname = f"Contoller.keyup.{self._id}.{index}"
+        evname = f"Contoller.keyup.{self.id}.{index}"
         self._evnames.append(evname)
         
         @self.screen.on_key(type="up", keys=[self.keys[index]], name=evname)

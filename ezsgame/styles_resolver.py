@@ -1,7 +1,18 @@
+from pydoc import resolve
 from colour import Color
 from ezsgame.global_data import get_screen
 
 adapt_rgb = lambda rgb: tuple(map(lambda i: i*255, rgb))
+
+def resolve_measure(measure, size):
+    if isinstance(measure, str):
+        if measure.endswith("%"):
+            return float(measure[:-1]) * size / 100
+        
+        else:
+            raise ValueError("Invalid measure value", measure)
+    
+    return measure 
 
 def resolve_color(color):   
     if isinstance(color, str):
@@ -11,19 +22,14 @@ def resolve_color(color):
         return adapt_rgb(Color(color).get_rgb())
     
     return color
-    
+
 def resolve_margin(margin):
     screen = get_screen()
 
     for i,m in enumerate(margin):
         screen_i = 0 if i%2 == 0 else 1        
-        
-        if isinstance(m, str):
-            if m.endswith("%"):
-                margin[i] = float(m[:-1]) * screen.size[screen_i] / 100
 
-            else:
-                raise ValueError("Invalid margin value", m)
+        margin[i] = resolve_measure(m, screen.size[screen_i])
 
     return margin
 
@@ -32,14 +38,8 @@ def resolve_size(size):
 
     for i,s in enumerate(size):
         screen_i = 0 if i%2 == 0 else 1
-        
-        if isinstance(s, str):
-            if s.endswith("%"):
-                size[i] = float(s[:-1]) * screen.size[screen_i] / 100
 
-            else:
-                raise ValueError("Invalid size value", s)
-     
+        size[i] = resolve_measure(s, screen.size[screen_i])
    
     return size
 

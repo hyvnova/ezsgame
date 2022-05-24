@@ -134,7 +134,7 @@ class StructuredRect(IObject):
 
 class Menu: 
     def __init__(self, data : dict):
-        self._id = get_id()
+        self.id = get_id()
         self.screen = get_screen()
         self.spacing = data.get("spacing", 15)
         self.pos = data.get("pos", [0,0])

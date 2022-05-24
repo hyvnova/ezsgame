@@ -546,10 +546,10 @@ class EventHandler:
                     
                     else:
                         if value.get("evname",None) == "unhover":
-                            if not self.is_hovering(value["object"]) and value["object"]._id in DATA.drawn_objects:
+                            if not self.is_hovering(value["object"]) and value["object"].id in DATA.drawn_objects:
                                 self.events[key]["callback"]()
                         else:               
-                            if self.is_hovering(value["object"]) and value["object"]._id in DATA.drawn_objects:
+                            if self.is_hovering(value["object"]) and value["object"].id in DATA.drawn_objects:
                                 value["callback"]()
                                             
     def add_event(self, event:str, object:Object, callback, name:str="Default"):
@@ -566,7 +566,7 @@ class EventHandler:
         event_ = self._convert_to_pgevent(event)
         
         if name == "Default":
-            name = f"{event}.{object._id}.{len(self.events)}"
+            name = f"{event}.{object.id}.{len(self.events)}"
             
         self.to_add["events"].append([name, {"type": event_, "object": object, "callback": callback, "evname" : event}])
 

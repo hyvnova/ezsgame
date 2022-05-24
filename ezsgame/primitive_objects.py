@@ -6,14 +6,14 @@ class PObject:
     Primitive Objects do not check anything before. BECAREFUL the funcions you use without defining variables
     '''
     def __init__(self, **attributes):
-        self._id = get_id()
+        self.id = get_id()
         self.screen = get_screen()
          
         for k,v in attributes.items():
             self.__setattr__(k,v)
 
     def __str__(self):
-        return f"<Primitive Object: {self.__class__.__name__}, ID: {self._id}>"
+        return f"<Primitive Object: {self.__class__.__name__}, ID: {self.id}>"
 
     def __repr__(self):
         return self.__str__()

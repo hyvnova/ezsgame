@@ -26,7 +26,7 @@ def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [
 def copy(obj, different=False):
     new_obj = copy.copy(obj)
     if different:
-        new_obj._id = get_id()
+        new_obj.id = get_id()
     return obj
     
 def is_out(obj):
