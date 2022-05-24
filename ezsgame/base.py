@@ -1,5 +1,5 @@
 import pygame as pg, random, time as t
-from ezsgame.objects import Size, Gradient, random_color, Object, PRect, resolve_color
+from ezsgame.objects import Size, Pos, Gradient, Object, resolve_color
 from ezsgame.global_data import DATA
 
 class Screen:
@@ -8,6 +8,7 @@ class Screen:
                  resizable:bool=False):
         
         self.size = Size(*size)
+        self.pos = Pos(0,0)
         self.title = title
         self.icon = icon
         self.surface = None
@@ -317,153 +318,26 @@ class Screen:
         self.init()
         
 
-class IScreen(Screen):
-    def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
-                 show_fps : bool = False, objects = [], color : str = "black", depth : int = 0, vsync : bool = False):
-        super().__init__(size, title, icon, fps, show_fps, color, depth, vsync)
-        self.objects = objects
-        self.color = color
-        self.depth = depth
-        self.vsync = vsync
-        self.grid = self.grid_div(cols=3, rows=3)
-        self.format_objects()
-        self.init()
+class Interface:
+    @staticmethod
+    def extend(object):
+        r'''
+        #### Extends the `object` with the `Interface` properties
+        '''
+        interface = Interface()
+    
+        for k in dir(interface):
+            if k not in ["size", "pos", "id"] and not k.startswith("__"):
+                setattr(object, k, getattr(interface, k))
         
-    def grid_positions(self, order=[0,1]):
-        pos = []
-        for k in range(self.grid_size[order[0]]):
-            for j in range(self.grid_size[order[1]]):
-               pos.append([k, j]) 
-        return pos          
-    
-    def format_objects(self):
-        r'''
-        Format the objects in the screen
-        '''
-        objs = []
-        i = 0
-        for obj in self.objects:
-            if isinstance(obj, Object):
-                obj.screen = self
-                objs.append({"object": obj, "z-index": i})
-                i += 1
-            
-        self.objects = objs
-    
-    def run(self, fill_color=None, auto_place=True, grid=[3,3]):
-        r'''
-        Run the screen
-        '''
-        self.grid = self.grid_div(*grid)
-        fill_color = self.color if fill_color == None else fill_color
-        if isinstance(fill_color, str):
-            fill_color = resolve_color(fill_color)
-                        
-        while True:
-            self.check_events()
-            self.fill(fill_color)
-            self.draw(auto_place)
-            self.update()
-
-    def show_grid(self):
-        r'''
-        Draws  grid on the screen
-        '''
-        colors = random_color(len(self.grid))
-        c = 0
-        for i in self.grid:
-            color = colors[c]
-            PRect(pos=i[:2], size=i[2:], color=color).draw(self)
-            c += 1
-   
-        return self
-     
-    def place(self, object, row=0, col=0):     
-        r'''
-        Place an object in the grid
-        '''
-        pos = self.grid[(row * 3) + col]
-        # center object in the box
-        object.pos = [pos[0] + pos[2] / 2 - object.size[0] / 4, pos[1] + pos[3] / 2 - object.size[1] / 4]
-   
-    def add(self, objects):
-        r'''
-        Add objects to the screen object list
-        '''
-        if isinstance(objects, list):
-            for obj in objects:
-                obj.screen = self
-                self.objects.append({"object": obj, "z-index":1})
-        elif isinstance(objects, Object):
-            objects.screen = self
-            self.objects.append({"object": objects, "z-index":1})
-        else:
-            raise Exception("Object must be a list of objects or an object")    
+        del interface
         
-    def draw(self, auto_place=False, objects=None):
-        if objects == None:
-            objects = self.objects
-        else:
-            if isinstance(objects, list):
-                for obj in objects:
-                    self.objects.append({"object": obj, "z-index":1})
-                    
-            elif isinstance(objects, Object) or isinstance(objects, PRect):
-                self.objects.append({"object": objects, "z-index":1})
-
-            else:
-                raise Exception("Object must be a list of objects or an object")
-            
-        if auto_place:
-            if len(objects) > self.grid_space:
-                raise Exception(f"Not enough space in the grid ({self.grid_space} places) for {len(objects)} objects")
-            c = 0
-            r = 0
-            for obj in objects:
-                self.place(obj["object"], r,c)
-                c += 1
-                if c == self.grid_size[1] * 3:
-                    c = 0
-                    r += 1
-            
-        colliding = []
-        to_remove = []
-        for i in range(len(objects)):
-            for j in range(len(objects)):
-                if i != j:
-                    try:
-                        if objects[i]["object"].is_colliding(objects[j]["object"]):
-                            colliding.append([{"object": objects[j]["object"], "z-index": objects[j]["z-index"], "index": i},
-                                            {"object": objects[j]["object"], "z-index": objects[j]["z-index"], "index": j}])
-                            to_remove.append(objects[i])
-                            to_remove.append(objects[j])
-                    except:
-                        pass
-                            
-        # remove duplicates in to_remove
-        to_remove = filter(lambda x: x not in to_remove, to_remove)
-  
-        for obj in colliding:
-            if obj[0]["z-index"] > obj[1]["z-index"]:
-                obj[1]["object"].draw(self)
-                obj[0]["object"].draw(self)
-            
-            elif obj[0]["z-index"] == obj[1]["z-index"]:
-                if obj[0]["index"] > obj[1]["index"]:
-                    obj[1]["object"].draw(self)
-                    obj[0]["object"].draw(self)
-                else:
-                    obj[0]["object"].draw(self)
-                    obj[1]["object"].draw(self)
-                    
-            else:
-                obj[0]["object"].draw(self)
-                obj[1]["object"].draw(self)
-                               
-        for obj in objects:
-            obj["object"].draw(self)
+        return object
     
-        self.update()
+    def __init__(self, display):
+        self.display = display
+        
+
 
 
 # Manager Objects
@@ -528,29 +402,54 @@ class EventHandler:
                 pg.quit()
                 quit()
                               
-            for base_event in self.base_events:
-                if ev.type == base_event:
-                    for item in self.base_events.get(base_event, None):
-                        if base_event == (pg.KEYDOWN or pg.KEYUP):
-                            add_args(item["callback"], key=ev.key, unicode=ev.unicode)()
+            for ev_type in self.base_events.keys():
+                if ev.type == ev_type:
+                    for i in self.base_events[ev_type]:
                         
+                        if ev.type == pg.MOUSEBUTTONDOWN:
+                            if i["evname"] == "mousewheelup" and ev.button == 4:
+                                i["callback"]()
+                            
+                            elif i["evname"] == "mousewheeldown" and ev.button == 5:
+                                i["callback"]()   
+                            
+                    
+                        elif i["type"] == (pg.KEYDOWN or pg.KEYUP):
+                            add_args(value["callback"], key=ev.key, unicode=ev.unicode)()
+                    
                         else:
-                            item["callback"]()
+                            i["callback"]()
                            
             # STORED EVENTS --------------------------------------------------------------------------------
-            for key, value in self.events.items():
+            for value in self.events.values():
                 if value["type"] == ev.type:
+                    
+                    # ON key events
                     if "key" in value:
                         if value["key"] == ev.key:
                             add_args(value["callback"], key=ev.key, unicode=ev.unicode)()
                     
-                    else:
-                        if value.get("evname",None) == "unhover":
-                            if not self.is_hovering(value["object"]) and value["object"].id in DATA.drawn_objects:
-                                self.events[key]["callback"]()
-                        else:               
-                            if self.is_hovering(value["object"]) and value["object"].id in DATA.drawn_objects:
+                    else:                
+                        is_hovering = self.is_hovering(value["object"]) and value["object"].id in DATA.drawn_objects
+                        
+                        if value.get("evname", "") == "unhover":
+                            if not is_hovering:
                                 value["callback"]()
+                            else:
+                                return
+                        
+                        else:
+                            if is_hovering:
+                                if ev.type == pg.MOUSEBUTTONDOWN:
+                                    if value.get("evname", None) == "mousewheelup" and ev.button == 4:
+                                        value["callback"]()
+                                
+                                    elif value.get("evname", None) == "mousewheeldown" and ev.button == 5:
+                                        value["callback"]()                                        
+                        
+                                else:
+                                    value["callback"]()
+                                    
                                             
     def add_event(self, event:str, object:Object, callback, name:str="Default"):
         r'''
@@ -612,9 +511,10 @@ class EventHandler:
         
         if event not in self.base_events:
             self.base_events[event_] = []
+            
         name = f"base_event.{event}.{len(self.base_events)}" if name == "Default" else name
         
-        self.to_add["base_events"].append([event_, {"type": event_, "callback": callback, "name":name}])
+        self.to_add["base_events"].append([event_, {"type": event_, "callback": callback, "name":name, "evname":event}])
         
     def remove_base_event(self, name : str):
         r'''
@@ -647,7 +547,6 @@ class EventHandler:
                 
             elif len(key) > 1:
                 key = key.upper()
-
             
             k = eval("pg.K_" + key)
             
@@ -670,12 +569,13 @@ class EventHandler:
             "unclick" : pg.MOUSEBUTTONUP,
             "keydown" : pg.KEYDOWN,
             "keyup" : pg.KEYUP,
-            "mousewheel" : pg.MOUSEWHEEL,
+            "mousewheelmotion" : pg.MOUSEWHEEL,
             "mousemotion" : pg.MOUSEMOTION,
             "quit" : pg.QUIT,
             "mousebuttondown" : pg.MOUSEBUTTONDOWN,
             "mousebuttonup" : pg.MOUSEBUTTONDOWN,
-            "mousewheelup" : pg.MOUSEBUTTONDOWN
+            "mousewheelup" : pg.MOUSEBUTTONDOWN,
+            "mousewheeldown" : pg.MOUSEBUTTONDOWN
         }
         if event not in evs:
             raise Exception("Event type not found", event)

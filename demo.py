@@ -2,16 +2,14 @@ from ezsgame.all import *
 
 screen = Screen(title="Sample Demo")
 
-irect = IObject.extend(
-    Rect(pos=["center", "center"], size=[50,50])
-)
-    
+rect = Rect(pos=["center", "center"], size=[50,50]).extends(IObject)
 
+    
 while True:    
     screen.check_events()
     screen.fill() 
 
-    irect.draw()
+    rect.draw()
 
     
     screen.update()

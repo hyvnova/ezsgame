@@ -10,4 +10,9 @@
 
 - Now buttons are rect-like objects.
  
-- `IRect`, `ICircle` and any other `IObject` child, were replaced by `IObject.extend()` method.
+- `IRect`, `ICircle` and any other `IObject` child, were replaced by `IObject.extend()` method .
+- `Iscreen` class was replaced by `Interface` ****exteder**** class
+
+- ***Extender**** classes have a `.extend()` method, extends a object properties.
+
+- Fix : `mousewheelup` and `mousewheeldown` events now work 

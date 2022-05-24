@@ -262,6 +262,22 @@ class Object:
             self.draw = _draw_before(self.draw)
         except:
             pass
+        
+    def extends(self, *classes):
+        r"""
+        #### Extends the properties and methods of the given classes to the current object.
+        Note : this can only be done with classes with `extend()` method.
+        #### Parameters
+        - `classes`: classes to extend (*args)
+        """
+        for cls in classes:
+            if hasattr(cls, "extend"):
+                self = cls.extend(self)
+            else:
+                raise TypeError("Cannot extend class {}".format(cls))
+        
+        return self
+            
     
     def on_draw(self, func, name:str = "Default", pass_object=False):
         r"""
