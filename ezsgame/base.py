@@ -318,21 +318,6 @@ class Screen:
         self.init()
         
 class Interface:
-    @staticmethod
-    def extend(object):
-        r'''
-        #### Extends the `object` with the `Interface` properties
-        '''
-        interface = Interface(object)
-    
-        for k in dir(interface):
-            if k not in ["size", "pos", "id"] and not k.startswith("__"):
-                setattr(object, k, getattr(interface, k))
-        
-        del interface
-        
-        return object
-    
     def __init__(self, display):
         self.display = display
         self.objects = []
@@ -379,8 +364,8 @@ class Interface:
         end_y = self.display.pos[1] + height
         end_x = self.display.pos[0] + width
     
-         
-            
+        
+                        
         return self
             
     def draw(self):
