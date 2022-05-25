@@ -1,0 +1,13 @@
+# Python cache
+/__pycache__/
+/ezsgame/__pycache__/
+/ezsgame/extra/__pycache__/
+
+# Visual Studio stuff
+/.vscode
+
+# locales
+/local
+
+
+/.github/
