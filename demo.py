@@ -5,9 +5,9 @@ screen = Screen(title="Sample Demo")
 
 plane = Interface(screen)
 plane.add([
-    Rect([0,0], [50,100], color="red"),
-    Rect([0,0], [100,50], color="green"),
-    Rect([0,0], [50,50], color="blue"),
+    Rect([0,0], [200,100], color="red"),
+    Rect([0,0], [100,100], color="green"),
+    Rect([0,0], [300,50], color="blue"),
 ]).flex("row", "center", "center")
 
 while True:    

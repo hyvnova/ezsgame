@@ -346,13 +346,22 @@ class Interface:
             self.objects.remove(obj)
             
     def flex(self, direction="column", x_align="center", y_align="center", wrap=True, 
-             padding_x=[0,0], padding_y=[0,0]):
+             padding_x=0, padding_y=0):
         r'''
         #### Sets the layout of the interface
         - `direction` : `"row"` or `"column"`
         - `x_align` : aligment in x-axis `"left"`, `"center"` or `"right"`
         - `y_align` : Alignment in y-axis `"top"`, `"center"` or `"bottom"`
         '''
+        if (direction := direction.lower()) not in ("row", "column"):
+            raise ValueError("Direction should be `row` or `column`")
+        
+        if (x_align := x_align.lower()) not in ("left", "center", "right"):
+            raise ValueError("x_align should be `left`, `center` or `right`")
+        
+        if (y_align := y_align.lower()) not in ("top", "center", "bottom"):
+            raise ValueError("y_align should be `top`, `center` or `bottom`")
+        
         self.direction = direction
         self.x_align = x_align
         self.y_align = y_align
@@ -363,11 +372,196 @@ class Interface:
         width, height = self.display.size
         end_y = self.display.pos[1] + height
         end_x = self.display.pos[0] + width
+
+        # for center alignment 
+        current_align_direction = ["right", "bottom"]
     
+        last_objs = []
         for obj in self.objects:
+            last_obj = last_objs[-1] if last_objs else None
             
-        
+            x_step = self.display.size[0] / len(self.objects)
+            y_step = self.display.size[1] / len(self.objects)
+            
+            # X-axis alignment
+            if direction == "row":
+                if x_align == "left":
+                    # if last obj use it's position to align x-axis
+                    if last_obj:
+                        obj.pos[0] = (last_obj.pos[0] + last_obj.size[0]) + padding_x + x_step
                         
+                    # if not, use the display's position
+                    else:
+                        obj.pos[0] = self.display.pos[0] + padding_x 
+
+                    # if obj overflows the display
+                    if obj.pos[0] + obj.size[0] > end_x:
+                        if wrap:
+                            # if wrap and last obj, use the last obj's position to align y-axis
+                            if last_obj:
+                                obj.pos[1] = last_obj.pos[1] + last_obj.size[1] + padding_y + y_step
+                            
+                            # if not last obj, use the display's position to align y-axis
+                            else:
+                                obj.pos[1] = self.display.pos[1] + padding_y
+                        
+                        # if not object or wrap, reduce the size of the object, so it fits in the display
+                        else:
+                            obj.size = [end_x - obj.pos[0], obj.size[1]]
+
+                elif x_align == "center":
+                    # if last obj use it's position to align x-axis
+                    if last_obj:
+                        if current_align_direction[0] == "right":
+                            obj.pos[0] = (last_obj.pos[0] + last_obj.size[0]) + padding_x + x_step
+                            current_align_direction[0] = "left"
+                            
+                        else:
+                            last_obj = last_objs[-2]
+                            
+                            obj.pos[0] = last_obj.pos[0] - (padding_x + x_step + obj.size[0])        
+                            current_align_direction[0] = "right"
+                         
+                    else:
+                        #  if not last obj, then center the object
+                        obj.pos[0]  = self.display.pos[0] + (width / 2) - (obj.size[0] / 2)
+                    
+                    # if obj overflows the display
+                    if obj.pos[0] + obj.size[0] > end_x:
+                            
+                        if wrap:
+                            # if wrap and last obj, use the last obj's position to align y-axis
+                            if last_obj:
+                                obj.pos[1] = last_obj.pos[1] + last_obj.size[1] + padding_y + y_step
+                                
+                                if last_obj.pos[1] == obj.pos[1]:
+                                    obj.pos[0] = last_obj.pos[0] + last_obj.size[0] + padding_x + x_step
+                                
+                                else:
+                                    obj.pos[0] = self.display.pos[0] + padding_x    
+                                
+                            # if not last obj, use the display's position to align y-axis
+                            else:
+                                obj.pos[1] = self.display.pos[1] + padding_y
+                        
+                        # if not object or wrap, reduce the size of the object, so it fits in the display
+                        else:
+                            obj.size = [end_x - obj.pos[0], obj.size[1]]
+
+                elif x_align == "right":
+                    # if last obj use it's position to align x-axis
+                    if last_obj:
+                        obj.pos[0] = last_obj.pos[0] - (padding_x + x_step + obj.size[0])
+                    
+                    # if not last obj, use the display's position
+                    else:
+                        obj.pos[0] = self.display.pos[0] + width - padding_x - obj.size[0]
+                    
+                    # if obj overflows the display
+                    if obj.pos[0] < self.display.pos[0]:
+                        if wrap:
+                            # if wrap and last obj, use the last obj's position to align y-axis
+                            if last_obj:
+                                obj.pos[1] = last_obj.pos[1] + last_obj.size[1] + padding_y + y_step
+                            
+                            # if not last obj, use the display's position to align y-axis
+                            else:
+                                obj.pos[1] = self.display.pos[1] + padding_y
+                        
+                        # if not object or wrap, reduce the size of the object, so it fits in the display
+                        else:
+                            obj.size = [end_x - obj.pos[0], obj.size[1]]
+            # Y-axis alignment
+            elif direction == "column":
+                if y_align == "top":
+                    # if last obj use it's position to align y-axis
+                    if last_obj:
+                        obj.pos[1] = (last_obj.pos[1] + last_obj.size[1]) + padding_y + y_step
+                        
+                    # if not, use the display's position
+                    else:
+                        obj.pos[1] = self.display.pos[1] + padding_y
+                        
+                    # if obj overflows the display
+                    if obj.pos[1] + obj.size[1] > end_y:
+                        if wrap:
+                            # if wrap and last obj, use the last obj's position to align y-axis
+                            if last_obj:
+                                obj.pos[0] = last_obj.pos[0] + last_obj.size[0] + padding_x + x_step
+                            
+                            # if not last obj, use the display's position to align y-axis
+                            else:
+                                obj.pos[0] = self.display.pos[0] + padding_x
+                        
+                        # if not object or wrap, reduce the size of the object, so it fits in the display
+                        else:
+                            obj.size = [obj.size[0], end_y - obj.pos[1]]
+                            
+                elif y_align == "center":
+                    # if last obj use it's position to align y-axis
+                    if last_obj:
+                        if current_align_direction[1] == "bottom":
+                            obj.pos[1] = (last_obj.pos[1] + last_obj.size[1]) + padding_y + y_step
+                    
+                            current_align_direction[1] = "top"
+                            
+                        else:
+                            last_obj = last_objs[-2]
+                            obj.pos[1] = last_obj.pos[1] - (padding_y + y_step + obj.size[1])
+                    
+                            current_align_direction[1] = "bottom"
+                            
+                    else:
+                        #  if not last obj, then center the object
+                        obj.pos[1]  = self.display.pos[1] + (height / 2) - (obj.size[1] / 2)
+                    
+                    # if obj overflows the display
+                    if obj.pos[1] + obj.size[1] > end_y:
+                            
+                        if wrap:
+                            # if wrap and last obj, use the last obj's position to align y-axis
+                            if last_obj:
+                                obj.pos[0] = last_obj.pos[0] + last_obj.size[0] + padding_x + x_step
+                            
+                            # if not last obj, use the display's position to align y-axis
+                            else:
+                                obj.pos[0] = self.display.pos[0] + padding_x
+                        
+                        # if not object or wrap, reduce the size of the object, so it fits in the display
+                        else:
+                            obj.size = [obj.size[0], end_y - obj.pos[1]]
+                                        
+                elif y_align == "bottom":
+                    # if last obj use it's position to align y-axis
+                    if last_obj:
+                        obj.pos[1] = last_obj.pos[1] - (padding_y + y_step + obj.size[1])
+                        
+                    # if not last obj, use the display's position
+                    else:
+                        obj.pos[1] = self.display.pos[1] + height - padding_y - obj.size[1]
+                        
+                
+                    # if obj overflows the display
+                    
+                    if obj.pos[1] < self.display.pos[1]:
+                        if wrap:
+                            # if wrap and last obj, use the last obj's position to align y-axis
+                            if last_obj:
+                                obj.pos[0] = last_obj.pos[0] + last_obj.size[0] + padding_x + x_step
+                            
+                            # if not last obj, use the display's position to align y-axis
+                            else:
+                                obj.pos[0] = self.display.pos[0] + padding_x
+                        
+                        # if not object or wrap, reduce the size of the object, so it fits in the display
+                        else:
+                            obj.size = [obj.size[0], end_y - obj.pos[1]]
+
+            last_objs.append(obj)
+            if len(last_objs) > 2:
+                # only keep the last two objects
+                last_objs.pop(0)
+                
         return self
             
     def draw(self):
