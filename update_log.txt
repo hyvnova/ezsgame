@@ -16,3 +16,8 @@
 - ***Extender**** classes have a `.extend()` method, extends a object properties.
 
 - Fix : `mousewheelup` and `mousewheeldown` events now work 
+
+- `Object`'s now have a `z_index` property.
+- Added : `Styles` class, which can be used to manage styles in a json file. <basics module>
+    - When creating objects, argument `styles` should be a `dict` with the styles
+

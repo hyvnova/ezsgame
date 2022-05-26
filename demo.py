@@ -1,15 +1,19 @@
 from ezsgame.all import *
+from ezsgame.styles import Styles
 
 screen = Screen(title="Sample Demo")
 
-rect = Rect(pos=["center", "center"], size=[50,50]).extends(IObject)
+plane = Interface(screen)
+plane.add([
+    Rect([0,0], [50,100], color="red"),
+    Rect([0,0], [100,50], color="green"),
+    Rect([0,0], [50,50], color="blue"),
+]).flex("row", "center", "center")
 
-    
 while True:    
     screen.check_events()
     screen.fill() 
 
-    rect.draw()
-
+    plane.draw()
     
     screen.update()

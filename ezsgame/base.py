@@ -317,28 +317,64 @@ class Screen:
         self.fullscreen = not self.fullscreen
         self.init()
         
-
 class Interface:
-    @staticmethod
-    def extend(object):
-        r'''
-        #### Extends the `object` with the `Interface` properties
-        '''
-        interface = Interface()
-    
-        for k in dir(interface):
-            if k not in ["size", "pos", "id"] and not k.startswith("__"):
-                setattr(object, k, getattr(interface, k))
-        
-        del interface
-        
-        return object
-    
     def __init__(self, display):
         self.display = display
+        self.objects = []
+        self.current_z_index = 1
         
-
-
+    def add(self, *objects):
+        r'''
+        #### Adds passed objects to the interface
+        '''
+        if isinstance(objects[0], list):
+            objects = objects[0]
+        
+        for obj in objects:
+            obj.z_index = self.current_z_index
+            self.current_z_index += 1
+            
+            self.objects.append(obj)
+            
+        return self
+            
+    def remove(self, *objects):
+        r'''
+        #### Removes passed objects from the interface
+        '''
+        for obj in objects:
+            self.objects.remove(obj)
+            
+    def flex(self, direction="column", x_align="center", y_align="center", wrap=True, 
+             padding_x=[0,0], padding_y=[0,0]):
+        r'''
+        #### Sets the layout of the interface
+        - `direction` : `"row"` or `"column"`
+        - `x_align` : aligment in x-axis `"left"`, `"center"` or `"right"`
+        - `y_align` : Alignment in y-axis `"top"`, `"center"` or `"bottom"`
+        '''
+        self.direction = direction
+        self.x_align = x_align
+        self.y_align = y_align
+        self.wrap = wrap
+        self.padding_x = padding_x
+        self.padding_y = padding_y
+        
+        width, height = self.display.size
+        end_y = self.display.pos[1] + height
+        end_x = self.display.pos[0] + width
+    
+        
+                        
+        return self
+            
+    def draw(self):
+        r'''
+        #### Draws all objects in the interface
+        '''
+        for obj in self.objects:
+            obj.draw()
+        
 
 # Manager Objects
         

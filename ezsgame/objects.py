@@ -233,24 +233,27 @@ class Object:
     
     def __init__(self, pos : Pos, size : Size, **styles):
         self.id = get_id()
-
+        self.screen = get_screen() 
+        
         self.color = styles.get("color", "white")
-
         self.margin = styles.get("margin", [0, 0, 0, 0]) # top, right, bottom, left
         self.stroke = styles.get("stroke", 0)
+        self.z_index = styles.get("z_index", 1)
 
         self.pos = Pos(*pos)
         self.size = Size(*size)
-
-        self.screen = get_screen()  
-
-        self.resolve_styles()
         
-        self.__on_draw = {}
-        
+        if "styles" in styles:
+            for k,v in styles["styles"].items():
+                setattr(self, k, v)
+            
         if "components" in styles:
             self.components = ComponentGroup(self, styles["components"])         
-        
+
+        self.resolve_styles()
+
+        self.__on_draw = {}
+
         # Calls _draw() before draw()
         def _draw_before(draw_func):
             def wrapper():
@@ -262,6 +265,24 @@ class Object:
             self.draw = _draw_before(self.draw)
         except:
             pass
+        
+    def update_styles(self, styles=None, **kwargs):
+        r"""
+        #### Updates the object's styles
+        
+        #### Parameters
+        - `styles`: `dict` of styles to update (default: None)
+        - `**kwargs`: keyword arguments of styles to update
+        """
+        
+        if styles:
+            for k,v in styles.items():
+                setattr(self, k, v)
+                
+        for k,v in kwargs.items():
+            setattr(self, k, v)
+            
+        self.resolve_styles()
         
     def extends(self, *classes):
         r"""
