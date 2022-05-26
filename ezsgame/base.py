@@ -364,6 +364,8 @@ class Interface:
         end_y = self.display.pos[1] + height
         end_x = self.display.pos[0] + width
     
+        for obj in self.objects:
+            
         
                         
         return self
