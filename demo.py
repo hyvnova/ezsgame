@@ -1,14 +1,13 @@
 from ezsgame.all import *
-from ezsgame.styles import Styles
 
 screen = Screen(title="Sample Demo")
 
+
+def gen_objects(n, size=[50,50]):
+    return [Rect([0,0], size, color=random_color()) for _ in range(n)]
+
 plane = Interface(screen)
-plane.add([
-    Rect([0,0], [200,100], color="red"),
-    Rect([0,0], [100,100], color="green"),
-    Rect([0,0], [300,50], color="blue"),
-]).flex("row", "center", "center")
+plane.add(gen_objects(9)).grid_align()
 
 while True:    
     screen.check_events()
