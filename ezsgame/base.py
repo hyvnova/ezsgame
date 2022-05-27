@@ -380,25 +380,54 @@ class Interface:
         for obj in objects:
             self.objects.remove(obj)
                     
-    def align(self):
+    def align(self, direction="row", spacing="auto"):
         r'''
         #### Aligns objects in the interface
+        - `direction` : align direction "row" or "column"
         ''' 
-        x,y = 0,0
-        step = [self.objects[-1].size[0], self.objects[-1].size[1]]
+        if (direction:= direction.lower()) not in ("row", "column"):
+            raise ValueError("Direction must be either 'row' or 'column'")
+        
+        if isinstance(spacing, str):
+            if spacing.lower() == "auto":
+                spacing = self.display.size[0] // (self.grid_size[0]//2 * len(self.objects))
+                
+            else:
+                raise ValueError("Spacing must be either 'auto' or a number")
+        
+        x,y = spacing//2, spacing//2
+        
+        step = [self.objects[-1].size[0] + spacing,
+                self.objects[-1].size[1] + spacing]
         
         for obj in self.objects:
             obj.pos = [x, y]
-            if obj.pos[0] + obj.size.width > self.display.size.width:
-                x = 0
-                y += step[1]
+            if direction == "row":
+                if obj.pos[0] + obj.size.width > self.display.pos[0] + self.display.size[0]:
+                    x = spacing//2
+                    y += step[1]
+                    obj.pos = [x, y]  
+                    
+                    x += step[0]  
                 
-            else:
-                x += step[0]
-       
+                else:
+                    x += step[0]
+                    
+            elif direction == "column":
+                if obj.pos[1] + obj.size.height > self.display.size.height:
+                    x += step[0] 
+                    y = spacing//2
+                    obj.pos = [x, y]    
+                    
+                    y += step[1]
+                    
+                else:
+                    y += step[1]
+            
     def grid_align(self, size=[]):
         r'''
         #### Aligns objects in the interface grid
+        - `size` : grid dimensions (Optional)
         ''' 
         self.__gen_grid(size)
                 
@@ -408,6 +437,8 @@ class Interface:
                 self.objects[i].pos = Pos(self.grid[i])
                 self.objects[i].size = Size(self.grid_box_size)
             
+
+            
             
     def draw(self):
         r'''
@@ -416,9 +447,7 @@ class Interface:
         for obj in self.objects:
             obj.draw()
         
-
 # Manager Objects
-        
 def add_args(func, **kwargs):
     def inner(*_, **__):
         try:
