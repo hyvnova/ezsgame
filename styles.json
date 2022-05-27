@@ -1,8 +1,0 @@
-{
-    "rect" : {
-        "color" : "blue",
-        "border_radius" : [10,10,10,10],
-        "pos" : ["center", "center"],
-        "size" : [100,100]
-    }
-}
