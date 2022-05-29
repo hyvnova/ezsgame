@@ -1,5 +1,5 @@
 import pygame as pg
-from ezsgame.global_data import get_id, get_screen
+from .global_data import get_id, get_screen
 
 class PObject:
     r'''

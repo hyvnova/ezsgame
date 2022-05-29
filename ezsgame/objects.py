@@ -1,9 +1,9 @@
 import pygame as pg, random
 from colour import Color
-from ezsgame.extra.components import ComponentGroup
-from ezsgame.global_data import get_id, get_screen, get_drawn_objects
-from ezsgame.primitive_objects import PRect
-from ezsgame.styles_resolver import resolve_color, resolve_margin, resolve_size, resolve_pos
+from .extra.components import ComponentGroup
+from .global_data import get_id, get_screen, get_drawn_objects
+from .primitive_objects import PRect
+from .styles_resolver import resolve_color, resolve_margin, resolve_size, resolve_pos
 
 def random_color(n=1):
     """

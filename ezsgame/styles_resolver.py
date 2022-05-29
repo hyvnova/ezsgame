@@ -1,6 +1,5 @@
-from pydoc import resolve
 from colour import Color
-from ezsgame.global_data import get_screen
+from .global_data import get_screen
 
 adapt_rgb = lambda rgb: tuple(map(lambda i: i*255, rgb))
 

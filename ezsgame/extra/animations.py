@@ -1,5 +1,5 @@
 import json
-from ezsgame.global_data import get_id, get_screen
+from ..global_data import get_id, get_screen
 
 class Animation:
     def __init__(self, object, start, end, time=50, step=1, loop=False, done_callback=None):

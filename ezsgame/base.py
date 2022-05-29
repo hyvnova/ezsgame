@@ -1,6 +1,6 @@
 import pygame as pg, random, time as t
-from ezsgame.objects import Size, Pos, Gradient, Object, resolve_color
-from ezsgame.global_data import DATA, get_screen
+from .objects import Size, Pos, Gradient, Object, resolve_color
+from .global_data import DATA, get_screen
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 

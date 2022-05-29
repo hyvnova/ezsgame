@@ -1,5 +1,5 @@
-from ezsgame.global_data import get_id, get_screen
-from ezsgame.styles_resolver import resolve_color
+from .global_data import get_id, get_screen
+from .styles_resolver import resolve_color
 import pygame as pg
 
 def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [0,0,0,0]):

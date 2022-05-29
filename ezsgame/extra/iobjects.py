@@ -1,10 +1,10 @@
 import pygame as pg, random
-from ezsgame.objects import *
+from ..objects import *
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core import grid
 from pathfinding.finder.a_star import AStarFinder
-from ezsgame.primitive_objects import PRect
-from ezsgame.global_data import get_screen
+from ..primitive_objects import PRect
+from ..global_data import get_screen
 
 class IObject(Object):
     @staticmethod

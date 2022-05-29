@@ -1,6 +1,6 @@
-from ezsgame.global_data import get_screen
-from ezsgame.extra.controller import Controller
-from ezsgame.funcs import outline, move
+from ..global_data import get_screen
+from ..extra.controller import Controller
+from ..funcs import outline, move
 
 
 class ComponentGroup:
