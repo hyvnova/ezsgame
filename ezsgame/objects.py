@@ -248,12 +248,11 @@ class Object:
                 setattr(self, k, v)  
             
         self.__on_draw = {}
-        
+            
         if "components" in styles:
             self.components = ComponentGroup(self, styles["components"])         
 
         self.resolve_styles()
-        
         # Calls _draw() before draw()
         def _draw_before(draw_func):
             def wrapper():

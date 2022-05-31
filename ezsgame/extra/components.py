@@ -270,7 +270,8 @@ class Draggable(Component):
 
 class Controllable(Component):
     def __call__(self, object):
-        self.__init__(object)
+        self.__init__(object, self.__dict__.get("keys", ["a", "d", "w", "s"]), 
+                        self.__dict__.get("speed", [-5,5,5,-5]))
         
     def __init__(self, object=None, keys:list=["a", "d", "w", "s"], speed:list =[-5,5,5,-5]):
         self.keys = keys
