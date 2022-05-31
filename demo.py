@@ -1,21 +1,19 @@
 from ezsgame.all import *
-import random
 
-screen = Screen(title="Sample Demo")
+screen = Screen(title="Sample Demo", fps=120, show_fps=True)
 
-def gen_objects(n, size=[50,50]):
-    return [Rect([0,0], 
-                [ random.randint(size[0]/2, size[0]*1.5), 
-                random.randint(size[1]/2, size[1]*1.5)],
-                color=random_color()) for i in range(n)] 
+player = Rect(["left", "center"], [50,50], color="red", components=[
+    Controllable(speed=[-10,10])
+    ])
 
-plane = Interface(screen)
-plane.add(gen_objects(9, [100,100])).align("row")
+@screen.on_key("down", ["escape"])
+def quit_app():
+    screen.quit()
 
 while True:    
     screen.check_events()
     screen.fill() 
 
-    plane.draw()
+    player.draw()
     
     screen.update()

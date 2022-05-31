@@ -1,16 +1,49 @@
 from ezsgame.global_data import get_id, get_screen
 
 class Controller:
-    def __init__(self, keys=["a","d","w","s"], speed=[-5,5,5,-5]):
-        if len(keys) != len(speed):
-            raise Exception(f"Number of keys and speed must be the same. ({len(keys)}) keys != ({len(speed)}) speeds")  
+    r'''
+        #### Controller
+        A controller is a class that can be used to control a component throught keyboard.
+        
+        #### Parameters
+        - `keys`: A list of keys that can be used to control the component.
+        - `speed`: A list of speeds that can be used to control the component.
+        
+        ##### length of speed must be equal to length of keys, unless `auto_complete_speed` is `True`
+        - `use_delta_time`: If True, the speed will be multiplied by the delta_time.
+        
+        - `auto_complete_speed`: If true will "resolve" the speed list.
+            - if speed length is 1 -> [speed*-1, speed, speed, speed*-1] # left, right, up, down
+            - if speed length is 2 -> [speed[0], speed[1], speed[0], speed[1]] # left, right, up, down
+    
+        '''
+    
+    def __init__(self, keys=["a","d","w","s"], speed=[-5,5,5,-5], use_delta_time=True, auto_complete_speed=True):
         
         self.id = get_id()
         self.screen = get_screen()
         self.keys = keys
-        self._speeds = speed
-        self.speed = [0]*len(speed)
+        self.use_delta_time = use_delta_time
         
+        # auto speed complete   
+        if auto_complete_speed:
+            if len(speed) == 1:
+                speed = [speed[0]*1, speed[0], speed[0], speed[0]*-1] 
+                
+            elif len(speed) == 2:
+                speed = [speed[0], speed[1], speed[0], speed[1]]     
+                
+                
+        if len(keys) != len(speed):
+            raise Exception(f"Number of keys and speed must be the same. ({len(keys)}) keys != ({len(speed)}) speeds")          
+                
+        if use_delta_time:
+            self._speeds = list(map(lambda x: x * 10, speed))
+        else:
+            self._speeds = speed            
+            
+        self.speed = [0] * len(self._speeds)
+            
         self._evnames = []
 
         for i in range(len(keys)):
@@ -22,7 +55,10 @@ class Controller:
         
         @self.screen.on_key(type="down", keys=[self.keys[index]], name=evname)
         def keydown():
-            self.speed[index] = self._speeds[index]
+            if self.use_delta_time:
+                self.speed[index] = self._speeds[index] * self.screen.delta_time
+            else:
+                self.speed[index] = self._speeds[index]
 
         evname = f"Contoller.keyup.{self.id}.{index}"
         self._evnames.append(evname)
@@ -40,7 +76,9 @@ class Controller:
         @type average: return average of all speeds -> float
         @type any: return first speed that is not 0, if all are 0, return 0 -> int
         '''
-        
+           
+        print(f"{self.speed} \r", end="")
+            
         if type == "average":
             return sum(self.speed)/len(self.speed)
 

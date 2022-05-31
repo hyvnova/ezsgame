@@ -22,3 +22,7 @@
     - When creating objects, argument `styles` should be a `dict` with the styles
 
 - Added `Interface` class. [experimental]
+
+
+- `Controller` class now can use or not delta time
+- `delta_time` method is now a property

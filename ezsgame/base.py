@@ -20,6 +20,7 @@ class Screen:
         self.fps = fps
         self.depth = depth
         self.show_fps = show_fps
+        self.delta_time = 0 
         
         self.load_icon(icon)
              
@@ -34,8 +35,7 @@ class Screen:
         
     def __str__(self):
         return "<Screen>"
-    
-    
+      
     # time decorators  ------------------------------------------------------------
     def add_interval(self, time:int, name:str = "Default"):
         r'''    
@@ -93,14 +93,22 @@ class Screen:
         
         return wrapper
 
-    # -----------------------------------------------------------------------------
-        
-    def delta_time(self):
+    def remove_event(self, name : str):
         r'''
-        Returns the delta time since the last frame
+        #### Removes an event from the event handler
+        - `name` : name of the event
         '''
-        return self.clock.get_time()
-         
+        self.events.remove_event(name)
+        
+    def remove_base_event(self, name:str = "Default"):
+        r'''
+        #### Removes an base event from the event handler
+        - `name` : name of the event
+        '''
+        self.events.remove_base_events(name)
+        
+
+    # -----------------------------------------------------------------------------
     def load_icon(self, icon : str):
         r'''
         #### Loads an icon for the screen
@@ -258,7 +266,8 @@ class Screen:
             pg.display.set_caption(f"{self.title}  FPS : " + f"{int(self.clock.get_fps())}")
         
         pg.display.update()
-        self.clock.tick(self.fps)
+        self.delta_time = self.clock.tick(self.fps) / 1000
+        
         
     def quit(self):
         r'''
@@ -356,8 +365,7 @@ class Interface:
         for i in range(self.grid_size[0]):
             for j in range(self.grid_size[1]):
                 self.grid.append([x_values[i][0], y_values[j][0]])
-
-        
+   
     def add(self, *objects):
         r'''
         #### Adds passed objects to the interface
@@ -415,7 +423,7 @@ class Interface:
                     
             elif direction == "column":
                 if obj.pos[1] + obj.size.height > self.display.size.height:
-                    x += step[0] 
+                    x += step[0] + spacing//2
                     y = spacing//2
                     obj.pos = [x, y]    
                     
@@ -436,10 +444,7 @@ class Interface:
             if len(self.objects) > i:
                 self.objects[i].pos = Pos(self.grid[i])
                 self.objects[i].size = Size(self.grid_box_size)
-            
-
-            
-            
+                        
     def draw(self):
         r'''
         #### Draws all objects in the interface
@@ -732,8 +737,7 @@ class TimeHandler:
             if t.time() - value["last_call"] >= value["time"]:
                 value["last_call"] = t.time()
                 value["callback"]()
-                
-    
+                   
 def flat(arr, depth=1):
     r'''
     Flattens a list
