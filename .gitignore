@@ -8,6 +8,8 @@
 
 # locales
 /local
-
+/build
+/dist
+demo.spec
 
 /.github/

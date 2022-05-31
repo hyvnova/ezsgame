@@ -23,6 +23,10 @@ def build(
         "--add-data", 
         f"{os.getcwd()}\\ezsgame;ezsgame", # Folder
         
+        "--add-data",
+        f"{os.getcwd()}\\ezsgame\\assets;icon.jpg", # File
+        
+        
         f"{os.getcwd()}\\{file}", # File
         
     ]

@@ -245,15 +245,15 @@ class Object:
         
         if "styles" in styles:
             for k,v in styles["styles"].items():
-                setattr(self, k, v)
+                setattr(self, k, v)  
             
+        self.__on_draw = {}
+        
         if "components" in styles:
             self.components = ComponentGroup(self, styles["components"])         
 
         self.resolve_styles()
-
-        self.__on_draw = {}
-
+        
         # Calls _draw() before draw()
         def _draw_before(draw_func):
             def wrapper():
@@ -310,6 +310,9 @@ class Object:
 
         """
         name = name if name else func.__name__
+        
+
+        
         self.__on_draw[name] = lambda: func(self) if pass_object else func
 
     def remove_on_draw(self, name:str):

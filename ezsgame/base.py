@@ -1,4 +1,4 @@
-import pygame as pg, random, time as t
+import pygame as pg, random, time as t, os
 from .objects import Size, Pos, Gradient, Object, resolve_color
 from .global_data import DATA, get_screen
 
@@ -108,8 +108,14 @@ class Screen:
         '''
         self.icon = icon
         if icon == "":
-            self.icon = "ezsgame/assets/img/icon.jpg"
-        pg.display.set_icon(pg.image.load(self.icon))
+            try:
+                path = os.path.join(os.path.dirname(__file__),"assets", "img", "icon.jpg")
+                self.icon = path
+                pg.display.set_icon(pg.image.load(self.icon))
+                
+            except FileNotFoundError:
+                pass
+                
         return self
 
     def shake(self, force=5):
@@ -264,7 +270,6 @@ class Screen:
         r'''
         #### Quits the game/App  (Closse/Ends the window)
         '''
-        
         pg.quit()
         quit()
 
@@ -505,8 +510,8 @@ class EventHandler:
                         i["callback"]()
                         break
                     
-                pg.quit()
-                quit()
+                get_screen().quit()
+
                               
             for ev_type in self.base_events.keys():
                 if ev.type == ev_type:

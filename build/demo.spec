@@ -8,7 +8,7 @@ a = Analysis(
     ['C:\\Users\\theyu\\OneDrive\\Documentos\\Python\\EZSGAME-ROOT\\ezsgame-main\\demo.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:\\Users\\theyu\\OneDrive\\Documentos\\Python\\EZSGAME-ROOT\\ezsgame-main\\ezsgame', 'ezsgame')],
+    datas=[('C:\\Users\\theyu\\OneDrive\\Documentos\\Python\\EZSGAME-ROOT\\ezsgame-main\\ezsgame', 'ezsgame'), ('C:\\Users\\theyu\\OneDrive\\Documentos\\Python\\EZSGAME-ROOT\\ezsgame-main\\ezsgame\\assets', 'icon.jpg')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
