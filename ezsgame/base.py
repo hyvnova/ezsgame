@@ -274,6 +274,10 @@ class Screen:
         pg.display.update()
         self.delta_time = self.clock.tick(self.fps) / 1000
         
+        # call on update events
+        for func in DATA.on_update.values():
+            func()
+        
         
     def quit(self):
         r'''
@@ -473,8 +477,12 @@ class EventHandler:
     def __init__(self):
         self.events  = {}
         self.base_events = {}
-        self.to_remove = {"events": [], "base_events": []}
-        self.to_add = {"events": [], "base_events": []}
+        self.ezsgame_events = []
+    
+        self.to_remove = {"events": [], "base_events": [], "ezsgame_events": []}
+        self.to_add = {"events": [], "base_events": [], "ezsgame_events": []}
+        
+        self.__ezsgame_events = ["update"]
                                             
     def check(self):
         event = self._get_events()
@@ -494,10 +502,11 @@ class EventHandler:
                         break
         self.to_remove = {"events": [], "base_events": []}
                     
-        # add events
+        # adds events
         for item in self.to_add["events"]:
             self.events[item[0]] = item[1]
-            
+           
+        # adds base event 
         names = []
         for item in self.to_add["base_events"]:
             
@@ -505,7 +514,19 @@ class EventHandler:
                 self.base_events[item[0]].append(item[1])
                 names.append(item[1]["name"])
         
-        self.to_add = {"events": [], "base_events": []}
+        # adds ezsgame event
+        for item in self.to_add["ezsgame_events"]:
+            # item -> [type, name, callback]
+            
+            if item[1] not in self.ezsgame_events:
+                self.ezsgame_events.append(item[1])
+                
+            if item[0] == "update":
+                DATA.on_update[item[1]] = item[2]
+                
+        
+        self.to_add = {"events": [], "base_events": [], "ezsgame_events": []}
+        
         
         for ev in event:
             # BASE EVENTS ----------------------------------------------------------------------------------
@@ -530,14 +551,14 @@ class EventHandler:
                                 i["callback"]()   
                             
                     
-                        elif i["type"] == (pg.KEYDOWN or pg.KEYUP):
+                        elif i["type"] == (pg.KEYDOWN or pg.KEYUP): 
                             add_args(value["callback"], key=ev.key, unicode=ev.unicode)()
                     
                         else:
                             i["callback"]()
                            
             # STORED EVENTS --------------------------------------------------------------------------------
-            for value in self.events.values():
+            for value in  self.events.values():
                 if value["type"] == ev.type:
                     
                     # ON key events
@@ -565,8 +586,7 @@ class EventHandler:
                         
                                 else:
                                     value["callback"]()
-                                    
-                                            
+                                                                           
     def add_event(self, event:str, object:Object, callback, name:str="Default"):
         r'''
         #### Adds a event listener to a object
@@ -578,11 +598,12 @@ class EventHandler:
         '''
      
         event = event.lower()
-        event_ = self._convert_to_pgevent(event)
         
         if name == "Default":
-            name = f"{event}.{object.id}.{len(self.events)}"
-            
+            name = f"{event}.{object.id}.{len(self.events)}"        
+        
+        event_ = self._convert_to_pgevent(event)
+        
         self.to_add["events"].append([name, {"type": event_, "object": object, "callback": callback, "evname" : event}])
 
     def remove_event(self, name:str):
@@ -617,28 +638,35 @@ class EventHandler:
         r'''
         #### Adds a `Base Event` to the event list, Calls function when event is triggered. 
         - `event`: event to be added 
-            - Events : `quit`, `mousemotion`, `mousedown`, `mouseup`, `keydown`, `keyup`, `mousewheel`
+            - Events : `quit`, `mousemotion`, `mousedown`, `mouseup`, `keydown`, `keyup`, `mousewheel`, `update`
         -  `callback`: function to be called when the event is triggered ``function``
         - `name`: name of event (optional)
         '''
         event = event.lower()
-    
-        event_ = self._convert_to_pgevent(event)
-        
-        if event not in self.base_events:
-            self.base_events[event_] = []
-            
         name = f"base_event.{event}.{len(self.base_events)}" if name == "Default" else name
         
-        self.to_add["base_events"].append([event_, {"type": event_, "callback": callback, "name":name, "evname":event}])
+        # if is ezsgame event
+        if event in self.__ezsgame_events:
+            self.to_add["ezsgame_events"].append([event, name, callback])
+            return
+    
+        event_ = self._convert_to_pgevent(event)
+    
+        if event not in self.base_events:
+            self.base_events[event_] = []
+            return
+        
+        self.to_add["base_events"].append([event_, {"type": event_, "callback": callback, "name":name, "evname":event}]) 
         
     def remove_base_event(self, name : str):
         r'''
         #### Removes a `Base Event` from the event list, so it won't be called anymore
         - `name` : name of the event to be removed
         '''
-        
-        self.to_remove["base_events"].append(name)
+        if name in self.ezsgame_events:
+            self.to_remove["ezsgame_events"].append(name)
+        else:
+            self.to_remove["base_events"].append(name)
                    
     def on_key(self, type : str, keys : list, callback, name:str = "Default"):
         r'''
@@ -676,6 +704,9 @@ class EventHandler:
                 return i
                     
     def _convert_to_pgevent(self, event):
+        if event in self.__ezsgame_events:
+            return event
+                
         evs  = {
             "hover" : pg.MOUSEMOTION,
             "click" : pg.MOUSEBUTTONDOWN,

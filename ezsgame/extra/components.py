@@ -271,11 +271,13 @@ class Draggable(Component):
 class Controllable(Component):
     def __call__(self, object):
         self.__init__(object, self.__dict__.get("keys", ["a", "d", "w", "s"]), 
-                        self.__dict__.get("speed", [-5,5,5,-5]))
+                        self.__dict__.get("speed", [-25,25,25,-25]), 
+                        self.__dict__.get("use_delta_time", True))
         
-    def __init__(self, object=None, keys:list=["a", "d", "w", "s"], speed:list =[-5,5,5,-5]):
+    def __init__(self, object=None, keys:list=["a", "d", "w", "s"], speed:list =[-25,25,25,-25], use_delta_time=True):
         self.keys = keys
         self.speed = speed
+        self.user_delta_time = use_delta_time
         
         if not object:
             return
@@ -285,7 +287,7 @@ class Controllable(Component):
         self.screen = object.screen
         self.object = object
 
-        self.controller = Controller(keys=keys, speed=speed)
+        self.controller = Controller(keys=keys, speed=speed, use_delta_time=use_delta_time)
         self.object.on_draw(self._move, f"ControllableComponent.on.draw.{self.object.id}", True)
         
     def activate(self):

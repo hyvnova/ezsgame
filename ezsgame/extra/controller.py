@@ -12,13 +12,15 @@ class Controller:
         ##### length of speed must be equal to length of keys, unless `auto_complete_speed` is `True`
         - `use_delta_time`: If True, the speed will be multiplied by the delta_time.
         
-        - `auto_complete_speed`: If true will "resolve" the speed list.
-            - if speed length is 1 -> [speed*-1, speed, speed, speed*-1] # left, right, up, down
-            - if speed length is 2 -> [speed[0], speed[1], speed[0], speed[1]] # left, right, up, down
+        - `auto_complete_speed`: If true will "resolve" the speed list in case is not.
+            - if speed length is 1 -> `[max]`
+                - Example: `[10]` -> `[-10,10,10,-10]` left, right, up, down
+            - if speed length is 2 -> `[min, max]`
+                - Example: `[-10,10]` -> `[-10,10,10,-10]` left, right, up, down
     
         '''
     
-    def __init__(self, keys=["a","d","w","s"], speed=[-5,5,5,-5], use_delta_time=True, auto_complete_speed=True):
+    def __init__(self, keys=["a","d","w","s"], speed=[-25,25,25,-25], use_delta_time=True, auto_complete_speed=True):
         
         self.id = get_id()
         self.screen = get_screen()
@@ -31,7 +33,7 @@ class Controller:
                 speed = [speed[0]*1, speed[0], speed[0], speed[0]*-1] 
                 
             elif len(speed) == 2:
-                speed = [speed[0], speed[1], speed[0], speed[1]]     
+                speed = [speed[0], speed[1], speed[1], speed[0]]     
                 
                 
         if len(keys) != len(speed):
@@ -76,9 +78,7 @@ class Controller:
         @type average: return average of all speeds -> float
         @type any: return first speed that is not 0, if all are 0, return 0 -> int
         '''
-           
-        print(f"{self.speed} \r", end="")
-            
+                    
         if type == "average":
             return sum(self.speed)/len(self.speed)
 

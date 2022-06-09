@@ -26,3 +26,8 @@
 
 - `Controller` class now can use or not delta time
 - `delta_time` method is now a property
+
+- Added :  **ezsgame events** (Base events)  Events:
+    - `update` : called every frame
+
+- Fixed : `Reloader` class now doesn't interrupt the program when variables are changed.

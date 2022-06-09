@@ -1,3 +1,5 @@
+from ..global_data import get_screen
+
 class Reload:
     def __init__(self, file, _globals, _locals):
         self.file = file
@@ -5,6 +7,8 @@ class Reload:
         self._locals = _locals
         self.code = ""
         self._start_code = ""
+                      
+        self.screen = get_screen()
         
         with open (self.file, "r") as f:
             file_content = f.read()        
@@ -13,8 +17,11 @@ class Reload:
                 code = file_content.split('::reload')[1].split('::endreload')[0]     
                                 
             except IndexError:
-                raise SyntaxError(f"No code division found at: {self.file}")
+                raise SyntaxError(f"No code division found at: {self.file} \n\t Need to have ::reload and ::endreload")
 
+            except Exception as e:
+                raise e
+            
             else:
                 self._start_code = code
                 self.code = code
@@ -54,7 +61,11 @@ class Reload:
                     self.code = code 
                 
                 finally:
-                    self._globals.update(self._locals)
-                    self._locals.update(self._globals)
+                    @self.screen.on_event("update", "ReloaderUpdate")
+                    def update():
+                        self._globals.update(self._locals)
+                        self._locals.update(self._globals)
+                    
+                        self.screen.remove_base_event("ReloaderUpdate")
+                    
 
-        
