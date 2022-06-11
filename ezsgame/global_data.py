@@ -41,3 +41,13 @@ DATA = Data()
 #shortcuts to DATA
 get_screen = lambda: DATA.screen
 get_drawn_objects = lambda: DATA.drawn_objects 
+
+def on_update(key=None,val=None):
+    r"""
+    #### Sets a function into `DATA.on_update` or returns all funcions if no key is passed
+    """
+    
+    if key:
+        DATA.on_update[key] = val
+    else:
+        return DATA.on_update.values()

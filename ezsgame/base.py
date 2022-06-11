@@ -1,6 +1,6 @@
 import pygame as pg, random, time as t, os
 from .objects import Size, Pos, Gradient, Object, resolve_color
-from .global_data import DATA, get_screen
+from .global_data import DATA, get_screen, on_update
 
 class Screen:
     def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
@@ -105,7 +105,7 @@ class Screen:
         #### Removes an base event from the event handler
         - `name` : name of the event
         '''
-        self.events.remove_base_events(name)
+        self.events.remove_base_event(name)
         
 
     # -----------------------------------------------------------------------------
@@ -168,7 +168,7 @@ class Screen:
         - `time` : time to wait for, in milliseconds
         '''
         pg.time.wait(time)
-            
+        
     def div(self, axis : str, q : int, size : list = None):
         r'''
         #### Returns a list of division points of the screen in the given axis
@@ -275,7 +275,7 @@ class Screen:
         self.delta_time = self.clock.tick(self.fps) / 1000
         
         # call on update events
-        for func in DATA.on_update.values():
+        for func in on_update():
             func()
         
         
@@ -494,6 +494,7 @@ class EventHandler:
             if name in self.events:
                 del self.events[name]
             
+        # removes base event
         for name in self.to_remove["base_events"]:
             for i in self.base_events:
                 for item in self.base_events[i]:
@@ -501,7 +502,18 @@ class EventHandler:
                         self.base_events[i].pop(self.base_events[i].index(item))
                         break
 
-        self.to_remove = {"events": [], "base_events": []}
+         # removes ezsgame event
+        for item in self.to_remove["ezsgame_events"]:
+            # item -> name
+           
+            if item in self.ezsgame_events:
+                self.ezsgame_events.pop(self.ezsgame_events.index(item))
+
+            # removes event from DATA so it won't be called anymore
+            del DATA.on_update[item]
+                 
+
+        self.to_remove = {"events": [], "base_events": [], "ezsgame_events":[]}
                     
         # adds events
         for item in self.to_add["events"]:
@@ -523,7 +535,8 @@ class EventHandler:
                 self.ezsgame_events.append(item[1])
                 
             if item[0] == "update":
-                DATA.on_update[item[1]] = item[2]
+                # sets event to on update 
+                on_update(item[1], item[2])
                 
         
         self.to_add = {"events": [], "base_events": [], "ezsgame_events": []}
@@ -544,14 +557,25 @@ class EventHandler:
                 if ev.type == ev_type:
                     for i in self.base_events[ev_type]:
                         
+                        # mouse events
                         if ev.type == pg.MOUSEBUTTONDOWN:
+                            # mouse wheel up
                             if i["evname"] == "mousewheelup" and ev.button == 4:
                                 i["callback"]()
                             
+                             # mouse wheel down
                             elif i["evname"] == "mousewheeldown" and ev.button == 5:
-                                i["callback"]()   
+                                i["callback"]()  
+
+                            # mouse down
+                            elif i["evname"] == "mousedown" :
+                                i["callback"]()
+                                
+                        # mouse up
+                        elif ev.type == pg.MOUSEBUTTONUP and i["evname"] == "mouseup":
+                            i["callback"]()                 
                             
-                    
+
                         elif i["type"] == (pg.KEYDOWN or pg.KEYUP): 
                             add_args(value["callback"], key=ev.key, unicode=ev.unicode)()
                     
@@ -578,14 +602,27 @@ class EventHandler:
                         
                         else:
                             if is_hovering:
+
+                                # mouse  events
                                 if ev.type == pg.MOUSEBUTTONDOWN:
+                                    # mouse wheel up
                                     if value.get("evname", None) == "mousewheelup" and ev.button == 4:
                                         value["callback"]()
                                 
+                                    # mouse wheel down
                                     elif value.get("evname", None) == "mousewheeldown" and ev.button == 5:
-                                        value["callback"]()                                        
-                        
+                                        value["callback"]()   
+                                        
+                                    # mouse down
+                                    elif value.get("evname", None) == "mousedown":
+                                        value["callback"]()
+                                        
+                                # mouse up
+                                elif ev.type == pg.MOUSEBUTTONUP and value.get("evname", None) == "mouseup":
+                                    value["callback"]()
+                                                   
                                 else:
+                                    # hover 
                                     value["callback"]()
                                                                            
     def add_event(self, event:str, object:Object, callback, name:str="Default"):
@@ -655,7 +692,6 @@ class EventHandler:
     
         if event not in self.base_events:
             self.base_events[event_] = []
-            return
         
         self.to_add["base_events"].append([event_, {"type": event_, "callback": callback, "name":name, "evname":event}]) 
         
@@ -664,10 +700,17 @@ class EventHandler:
         #### Removes a `Base Event` from the event list, so it won't be called anymore
         - `name` : name of the event to be removed
         '''
-        if name in self.ezsgame_events:
-            self.to_remove["ezsgame_events"].append(name)
-        else:
-            self.to_remove["base_events"].append(name)
+        
+        for item in self.ezsgame_events:
+            if item == name:
+                self.to_remove["ezsgame_events"].append(name)
+                return
+            
+        for item in self.base_events.values():
+            if item[0]["name"] == name:
+                self.to_remove["base_events"].append(name)
+                return
+     
                    
     def on_key(self, type : str, keys : list, callback, name:str = "Default"):
         r'''
@@ -681,8 +724,10 @@ class EventHandler:
         types = {
             "down" : pg.KEYDOWN,
             "up" : pg.KEYUP
-        }        
+        }      
+        
         t = types.get(type, None)
+        
         if not t:
             raise ValueError("Invalid type: ", type)
          
@@ -697,7 +742,7 @@ class EventHandler:
             
             name = f"{key}_{type}_{len(self.events)}" if name == "Default" else name
         
-            self.events[name] = {"type": t, "key": k, "callback": callback}
+            self.to_add["events"].append([name, {"type": t, "key": k, "callback": callback, "evname":key}])
             
     def _base_event_index(self, type, item):
         for i in range(len(self.base_events[type])):

@@ -11,6 +11,12 @@ class ComponentGroup:
         if components:
             self.add(*components)
     
+    def __del__(self):
+        while self.components:
+            self.remove((*self.components.keys(),)[0])
+
+        del self
+
     def __str__(self):
         t = ", ".join([*map(str,self.components.values())])
         return f"<Component Group : [{t}] >"
@@ -149,8 +155,7 @@ class Resizable (Component):
         self._eventname_resize = f"ResizableComponent.on.keydown._resize.{self.object.id}"
         self._eventname_event_listener = f"ResizableComponent.event_listener.{self.object.id}"
         
-        self.screen.events.add_event(event="mousedown", object=self.object, callback= self.activate,name=self._eventname_event_listener)
-        self.screen.events.on_event("mousedown", self.desactivate, self._eventname_unfocus)
+        self.screen.events.add_event(event="mousedown", object=self.object, callback= self.activate, name=self._eventname_event_listener)
         
         self.object.on_draw(self.draw, self._eventname_event_listener, True)
         
@@ -178,18 +183,30 @@ class Resizable (Component):
     def activate(self):
         if self.focus == False:
             self.focus = True        
+
+            # removes active event
+            self.screen.events.remove_event(self._eventname_event_listener)
+
+            # add desactivate event 
             self.screen.events.on_event("mousedown", self.desactivate, self._eventname_unfocus)
+
+            # add resize event 
             self.screen.time.add(10, self._resize, self._eventname_resize)
+
 
     def desactivate(self):
         if self.focus:
             self.focus = False
-        if "keydown" in self.screen.events.base_events:
-            self.screen.events.remove_base_event(self._eventname_focus)
-        if "mousedown" in self.screen.events.base_events:
+
+            # removes desactiva event
             self.screen.events.remove_base_event(self._eventname_unfocus)  
             
-        self.screen.time.remove(self._eventname_resize)
+            # removes resize event
+            self.screen.time.remove(self._eventname_resize)
+
+        # adds active event
+        self.screen.events.add_event(event="mousedown", object=self.object, callback= self.activate, name=self._eventname_event_listener)
+        
                 
     def draw(self, obj):
         if self.focus:
@@ -198,7 +215,7 @@ class Resizable (Component):
     def remove(self):
         self.object.remove_on_draw(self._eventname_event_listener)
         self.desactivate()
-        self.screen.events.remove(self._eventname_event_listener)
+        self.screen.events.remove_event(self._eventname_event_listener)
         del self
 
 class Draggable(Component):
@@ -222,11 +239,13 @@ class Draggable(Component):
 
         self.focus = False
 
+        # defines evnames of object os thay can be added or removed
         self._eventname_unfocus = f"DrageableComponent.on.mousedown._unfocus.{self.object.id}"
         self._eventname_focus = f"DrageableComponent.on.keydown._focus.{self.object.id}"
         self._eventname_move = f"DrageableComponent.on.keydown._move.{self.object.id}"
         self._eventname_event_listener = f"DrageableComponent.event_listener.{self.object.id}"
         
+        # adds activate event 
         self.screen.events.add_event(event="mousedown", object=self.object, callback= self.activate, name=self._eventname_event_listener)
         self.object.on_draw(self.draw, self._eventname_move, True)
               
@@ -241,21 +260,28 @@ class Draggable(Component):
     def activate(self):
         if self.focus == False:
             self.focus = True        
-            self.screen.events.on_event("mousedown", self.desactivate, self._eventname_unfocus)
-            self.screen.time.add(10, self._move, self._eventname_move)
             
+            # removes activate event
             self.screen.events.remove_event(self._eventname_event_listener)
+
+            # adds desactivate event 
+            self.screen.events.on_event("mousedown", self.desactivate, self._eventname_unfocus)
+
+            # adds move event
+            self.screen.time.add(10, self._move, self._eventname_move)
 
     def desactivate(self):
         if self.focus:
             self.focus = False
+            
+            # removes desactivate event 
+            self.screen.events.remove_base_event(self._eventname_unfocus) 
+            
+            # removes move event 
             self.screen.time.remove(self._eventname_move)
-            self.screen.events.add_event(event="mousedown", object=self.object, callback=self.activate, name=self._eventname_event_listener)
-
-        if "keydown" in self.screen.events.base_events:
-            self.screen.events.remove_base_event(self._eventname_focus)
-        if "mousedown" in self.screen.events.base_events:
-            self.screen.events.remove_base_event(self._eventname_unfocus)  
+            
+        # adds activate event
+        self.screen.events.add_event(event="mousedown", object=self.object, callback=self.activate, name=self._eventname_event_listener)
                 
     def draw(self, obj):
         if self.focus:
@@ -270,9 +296,10 @@ class Draggable(Component):
 
 class Controllable(Component):
     def __call__(self, object):
-        self.__init__(object, self.__dict__.get("keys", ["a", "d", "w", "s"]), 
-                        self.__dict__.get("speed", [-25,25,25,-25]), 
-                        self.__dict__.get("use_delta_time", True))
+        self.__init__(object, 
+                      self.__dict__.get("keys", ["a", "d", "w", "s"]), 
+                      self.__dict__.get("speed", [-25,25,25,-25]), 
+                      self.__dict__.get("use_delta_time", True))
         
     def __init__(self, object=None, keys:list=["a", "d", "w", "s"], speed:list =[-25,25,25,-25], use_delta_time=True):
         self.keys = keys

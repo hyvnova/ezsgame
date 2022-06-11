@@ -24,7 +24,6 @@ class Reload:
             
             else:
                 self._start_code = code
-                self.code = code
         
         self.__call__()
 
@@ -65,13 +64,4 @@ class Reload:
                 else:
                     self.code = code 
                 
-                finally:
-                    @self.screen.on_event("update", "ReloaderUpdate")
-                    def update():
-                        #self._globals.update(self._locals)
-                        # self._locals.update(self._globals)
-                        print("Called")
-                        
-                        self.screen.remove_base_event("ReloaderUpdate")
-                    
-
+             

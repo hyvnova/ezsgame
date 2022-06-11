@@ -1,8 +1,9 @@
 {
   "ExpandedNodes": [
     "",
-    "\\ezsgame"
+    "\\ezsgame",
+    "\\ezsgame\\extra"
   ],
-  "SelectedNode": "\\ezsgame\\base.py",
+  "SelectedNode": "\\update_log.md",
   "PreviewInSolutionExplorer": false
 }
