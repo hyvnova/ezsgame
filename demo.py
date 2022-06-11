@@ -19,7 +19,7 @@ reloader = Reload("demo.py", globals(), locals())
 @screen.on_key("down", ["r"])
 def reload_script():
     reloader()
-
+             
 while True:    
     screen.check_events()
     screen.fill() 

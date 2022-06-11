@@ -28,7 +28,12 @@ class Reload:
         
         self.__call__()
 
-    def __call__(self):
+    def __call__(self, globals=None, locals=None):
+        if globals:
+            self._globals = globals
+            self._locals = locals
+
+        
         with open (self.file, "r") as f:
             file_content = f.read()        
             try:
@@ -63,9 +68,10 @@ class Reload:
                 finally:
                     @self.screen.on_event("update", "ReloaderUpdate")
                     def update():
-                        self._globals.update(self._locals)
-                        self._locals.update(self._globals)
-                    
+                        #self._globals.update(self._locals)
+                        # self._locals.update(self._globals)
+                        print("Called")
+                        
                         self.screen.remove_base_event("ReloaderUpdate")
                     
 

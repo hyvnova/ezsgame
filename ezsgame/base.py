@@ -375,7 +375,7 @@ class Interface:
             for j in range(self.grid_size[1]):
                 self.grid.append([x_values[i][0], y_values[j][0]])
    
-    def add(self, *objects):
+    def add_objects(self, *objects):
         r'''
         #### Adds passed objects to the interface
         '''
@@ -500,6 +500,7 @@ class EventHandler:
                     if item["name"] == name:
                         self.base_events[i].pop(self.base_events[i].index(item))
                         break
+
         self.to_remove = {"events": [], "base_events": []}
                     
         # adds events
