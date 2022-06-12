@@ -199,7 +199,8 @@ class Resizable (Component):
             self.focus = False
 
             # removes desactiva event
-            self.screen.events.remove_base_event(self._eventname_unfocus)  
+            self.screen.events.remove_
+            (self._eventname_unfocus)  
             
             # removes resize event
             self.screen.time.remove(self._eventname_resize)
@@ -275,7 +276,7 @@ class Draggable(Component):
             self.focus = False
             
             # removes desactivate event 
-            self.screen.events.remove_base_event(self._eventname_unfocus) 
+            self.screen.events.remove_event(self._eventname_unfocus) 
             
             # removes move event 
             self.screen.time.remove(self._eventname_move)

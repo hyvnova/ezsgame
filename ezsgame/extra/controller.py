@@ -21,8 +21,9 @@ class Controller:
         '''
     
     def __init__(self, keys=["a","d","w","s"], speed=[-25,25,25,-25], use_delta_time=True, auto_complete_speed=True):
-        
         self.id = get_id()
+        self._evnames = []
+        
         self.screen = get_screen()
         self.keys = keys
         self.use_delta_time = use_delta_time
@@ -45,8 +46,6 @@ class Controller:
             self._speeds = speed            
             
         self.speed = [0] * len(self._speeds)
-            
-        self._evnames = []
 
         for i in range(len(keys)):
             self._add_events(i)
@@ -121,8 +120,9 @@ class Controller:
             return 
         
     def __del__(self):
-        for evname in self._evnames:
-            self.screen.remove_event(name=evname)
+        if self.__dict__.get("_evnames", None):
+            for evname in self._evnames:
+                self.screen.remove_event(evname)
             
         del self
               
