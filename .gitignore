@@ -7,9 +7,10 @@
 /.vscode
 
 # locales
-/local
-/build
-/dist
+/local/
+/build/
+/dist/
 demo.spec
 
 /.github/
+.vs/
