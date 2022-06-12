@@ -247,6 +247,10 @@ class Object:
             for k,v in styles["styles"].items():
                 setattr(self, k, v)  
             
+        self.behavior = styles.get("behavior", 
+            {"pos":"dynamic"} # defualt behavior
+        )
+
         self.__on_draw = {}
             
         if "components" in styles:

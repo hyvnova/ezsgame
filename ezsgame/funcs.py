@@ -48,7 +48,10 @@ def move(obj, x=0, y=0):
     #### Adds x,y to the current object position. (Also inverts y )
     - x : int, float or list -> value to add to x-axis
     - y : int, float -> value to add to y-axis
-    '''        
+    '''     
+    if obj.behavior.get("pos", "dynamic") == "static":
+        return
+
     try:
         x,y = x[0], x[1]
     except:

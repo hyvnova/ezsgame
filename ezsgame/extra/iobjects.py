@@ -480,10 +480,9 @@ class InputBox(Rect):
         if self.focus:
             self.focus = False
         self.events["unfocus"]()
-        if "keydown" in self.screen.events.base_events:
-            self.screen.events.remove_base_event(self._eventname_focus)
-        if "mousedown" in self.screen.events.base_events:
-            self.screen.events.remove_base_event(self._eventname_unfocus)            
+        
+        self.screen.events.remove_event(self._eventname_focus)
+        self.screen.events.remove_event(self._eventname_unfocus)            
         
     def _onfocus(self):
         self.stroke = 1
