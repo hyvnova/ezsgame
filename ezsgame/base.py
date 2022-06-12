@@ -281,10 +281,13 @@ class Screen:
         
     def quit(self):
         r'''
-        #### Quits the game/App  (Closse/Ends the window)
+        #### Quits the game/App  (Closes/Ends the window)
         '''
         pg.quit()
-        quit()
+        try:
+            quit()
+        except:
+            pass
 
     def fill(self, color = None, pos : list=[0, 0], size:list=[0, 0]):
         r'''

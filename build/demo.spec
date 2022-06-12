@@ -5,10 +5,10 @@ block_cipher = None
 
 
 a = Analysis(
-    ['C:\\Users\\theyu\\OneDrive\\Documentos\\Python\\EZSGAME-ROOT\\ezsgame-main\\demo.py'],
+    ['C:\\Users\\theyu\\Source\\Repos\\ezsgame\\demo.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:\\Users\\theyu\\OneDrive\\Documentos\\Python\\EZSGAME-ROOT\\ezsgame-main\\ezsgame', 'ezsgame'), ('C:\\Users\\theyu\\OneDrive\\Documentos\\Python\\EZSGAME-ROOT\\ezsgame-main\\ezsgame\\assets', 'icon.jpg')],
+    datas=[('C:\\Users\\theyu\\Source\\Repos\\ezsgame\\ezsgame', 'ezsgame'), ('C:\\Users\\theyu\\Source\\Repos\\ezsgame\\ezsgame\\assets', 'icon.jpg')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

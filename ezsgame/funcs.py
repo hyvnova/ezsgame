@@ -1,6 +1,6 @@
 from .global_data import get_id, get_screen
 from .styles_resolver import resolve_color
-import pygame as pg
+import pygame as pg, os, subprocess
 
 def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [0,0,0,0]):
     r'''
@@ -75,3 +75,38 @@ def is_colliding(obj1, obj2, draw_collision_box=False):
         
     return False
 
+
+def build(
+    file,
+    oneFile: bool = True,
+    based: bool = True,
+    icon: str = None,
+    output: str = os.path.join(os.getcwd(), "build"),
+    ) :
+
+    
+    if not os.path.exists(output):
+        os.mkdir(output)
+        
+    args = [
+        "pyinstaller",
+        "--clean",
+        "--noconfirm",
+        ("--onedir", "--onefile")[oneFile],
+        ("--console", "--windowed")[based],
+        (*(f"--icon", icon), None)[icon is None],
+        
+        "--add-data", 
+        f"{os.getcwd()}\\ezsgame;ezsgame", # Folder
+        
+        "--add-data",
+        f"{os.getcwd()}\\ezsgame\\assets;icon.jpg", # File
+        
+        
+        f"{os.getcwd()}\\{file}", # File
+        
+    ]
+    
+    # Clear a None value in args
+    args = [x for x in args if x is not None]
+    subprocess.run(args, cwd=output)

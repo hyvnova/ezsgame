@@ -17,6 +17,8 @@
     - When creating objects, parameter `styles` should be a `dict` with the styles
 
 - `Interface` class. *[experimental]*
+- `build` function, to convert projects to exe files. *[experimental]*
+
 ## Changes
 - `Interface` class : `add` method renamed to `add_objects`
 - `IRect`, `ICircle` and any other `IObject` child, were replaced by `IObject.extend()` method .
