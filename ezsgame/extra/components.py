@@ -203,8 +203,7 @@ class Resizable (Component):
 			self.focus = False
 
 			# removes desactiva event
-			self.screen.events.remove_
-			(self._eventname_unfocus)  
+			self.screen.events.remove_event(self._eventname_unfocus)
 			
 			# removes resize event
 			self.screen.time.remove(self._eventname_resize)
@@ -274,7 +273,7 @@ class Draggable(Component):
 			self.screen.events.remove_event(self._eventname_event_listener)
 
 			# adds desactivate event 
-			self.screen.events.on_event("mousedown", self.desactivate, self._eventname_unfocus)
+			self.screen.events.on_event("click", self.desactivate, self._eventname_unfocus)
 
 			# adds move event
 			self.screen.time.add(50, self._move, self._eventname_move)
@@ -290,7 +289,7 @@ class Draggable(Component):
 			self.screen.time.remove(self._eventname_move)
 			
 		# adds activate event
-		self.screen.events.add_event(event="mousedown", object=self.object, callback=self.activate, name=self._eventname_event_listener)
+		self.screen.events.add_event(event="click", object=self.object, callback=self.activate, name=self._eventname_event_listener)
 				
 	def draw(self, obj):
 		if self.focus and self.outline:
@@ -335,7 +334,11 @@ class Controllable(Component):
 		self.controller.disable()
 	
 	def _move(self, obj):
-		speed = self.controller.get_speed("simple")
+		speed = self.controller.get_speed()
+  
+		if len(speed) == 4:
+			speed = [speed[0] + speed[1], speed[2] + speed[3]]
+ 
 		move(obj, speed)
 
 	def remove(self):

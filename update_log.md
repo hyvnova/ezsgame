@@ -1,4 +1,5 @@
 # New 
+- `Camera` module 
 - `Draggable` component now can freeze `x or y` axis
 - `Resizable` component now can freeze `width or height`.
 - `Controllable` component, Moves the object with keyboard.
@@ -18,6 +19,7 @@
 - `Custom events` functions, to create a more "specific" way of creating events. *[experimetal]*
 - 
 # Changes
+- `Screen` > `fill` function now can take a  image as a parameter.
 - Now buttons are rect-like objects.
 - `IRect`, `ICircle` and any other `IObject` child, were replaced by `IObject.extend()` method .
 - ***Extender*** classes have a `.extend()` method, extends a object properties.

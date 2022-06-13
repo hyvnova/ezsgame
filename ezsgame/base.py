@@ -3,7 +3,7 @@ from ast import If
 from gc import callbacks
 from re import I
 import pygame as pg, random, time as t, os
-from .objects import Size, Pos, Gradient, Object, resolve_color
+from .objects import Size, Pos, Gradient, Object, resolve_color, Image
 from .global_data import DATA, get_screen, on_update
 
 class Screen:
@@ -315,7 +315,7 @@ class Screen:
 	def fill(self, color = None, pos : list=[0, 0], size:list=[0, 0]):
 		r'''
 		#### Fill the screen with a `color` or `gradient`
-		- `color` : color to fill the screen with, or a `Gradient`  (Optional)
+		- `color` : color to fill the screen with, or  `Gradient` or `Image`  (Optional)
 		- `pos` : position of the fill start (Optional)
 		- `size` : size of the fill (Optional)
 		'''
@@ -326,6 +326,10 @@ class Screen:
 		if isinstance(color, Gradient):
 			for obj in color.objs:
 				obj.draw()      
+
+		elif isinstance(color, Image):
+			color.draw()
+	
 		else:
 			color = resolve_color(color)
 			pg.draw.rect(self.surface, color, pg.Rect(pos, size))
@@ -444,12 +448,12 @@ class Interface:
 				self.objects[-1].size[1] + spacing]
 		
 		for obj in self.objects:
-			obj.pos = [x, y]
+			obj.pos = Pos(x,y)
 			if direction == "row":
 				if obj.pos[0] + obj.size.width > self.display.pos[0] + self.display.size[0]:
 					x = spacing//2
 					y += step[1]
-					obj.pos = [x, y]  
+					obj.pos = Pos(x,y)
 					
 					x += step[0]  
 				
@@ -460,12 +464,14 @@ class Interface:
 				if obj.pos[1] + obj.size.height > self.display.size.height:
 					x += step[0] + spacing//2
 					y = spacing//2
-					obj.pos = [x, y]    
+					obj.pos = Pos(x,y)  
 					
 					y += step[1]
 					
 				else:
 					y += step[1]
+     
+		return self
 			
 	def grid_align(self, size=[]):
 		r'''
@@ -479,7 +485,9 @@ class Interface:
 			if len(self.objects) > i:
 				self.objects[i].pos = Pos(self.grid[i])
 				self.objects[i].size = Size(self.grid_box_size)
-						
+    
+		return self 					
+      
 	def draw(self):
 		r'''
 		#### Draws all objects in the interface
@@ -515,10 +523,10 @@ class EventHandler:
 		
 		# removes events 
 		for name in self.to_remove[ "events" ]:
-			for i in self.events:
-				for item in self.events[ i ]:
+			for ev_type in self.events:
+				for item in self.events[ ev_type ]:
 					if item[ "name" ] == name:
-						self.events[ i ].pop( self.events[ i ].index( item ) )
+						self.events[ ev_type ].pop( self.events[ ev_type ].index( item ) )
 						break
 
 		 # removes ezsgame events
@@ -612,6 +620,7 @@ class EventHandler:
 								if is_hovering:
 									event[ "callback" ]()
 							
+							# if is not event listener is base event, just call callback
 							else:
 								event[ "callback" ]()
 								return

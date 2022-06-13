@@ -14,9 +14,9 @@ class Controller:
         
         - `auto_complete_speed`: If true will "resolve" the speed list in case is not.
             - if speed length is 1 -> `[max]`
-                - Example: `[10]` -> `[-10,10,10,-10]` left, right, up, down
+                - Example: `[10]` -> `[-10,10,-10,10]` left, right, down, down
             - if speed length is 2 -> `[min, max]`
-                - Example: `[-10,10]` -> `[-10,10,10,-10]` left, right, up, down
+                - Example: `[-10,10]` -> `[-10,10, -10,-10]` left, right, down, up
     
         '''
     
@@ -29,12 +29,12 @@ class Controller:
         self.use_delta_time = use_delta_time
         
         # auto speed complete   
-        if auto_complete_speed:
+        if auto_complete_speed and len(speed) < len(keys):
             if len(speed) == 1:
-                speed = [speed[0]*1, speed[0], speed[0], speed[0]*-1] 
+                speed = [speed[0]*1, speed[0] ]  * len(keys)
                 
             elif len(speed) == 2:
-                speed = [speed[0], speed[1], speed[1], speed[0]]     
+                speed = [speed[0], speed[1]] * len(keys)  
                 
                 
         if len(keys) != len(speed):

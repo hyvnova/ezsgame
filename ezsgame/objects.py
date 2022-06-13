@@ -248,7 +248,8 @@ class Object:
 				setattr(self, k, v)  
 			
 		self.behavior = styles.get("behavior", 
-			{"pos":"dynamic"} # defualt behavior
+             # defualt behavior
+			{"pos":"dynamic"}
 		)
 
 		self.__on_draw = {}

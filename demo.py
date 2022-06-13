@@ -2,24 +2,32 @@ from ezsgame.all import *
 
 screen = Screen(title="Sample Demo", fps=144, show_fps=True)
 
-#::reload
-scroll = Scroll()
-#::endreload
+player = Rect([ 200, 300], [ 50,50 ], 
+            components=[
+                Controllable(keys=["a","d", "w", "a"], speed=[-25, 25, 0, 0])
+            ])
 
-reloader = Reload("demo.py", globals(), locals())
+camera = Camera(player)
+camera.setmethod(Follow(camera))
 
-@screen.on_key("down", ["r"])
-def reload():reloader()
+background = Image([ 0, 0 ], [ 720,480 ], "img/blue_sky.png")
+floor = Image([ 0,350 ], [ 720, 120 ], "img/grass.png")
+rock = Image([ 550, 250 ], [ 100, 100 ], "img/rock.png")
 
-player = Rect(["center", "center"], [50,50], color="white")
+while True:
+    screen.check_events()
+    screen.fill()
+    
+    #logic
+    camera.scroll()
+    
+    # scene drawing
+    background.draw()
+    floor.draw()
+    rock.draw()
+    
+    rock.pos.x = 550 - camera.offset.x
 
-
-while True:   
-	screen.check_events()
-	screen.fill() 
-	
-	player.draw()
-	scroll.draw()
-	
-
-	screen.update()
+    player.draw()
+    
+    screen.update()
