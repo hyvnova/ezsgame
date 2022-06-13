@@ -35,3 +35,4 @@
 - `Reloader` class now doesn't interrupt the program when variables are defined/update.
  - `EventHandler` > `on_key` function now doens't interrup execusion when events are added/removed
 - `EvenHandler` class now is **~35%** more faster due to the elimination of **base events**,  now all events are taken as "Events", but handle in different ways.
+- `Objects` now initialize `components` atribute even if no componens are passed.

@@ -2,8 +2,8 @@
   "ExpandedNodes": [
     "",
     "\\ezsgame",
-    "\\ezsgame\\assets"
+    "\\ezsgame\\extra"
   ],
-  "SelectedNode": "\\demo.py",
+  "SelectedNode": "\\ezsgame\\extra\\iobjects.py",
   "PreviewInSolutionExplorer": false
 }
