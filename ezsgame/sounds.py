@@ -1,5 +1,5 @@
 import pygame as pg
-from ezsgame.global_data import get_id
+from .global_data import get_id
 
 pg.mixer.init()
 
@@ -8,7 +8,7 @@ class Mixer:
         if pg.mixer.get_init() is None:
             pg.mixer.init()
     
-        self._id = get_id()
+        self.id = get_id()
         self.sounds = []
         
     def __str__(self):

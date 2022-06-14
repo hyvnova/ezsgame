@@ -1,7 +1,7 @@
-from ezsgame.objects import *
-from ezsgame.extra.iobjects import IObject
-from ezsgame.extra._sintax_tokens import *
-from ezsgame.global_data import get_id, get_screen
+from ..objects import *
+from ..extra.iobjects import IObject
+from ..extra._sintax_tokens import *
+from ..global_data import get_id, get_screen
 
 def add_before(func, object, **attrs):
     def wrapper():
@@ -134,7 +134,7 @@ class StructuredRect(IObject):
 
 class Menu: 
     def __init__(self, data : dict):
-        self._id = get_id()
+        self.id = get_id()
         self.screen = get_screen()
         self.spacing = data.get("spacing", 15)
         self.pos = data.get("pos", [0,0])

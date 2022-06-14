@@ -11,6 +11,10 @@ def get_id() -> int:
     return id
     
 class Data:
+    def __init__(self):
+        self.drawn_objects = []
+        self.on_update = {}
+    
     def __call__(self, **attrs):
         self.__dict__.update(attrs)
         
@@ -26,17 +30,24 @@ class Data:
     def __setattr__(self, key, value):
         self.__dict__[key] = value
         
-    def set(self, **attrs):
-        self.__dict__.update(attrs)
+    def set(self, key, value):
+        self.__dict__[key] = value
     
     def get(self, key):
         return self.__dict__[key]
             
 DATA = Data()
-DATA(drawn_objects=[])
 
-def get_screen():
-    return DATA.screen
+#shortcuts to DATA
+get_screen = lambda: DATA.screen
+get_drawn_objects = lambda: DATA.drawn_objects 
 
-def get_drawn_objects():        
-    return DATA.drawn_objects 
+def on_update(key=None,val=None):
+    r"""
+    #### Sets a function into `DATA.on_update` or returns all funcions if no key is passed
+    """
+    
+    if key:
+        DATA.on_update[key] = val
+    else:
+        return DATA.on_update.values()
