@@ -525,3 +525,83 @@ class Ellipse(Object):
 		
 	def draw(self):
 		pg.draw.ellipse(self.screen.surface, self.color, [*self.get_pos(), *self.size], int(self.stroke))
+  
+  
+class Group:
+	def __init__(self, *args):
+		self.screen = get_screen()
+		self.objects = [*args]
+		   
+	def __len__(self):
+		return len(self.objects)
+
+	def __iter__(self):
+		self.__current_index = 0
+		return iter(self.objects)
+	
+	def __next__(self):
+		if self.__current_index >= len(self.objects):
+			raise StopIteration
+		else:
+			self.__current_index += 1
+			return self.objects[self.__current_index - 1]
+	
+	def __getitem__(self, other):
+		if isinstance(other, int):
+			return self.objects[other]
+		elif isinstance(other, slice):
+			return self.__getslice__(other)
+		else:
+			raise TypeError("Index must be an integer or slice")
+		
+	def __contains__(self, thing):
+		return thing in self.objects
+
+	def __getslice__(self, other):
+		return self.objects[other.start:other.stop:other.step]
+
+	def __delitem__(self, other):
+		if isinstance(other, int):
+			del self.objects[other]
+
+		elif isinstance(other, slice):
+			self.__delslice__(other)
+			
+		else:
+			raise KeyError("Index must be an integer or slice")
+		 
+	def __delslice__(self, other):
+		del self.objects[other.start:other.stop:other.step]
+		 
+	def __setitem__(self, other, item):
+		self.objects[other] = item
+
+	def add(self, *objects):
+		self.objects.append(*objects)    
+
+	def remove(self, obj):
+		self.objects.remove(obj)
+	
+	def draw(self):
+		for obj in self.objects:
+			obj.draw()
+
+	def __del__(self):
+		for obj in self.objects:
+			del obj
+				
+		del self
+
+	def map(self, func):
+		for obj in self.objects:
+			func(obj)
+
+	def __str__(self):
+		t = ", ".join([str(i) for i in self.objects])
+		return f"<Group : {t} >"
+	
+	def __repr__(self):
+		return self.__str__()
+   
+	def filter(self, func):
+		return Group([obj for obj in self.objects if func(obj)])
