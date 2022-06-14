@@ -16,7 +16,7 @@ class Camera:
 
     def setmethod(self, method):
         try:
-            self.method = method(self, self.object)
+            self.method = method(self)
         except:
             self.method = method
 
@@ -24,16 +24,19 @@ class Camera:
         self.method.scroll()
 
 class CamScroll(ABC):
-    def __init__(self, camera):
+    def __call__(self, camera):
         self.camera = camera
         self.object = camera.object
+    
+    def __init__(self, camera):
+        self.__call__(camera)
 
     @abstractmethod
     def scroll(self):
         pass
 
 class Follow(CamScroll):
-    def __init__(self, camera):
+    def __init__(self, camera=None):
         CamScroll.__init__(self, camera)
 
     def scroll(self):
@@ -42,13 +45,14 @@ class Follow(CamScroll):
         self.camera.offset.x, self.camera.offset.y = int(self.camera.offset.x), int(self.camera.offset.y)
 
 class Border(CamScroll):
-    def __init__(self, camera, borders=[]):
-        CamScroll.__init__(self, camera)
-
+    def __init__(self, camera=None, borders=[]):
         self.borders = borders
+        
         if not borders:
             self.borders = [self.object.pos.x, self.object.pos.x + self.object.size.width, self.object.pos.y, self.object.pos.y + self.object.size.height]
-
+        
+        CamScroll.__init__(self, camera)
+        
     def scroll(self):
         self.camera.offset.x += (self.object.pos.x - self.camera.offset.x + self.camera.CONST.x)
         self.camera.offset.y += (self.object.pos.y - self.camera.offset.y + self.camera.CONST.y)
@@ -61,7 +65,7 @@ class Border(CamScroll):
         self.camera.offset.x = min(self.camera.offset.x, self.borders[1] - self.camera.width)
 
 class Auto(CamScroll):
-    def __init__(self,camera):
+    def __init__(self,camera=None):
         CamScroll.__init__(self,camera)
 
     def scroll(self):
