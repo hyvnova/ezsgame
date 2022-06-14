@@ -43,3 +43,6 @@
 
 # Notes
 this will be the last version of the project, at least for the next few months.
+Especial thanks to DawntDev and Zette for helping me throughout the development of this proyect. 🎉🙏
+
+for people wondering this version is Beta because the project is not fully done yet, but the development will be paused.
