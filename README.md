@@ -19,7 +19,7 @@ pip install -r requirements.txt
 - [ 4 ] Creando Archivos, los archivos que usaran ezsgame deben comenzar con la siguiente linea para importar ezsgame:
 
 ```python
-from ezsgame.main import *
+from ezsgame.all import *
 
 # Tu codigo aqui
 
@@ -42,11 +42,14 @@ from ezsgame.main import *
 # Inicio
 
 ```python
+# importar ezsgame
+from ezsgame.basics import *
+
 # Declara la pantalla
-screen = Screen(size=(640, 480), title="Mi App")
+screen = Screen(size=[640, 480], title="Mi App")
 
 # Declarar un objeto
-mi_rect =  Rect(pos=["center", "center"], size=(100, 100), color="red")
+mi_rect =  Rect(pos=["center", "center"], size=[100, 100], color="red")
 
 # Bucle principal
 while True:
@@ -57,7 +60,7 @@ while True:
     screen.fill("black")
 
     # Dibujar el objeto
-    mi_rect.draw(screen)
+    mi_rect.draw()
 
     # Actualizar la pantalla
     screen.update()
@@ -66,17 +69,8 @@ while True:
 #
 
 # Documentacion (Aun no completa)
-## [>> Ir a la documentacion](https://ezsgame-doc.ezsnova.repl.co/)
+## FigJam (V:2.1.5.5) : [>> Ir a Figma](https://www.figma.com/file/EpJeUfdcxbwZSO5c4lr6rT/ezsgame-doc?node-id=1%3A2)
 
 
-#
-#
-# Convicciones 
-- # archivos :
-    - ### Los archivos que usan ezsgame que son el archivo "principal", suelen llamarse:
-        ## demo.py (Recomendado)
-        ## main.py
-        ## game.py
-        ## app.py
 
 
