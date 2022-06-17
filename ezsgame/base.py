@@ -1,7 +1,3 @@
-
-from ast import If
-from gc import callbacks
-from re import I
 import pygame as pg, random, time as t, os
 from .objects import Size, Pos, Gradient, Object, resolve_color, Image
 from .global_data import DATA, get_screen, on_update
