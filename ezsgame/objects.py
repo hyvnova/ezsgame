@@ -105,6 +105,18 @@ class Vector2:
 	"""
 	def __init__(self, a=0, b=0):
 		self.__call__(a,b)
+	
+	def __add__(a, b):
+		x,y = b
+		return Vector2(a._a + x, a._b + y)
+
+	def __sub__(a, b):
+		x,y = b
+		return Vector2(a._a - x, a._b - y)
+
+	def __mul__(a, b):
+		x,y = b
+		return Vector2(a._a * x, a._b * y)	  
    
 	def __call__(self, a=0, b=0):
 		if isinstance(a, list) or isinstance(a, tuple) or isinstance(a, Vector2):
@@ -224,6 +236,8 @@ class Pos (Vector2):
 	@y.setter
 	def y(self, value):
 		self._b = value
+  
+
 			
 class Object:
 	r"""
@@ -378,7 +392,9 @@ class Object:
 		for func in self.__on_draw.values():
 			func()
 		
-		get_drawn_objects().append(self.id)
+		get_drawn_objects().append(self.id)		
+		
+	
 			  
 class Rect(Object):
 	r'''
@@ -605,3 +621,33 @@ class Group:
    
 	def filter(self, func):
 		return Group([obj for obj in self.objects if func(obj)])
+
+class Line:
+    def __init__(self, start: Pos, end: Pos, width: int = 5, **styles):
+        self.start = start
+        self.end = end
+        self.width = width
+        self.color = styles.get("color", "white")
+        self.screen = get_screen()
+
+    def draw(self):
+        pg.draw.line(self.screen.surface, self.color, self.start, self.end, self.width)
+                
+    def _get_collision_box(self):
+        # collision is checked at line end
+        return [self.end, self.end + [self.width, 0], self.end + [0, self.width], self.end + [self.width, self.width]]
+                
+    def get_size(self):
+        return Size(self.width, self.width)
+    
+    def get_pos(self):
+	    return self.end
+        
+def center_of(obj) -> Pos:
+    r'''
+    #### Returns the center of the object
+    - obj : object -> object
+    '''
+    return Pos(obj.pos[0] + obj.size[0]/2, obj.pos[1] + obj.size[1]/2)
+
+

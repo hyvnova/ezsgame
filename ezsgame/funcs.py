@@ -75,6 +75,7 @@ def is_colliding(obj1, obj2, draw_collision_box=False):
     for i in obj1._get_collision_box():    
         if (i[0] >= obj2.pos[0] and i[0] <= obj2.pos[0]+obj2.size[0]) and (i[1] >= obj2.pos[1] and i[1] <= obj2.pos[1] + obj2.size[1]):
             return True
+                
         
     return False
 
@@ -84,7 +85,7 @@ def build(
     oneFile: bool = True,
     based: bool = True,
     icon: str = None,
-    output: str = os.path.join(os.getcwd(), "build"),
+    output: str = os.path.join(os.getcwd(), "build")
     ) :
 
     
@@ -104,7 +105,12 @@ def build(
         
         "--add-data",
         f"{os.getcwd()}\\ezsgame\\assets;icon.jpg", # File
-        
+    
+        "--add-data",
+        f"{os.getcwd()};audio.mp3",
+
+        "--add-data",
+        f"{os.getcwd()};wakeup.png",
         
         f"{os.getcwd()}\\{file}", # File
         
@@ -113,3 +119,4 @@ def build(
     # Clear a None value in args
     args = [x for x in args if x is not None]
     subprocess.run(args, cwd=output)
+    
