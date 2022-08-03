@@ -1,12 +1,25 @@
 
-from ast import If
-from gc import callbacks
-from re import I
+from re import S
+from typing import Callable, List
 import pygame as pg, random, time as t, os
 from .objects import Size, Pos, Gradient, Object, resolve_color, Image
 from .global_data import DATA, get_screen, on_update
 
 class Screen:
+	# check if an istance of Screen is created
+	is_created:bool = False
+	
+	def __new__(cls, *args, **kwargs) -> 'Screen':
+		r'''
+		#### Creates a new Screen instance if it doesn't exist
+		'''
+		if not cls.is_created:
+			Screen.is_created = True
+			return object.__new__(Screen)
+
+		else:
+			return DATA.screen
+	
 	def __init__(self, size : list = [720, 420], title : str = "", icon : str = "", fps : int = 60, 
 				 show_fps : bool = False, vsync:bool = False, depth:int=32, color="black", fullscreen:bool=False,
 				 resizable:bool=False):
@@ -28,7 +41,7 @@ class Screen:
 		
 		self.load_icon(icon)
 			 
-		self.events = EventHandler()
+		self.events = EventHandler
 		self.time = TimeHandler()
 
 		# init screen
@@ -470,7 +483,7 @@ class Interface:
 					
 				else:
 					y += step[1]
-     
+	 
 		return self
 			
 	def grid_align(self, size=[]):
@@ -485,9 +498,9 @@ class Interface:
 			if len(self.objects) > i:
 				self.objects[i].pos = Pos(self.grid[i])
 				self.objects[i].size = Size(self.grid_box_size)
-    
+	
 		return self 					
-      
+	  
 	def draw(self):
 		r'''
 		#### Draws all objects in the interface
@@ -495,187 +508,208 @@ class Interface:
 		for obj in self.objects:
 			obj.draw()
 		
-# Manager Objects
-def add_args(func, **kwargs):
-	def inner(*_, **__):
+
+# EVENT HANDLING ----------------------------------------------------------------------------------------------------
+class Event:
+	def __init__(self, event_type, event_name, callback:Callable, object:Object = None, name:str = "Default", **kwargs):
+		self.type = event_type
+		self.event_name = event_name
+		self.callback = callback
+		self.object = object
+		self.name = name
+		
+		for k,v in kwargs.items():
+			setattr(self, k, v)
+   
+	def __contains__(self, item):
+		return item in self.__dict__.keys()
+		
+	def __call__(self, **kwargs):
 		try:
-			return func(**kwargs)
+			self.callback(**kwargs)
 		except Exception as e:
-			return func()
-	return inner
-	
+			self.callback()
+
+class EventList(list):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+  
+	def get_by_type(self, event_type) -> List[Event]:
+		return [event for event in self if event.type == event_type]
+ 
+	def get_by_name(self, event_name) -> Event:
+		lst = [event for event in self if event.event_name == event_name]
+		return lst[0] if lst else None
+ 
+	def replace(self, name:str, new_event:Event) -> None:
+		for i, event in enumerate(self):
+			if event.name == name:
+				self[i] = new_event
+
+	def remove(self, *names) -> None:
+		for name in names:
+			for i, event in enumerate(self):
+				if event.name == name:
+					del self[i]
+     
+	def add(self, event:Event):
+		# if event already exists, replace it
+		if self.get_by_name(event.name):
+			self.replace(event.name, event)
+
+		# otherwise, add it
+		else:
+			self.append(event)
+		
 class EventHandler:
 	r'''
-	- Manages events on the app 
+	- Manages events on the program 
 	'''
-	def __init__(self):
-		self.events  = {}
-		self.ezsgame_events = []
+	events  = EventList()
+
+	to_remove = []
+	to_add = []
 	
-		self.to_remove = {"events": [ ], "ezsgame_events": [ ] }
-		self.to_add = {"events": [ ], "ezsgame_events": [ ] }
-		
-		self.__ezsgame_events = ["update"]
+	__ezsgame_events = ["update"]	
 											
-	def check(self):
+	def check():
 		# gets widnow events
-		events = self._get_events()
+		events = pg.event.get()
 		
 		# removes events 
-		for name in self.to_remove[ "events" ]:
-			for ev_type in self.events:
-				for item in self.events[ ev_type ]:
-					if item[ "name" ] == name:
-						self.events[ ev_type ].pop( self.events[ ev_type ].index( item ) )
-						break
-
-		 # removes ezsgame events
-		for name in self.to_remove[ "ezsgame_events" ]:
-			if name in self.ezsgame_events:
-				self.ezsgame_events.pop( self.ezsgame_events.index( name ) )
-
-			# removes event from DATA so it won't be called anymore
-			del DATA.on_update[ name ]
-				 
-		self.to_remove = {"events": [ ], "ezsgame_events": [ ]}
-					
+		for name in EventHandler.to_remove:
+   			
+			for event in EventHandler.events:
+				if event.name == name:
+					EventHandler.events.remove(event)
+					break
+ 
+			# if is ezsgame event
+			else:
+				# removes event from DATA so it won't be called anymore
+				if name in DATA.on_update:
+					del DATA.on_update[ name ]
+			
+		EventHandler.to_remove.clear()
 		
 		# adds events 
-		names = [ ]
-		for item in self.to_add[ "events" ]:
-			if item[ 1 ][ "name" ] not in names:
-				
-				# if event type not in
-				if item[ 0 ] not in self.events.keys():
-					self.events[ item[ 0 ] ] = [ ]              
-				
-				self.events[ item[ 0 ] ].append (item[ 1 ] )
-				names.append( item[ 1 ][ "name" ] )
-				
-			# replace event
-			else:
-				for event_type in self.events:
-					for event in self.events[ event_type ]:
-						if event[ "name" ] == item[ 1 ][ "name" ]:
-							self.events[ event_type ].pop( self.events[ event_type ].index( event ) )
-							self.events[ event_type ].append( item[1] )
-							
-							break
-
-		# adds ezsgame event
-		for item in self.to_add["ezsgame_events"]:
-			# item -> [type, name, callback]
+		for event in EventHandler.to_add:
+      
+			# if is ezsgame event
+			if event.type == "ezsgame":
+       
+				# MANAGE EZSGAME EVENTS	
+    
+				# on update event
+				if event.event_name == "update":
+					on_update(event.name, event.callback)
 			
-			if item[1] not in self.ezsgame_events:
-				self.ezsgame_events.append(item[1])
+			# if is a event
+			else:
+				EventHandler.events.add(event)
 				
-			if item[0] == "update":
-				# sets event to on update 
-				on_update(item[1], item[2])
 				
-		self.to_add = {"events": [], "ezsgame_events": []}
+		EventHandler.to_add.clear()
 		
+		# EVENT MANAGEMENT -------------------------------------------------------------------------------------------
 		for ev in events:
+			# ev : event to process 
+      
 			# quit event (cannot be event listener)
 			if ev.type == pg.QUIT:
-				for i in self.events.get( pg.QUIT, "" ):
-					i[ "callback" ]()
+				for event in EventHandler.events.get_by_type(pg.QUIT):
+					event.callback()
 					
-				get_screen().quit()
+				Screen().quit()
 							  
+         
+			# Manages custom events
+			for event in EventHandler.events.get_by_type("custom"):
+				event_args = {
+					"key" : ev.key if ev.__dict__.get("key") else None,
+					"unicode" : ev.unicode if ev.__dict__.get("unicode") else None,
+					"type" : ev.type,
+					"button" : ev.button if ev.__dict__.get("button") else None,
+					"is_hovering" : EventHandler.is_hovering(event["object"]) if "object" in event else False
+				}
+
+				event(**event_args)
+         
 			#  EVENT LOOP (managing events)
-			for ev_type in self.events.keys():
-
-				# Manages custom events
-				if ev_type == "custom event":
-					for item in self.events[ ev_type ]:
-						event_args = {
-							"key" : ev.key if ev.__dict__.get("key") else None,
-							"unicode" : ev.unicode if ev.__dict__.get("unicode") else None,
-							"type" : ev.type,
-							"button" : ev.button if ev.__dict__.get("button") else None,
-							"is_hovering" : self.is_hovering(item["object"]) if "object" in item else False
-						}
-
-						add_args( item[ "callback" ], **event_args )()
+			for event in EventHandler.events.get_by_type(ev.type):
 				
-				if ev.type == ev_type:
-					for event in self.events[ ev_type ]:
+				# if is event listener (uses a object)
+				is_event_listener =  event.object is not None
+				is_hovering = False 
+				
+				if is_event_listener:
+					is_hovering = EventHandler.is_hovering( event.object)
+										
+					# if is not hovering and event is not unhover then skip 
+					if not is_hovering and  not event.event_name == "unhover":
+						continue
+
+				# function to reduce code, function decides whaterver callback should called or not
+				def callback():
+					if is_event_listener:
+						# events that require be hovering
+						if is_hovering:
+							event.callback()
+					
+					# if is not event listener is base event, just call callback
+					else:
+						event.callback()
+											
+				# mouse events
+				if ev.type == pg.MOUSEBUTTONDOWN:
+					# mouse wheel up
+					if event.event_name == "mousewheelup" and ev.button == 4:
+						callback()
+						continue
+					
+						# mouse wheel down
+					elif event.event_name == "mousewheeldown" and ev.button == 5:
+						callback()  
+						continue
+
+					# other click or mousedown events
+					else:
+						callback()
+						continue
+
+				# hover events
+				elif ev.type == pg.MOUSEMOTION:
+					if event.event_name == "unhover":
+						if not is_hovering:
+							event.callback()
+							continue
+
+					else:
+						callback()
+						continue
+
+				# mouse up events
+				elif ev.type == pg.MOUSEBUTTONUP: 
+					if event.event_name == "mouseup" or event.type == pg.MOUSEBUTTONUP:
+						event.callback()
 						
-						# if is event listener (uses a object)
-						is_event_listener =  "object" in event
-						is_hovering = False 
-						
-						if is_event_listener:
-							is_hovering = self.is_hovering( event[ "object" ] )
-												
-							# if is not hovering and event is not unhover then skip 
-							if not is_hovering and  not event[ "evname"] == "unhover":
-								continue
-
-						# function to reduce code, function decides whaterver callback should called or not
-						def callback():
-							if is_event_listener:
-								# events that require be hovering
-								if is_hovering:
-									event[ "callback" ]()
-							
-							# if is not event listener is base event, just call callback
-							else:
-								event[ "callback" ]()
-								return
-													
-						# mouse events
-						if ev.type == pg.MOUSEBUTTONDOWN:
-							# mouse wheel up
-							if event[ "evname" ] == "mousewheelup" and ev.button == 4:
-								callback()
-								continue
-							
-							 # mouse wheel down
-							elif event[ "evname" ] == "mousewheeldown" and ev.button == 5:
-								callback()  
-								continue
-
-							# other click or mousedown events
-							else:
-								callback()
-								continue
-
-						# hover events
-						elif ev.type == pg.MOUSEMOTION:
-							if event["evname"] == "unhover":
-								if not is_hovering:
-									event[ "callback" ]()
-									continue
-
-							else:
-								callback()
-								continue
-
-						# mouse up events
-						elif ev.type == pg.MOUSEBUTTONUP: 
-							if event[ "evname" ] == "mouseup":
-								event[ "callback" ]() 
-								
-							else:
-								callback()
-							
-						elif "key" in event:
-							if event[ "key" ] == ev.key:
-								add_args(event["callback"], key=ev.key, unicode=ev.unicode)()
-								continue
-						   
-						# base on key event keydown or keyapp
-						elif ev_type == (pg.KEYDOWN or pg.KEYUP): 
-							add_args(event["callback"], key=ev.key, unicode=ev.unicode)()
-						
-						# any event that matchess current window event
-						else:
-							callback()
-
-																		   
-	def add_event(self, event:str, object:Object, callback, name:str="Default"):
+					else:
+						callback()
+					
+				elif "key" in event:
+					if event.key == ev.key:
+						event(key=ev.key, unicode=ev.unicode)
+						continue
+					
+				# base on key event keydown or keyapp
+				elif event.type in (pg.KEYDOWN, pg.KEYUP): 
+					event(key=ev.key, unicode=ev.unicode)
+				
+				# any event that matchess current window event
+				else:
+					callback()
+																	   
+	def add_event(event:str, object:Object, callback, name):
 		r'''
 		#### Adds a event listener to a object
 		- `event` : event to be added 
@@ -688,31 +722,20 @@ class EventHandler:
 		event = event.lower()
 		
 		if name == "Default":
-			name = f"{event}.{object.id}.{len(self.events)}"        
+			name = f"{event}.{object.id}.{len(EventHandler.events)}"        
 		
-		event_type = self._convert_to_pgevent(event)
+		event_type = EventHandler._convert_to_pgevent(event)
 		
-		self.to_add["events"].append([event_type, {"name": name, "object": object, "callback": callback, "evname" : event}])
+		EventHandler.to_add.append(Event(event_type, event, callback, object, name))
 
-	def remove_event(self, name:str):
+	def remove_event( name:str):
 		f'''
 		#### Removes an event from the event list so it won't be called anymore
 		-  `name` : name of the event to be removed 
 		'''
-		for item in self.ezsgame_events:
-			if item == name:
-				self.to_remove["ezsgame_events"].append(name)
-				return
+		EventHandler.to_remove.append(name)
 
-		for item in self.events.values():
-			if not item:
-				continue
-
-			if item[0][ "name" ] == name:
-				self.to_remove["events"].append(name)
-				return
-
-	def is_hovering(self, object:Object) -> bool:
+	def is_hovering( object:Object) -> bool:
 		r'''
 		#### Checks if the mouse is hovering over the object
 		- `object` : object to check if the mouse is hovering over it
@@ -725,15 +748,8 @@ class EventHandler:
 				return True
 			
 		return False
-			
-	def _get_events(self):
-		f"""
-		#### Returns Current Events, Is called automatically
-		"""
-		# return current event
-		return pg.event.get()
 	
-	def on_event(self, event : str, callback , name:str = "Default"):
+	def on_event( event : str, callback , name:str = "Default"):
 		r'''
 		#### Adds a `Base Event` to the event list, Calls function when event is triggered. 
 		- `event`: event to be added 
@@ -742,21 +758,18 @@ class EventHandler:
 		- `name`: name of event (optional)
 		'''
 		event = event.lower()
-		name = f"base_event.{event}.{len(self.events)}" if name == "Default" else name
+		name = f"base_event.{event}.{len(EventHandler.events)}" if name == "Default" else name
 		
 		# if is ezsgame event
-		if event in self.__ezsgame_events:
-			self.to_add["ezsgame_events"].append([event, name, callback])
+		if event in EventHandler.__ezsgame_events:
+			EventHandler.to_add.append(Event("ezsgame", event, callback, None, name))
 			return
 	
-		event_type = self._convert_to_pgevent(event)
+		event_type = EventHandler._convert_to_pgevent(event)
 	
-		if event not in self.events:
-			self.events[event_type] = []
-		
-		self.to_add[ "events" ].append([event_type, {"callback": callback, "name":name, "evname":event}]) 
+		EventHandler.to_add.append(Event(event_type, event, callback, None, name)) 
 					   
-	def on_key(self, type : str, keys : list, callback, name:str = "Default"):
+	def on_key( type : str, keys : list, callback, name:str = "Default"):
 		r'''
 		#### Calls function when key event is triggered.
 		-  `type`: type of `Event` to be added
@@ -784,11 +797,11 @@ class EventHandler:
 			
 			k = eval("pg.K_" + key)
 			
-			name = f"{key}_{type}_{len(self.events)}" if name == "Default" else name
+			name = f"{key}_{type}_{len(EventHandler.events)}" if name == "Default" else name
 		
-			self.to_add["events"].append([event_type, {"name": name, "key": k, "callback": callback, "evname":key}])
+			EventHandler.to_add.append(Event(event_type, k, callback, None, name, key=k))
 		   
-	def custom_event(self, callback, object=None, name:str = "Default"):
+	def custom_event( callback, object=None, name:str = "Default"):
 		r'''
 		#### Creates a custom event. *[Decorator]*
 		- `callback` : function to be called with event parameters
@@ -796,13 +809,12 @@ class EventHandler:
 		- `name`: name of event (optional)
 		'''
 
-		name = f"custom_event.{name}.{len(self.events)}" if name == "Default" else name
+		name = f"custom_event.{name}.{len(EventHandler.events)}" if name == "Default" else name
 		
-		self.to_add["events"].append(["custom event", {"name": name, "callback": callback, "object":object}])
-			
-			
-	def _convert_to_pgevent(self, event):
-		if event in self.__ezsgame_events:
+		EventHandler.to_add.append(Event("custom", "custom", callback, object, name))
+						
+	def _convert_to_pgevent( event):
+		if event in EventHandler.__ezsgame_events:
 			return event
 				
 		evs  = {
@@ -825,6 +837,7 @@ class EventHandler:
 		if event not in evs:
 			raise Exception("Event type not found", event)
 		return evs[event]
+
    
 class TimeHandler:
 	r'''
@@ -837,7 +850,7 @@ class TimeHandler:
 		self.to_remove = []
 		self.to_add = []
 
-	def add(self, time : int, callback, name:str ="Default"):
+	def add( time : int, callback, name:str ="Default"):
 		r'''
 		#### Adds a `interval` that will be called every `time` milliseconds
 		- `name` : name of the event 
@@ -847,7 +860,7 @@ class TimeHandler:
 		name = f"{len(self.intervals)}.{time}" if name == "Default" else name
 		self.to_add.append([name, {"callback": callback, "time": time//1000, "last_call": t.time()}])
 
-	def remove(self, name:str):
+	def remove( name:str):
 		r'''
 		#### Removes an `interval` from the event list so it won't be called anymore
 		- `name` : name of the event to be removed 
