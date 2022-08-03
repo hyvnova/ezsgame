@@ -254,7 +254,15 @@ class Object:
 		self.stroke = styles.get("stroke", 0)
 		self.z_index = styles.get("z_index", 1)
 
+		
+		# if only 1 measure is given, use it for both measures
+		if len(pos) == 1:
+			pos = [pos[0], pos[0]]
 		self.pos = Pos(*pos)
+  
+		# if only 1 axis is given, use it for both axis
+		if len(size) == 1:
+			size = [size[0], size[0]]
 		self.size = Size(*size)
 		
 		if "styles" in styles:
@@ -503,6 +511,19 @@ class Image(Rect):
 		
 	def draw(self):
 		self.screen.surface.blit(self.image, self.get_pos())
+  
+	def rotate(self, angle):
+		self.image = pg.transform.rotate(self.image, angle)
+		self.size = [self.image.get_width(), self.image.get_height()]
+  
+	def flip(self, x_axis: bool = True, y_axis: bool = False):
+		self.image = pg.transform.flip(self.image, x_axis, y_axis)
+		self.size = [self.image.get_width(), self.image.get_height()]
+  
+	def scale(self, new_size: Size):
+		self.image = pg.transform.scale(self.image, new_size)
+		self.size = [self.image.get_width(), self.image.get_height()]
+
 	  
 class Circle(Object):
 	r'''
@@ -565,10 +586,15 @@ class Group:
 	def __getitem__(self, other):
 		if isinstance(other, int):
 			return self.objects[other]
+
 		elif isinstance(other, slice):
 			return self.__getslice__(other)
+
+		elif isinstance(other, Object):
+			return self.objects[self.objects.index(other)]
+
 		else:
-			raise TypeError("Index must be an integer or slice")
+			raise TypeError("Index must be an integer, slice or Object")
 		
 	def __contains__(self, thing):
 		return thing in self.objects
@@ -620,7 +646,14 @@ class Group:
 		return self.__str__()
    
 	def filter(self, func):
-		return Group([obj for obj in self.objects if func(obj)])
+		self.objects = [obj for obj in self.objects if func(obj)]
+		return self.objects
+
+	def copy(self):
+		return Group(*self.objects)
+
+	def __add__(a, b):
+		return Group(*a, *b)
 
 class Line:
     def __init__(self, start: Pos, end: Pos, width: int = 5, **styles):
@@ -641,13 +674,11 @@ class Line:
         return Size(self.width, self.width)
     
     def get_pos(self):
-	    return self.end
-        
+	    return self.end        
+
 def center_of(obj) -> Pos:
     r'''
-    #### Returns the center of the object
+    #### Returns the center postion of the object
     - obj : object -> object
     '''
     return Pos(obj.pos[0] + obj.size[0]/2, obj.pos[1] + obj.size[1]/2)
-
-

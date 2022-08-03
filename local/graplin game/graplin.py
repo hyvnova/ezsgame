@@ -135,6 +135,8 @@ def pull(obj):
             freezed = False
             screen.remove_interval("pulling")     
             
+            screen.events.check()
+            
             grapling.end = center_of(player)
             
             # add score

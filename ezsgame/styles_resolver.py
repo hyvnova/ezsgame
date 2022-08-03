@@ -3,6 +3,13 @@ from .global_data import get_screen
 
 adapt_rgb = lambda rgb: tuple(map(lambda i: i*255, rgb))
 
+def center_of(obj):
+    r'''
+    #### Returns the center postion of the object
+    - obj : object -> object
+    '''
+    return [obj.pos[0] + obj.size[0]/2, obj.pos[1] + obj.size[1]/2]
+
 def resolve_measure(measure, size):
     if isinstance(measure, str):
         if measure.endswith("%"):
@@ -34,6 +41,10 @@ def resolve_margin(margin):
 
 def resolve_size(size):
     screen = get_screen()
+    
+    # if only 1 axis is given, use it for both axis
+    if len(size) == 1:
+        size = [size[0],size[0]]
 
     for i,s in enumerate(size):
         screen_i = 0 if i%2 == 0 else 1
@@ -45,8 +56,13 @@ def resolve_size(size):
 def resolve_pos(pos,size, margin):
     screen = get_screen()
     
+    if len(pos) == 1:
+        pos = [pos[0],pos[0]]
+
     margin_x = margin[3] + margin[1]
     margin_y = margin[0] + margin[2]
+    
+    screen_center = center_of(screen)
     
     # align position x
     
@@ -68,11 +84,11 @@ def resolve_pos(pos,size, margin):
             elif pos[0] == "right":
                 pos[0] = screen.size[0] - size[0] - margin_x
             elif pos[0] == "right-center":
-                pos[0] = screen.size[0] - size[0] / 2 - screen.center()[0]/2 - margin_x
+                pos[0] = screen.size[0] - size[0] / 2 - screen_center[0]/2 - margin_x
             elif pos[0] == "left":
                 pos[0] = margin_x
             elif pos[0] == "left-center":
-                pos[0] = screen.center()[0] /2 - size[0] / 2 + margin_x
+                pos[0] = screen_center[0]/2 - size[0] / 2 + margin_x
         
         
     # align position y
@@ -94,11 +110,11 @@ def resolve_pos(pos,size, margin):
             elif pos[1] == "top":
                 pos[1] = margin_y
             elif pos[1] == "top-center":
-                pos[1] = screen.center()[1] / 2 - size[1]/2  + margin_y 
+                pos[1] = screen_center[1]/ 2 - size[1]/2  + margin_y 
             elif pos[1] == "bottom":
                 pos[1] = screen.size[1] - size[1] - margin_y
             elif pos[1] == "bottom-center":
-                pos[1] = screen.size[1] - size[1]/2 - screen.center()[1]/2 - margin_y
+                pos[1] = screen.size[1] - size[1]/2 - screen_center[1]/2 - margin_y
                     
                     
     return pos

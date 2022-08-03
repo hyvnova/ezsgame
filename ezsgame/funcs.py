@@ -120,3 +120,16 @@ def build(
     args = [x for x in args if x is not None]
     subprocess.run(args, cwd=output)
     
+
+def center(parent, obj, x_axis=True, y_axis=True):
+    r'''
+    #### Centers an object in the parent object
+    - parent : object -> parent object
+    - obj : object -> object to center
+    - x_axis : bool -> if True, center x-axis
+    - y_axis : bool -> if True, center y-axis
+    '''
+    if x_axis:
+        obj.pos[0] = parent.pos[0] + (parent.size[0] - obj.size[0]) / 2
+    if y_axis:
+        obj.pos[1] = parent.pos[1] + (parent.size[1] - obj.size[1]) / 2
