@@ -1,28 +1,19 @@
 from ezsgame.all import *
 
-screen = Screen(show_fps=True)
+screen = Screen(show_fps=True, color="white")
 
-rect = Rect(["center", "center"], [100,100])
-
-click_count_text = Text("0", ["center", "top-center"], fontsize=24, color="white")
-count = 0
-
-@screen.add_event("click", rect)
-def on_click():
-    global count
-    rect.color = "red"
-    count += 1
-    
-@screen.add_event("unclick", rect)
-def on_unclick():
-    rect.color = "white"
+grid = Grid(["center", "center"], [400,400], [5,5], 
+            box_styles = {
+                "border_radius": [10,10,10,10],
+                "color" : "black",
+                "stroke" : 5
+            })
 
 while True:
     screen.check_events()
     screen.fill()
 
-    rect.draw()
-    click_count_text.text = str(count)
-    click_count_text.draw()
+    grid.draw()
+    grid.highlight_current({"color": "red"})
 
     screen.update()

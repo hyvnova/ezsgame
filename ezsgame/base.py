@@ -2,7 +2,7 @@
 from re import S
 from typing import Callable, List
 import pygame as pg, random, time as t, os
-from .objects import Size, Pos, Gradient, Object, resolve_color, Image
+from .objects import Size, Pos, Gradient, Object, resolve_color, Image, div
 from .global_data import DATA, get_screen, on_update
 
 class Screen:
@@ -206,42 +206,6 @@ class Screen:
 		- `time` : time to wait for, in milliseconds
 		'''
 		pg.time.wait(time)
-		
-	def div(self, axis : str, q : int, size : list = None):
-		r'''
-		#### Returns a list of division points of the screen in the given axis
-		
-		- `axis` : axis to divide the screen in (`x` or `y`)
-		- `q` : number of divisions
-		- `size` : Size of where to divide the screen, works as a delimiter (Optional)
-		'''
-		
-		_size = size if size != None else self.size
-		
-		_size = Object(pos=[0,0], size=_size).get_size()
-		
-		divs = []
-		if axis == "x":
-			step = _size[0] / q
-			
-			for i in range(q):
-				divs.append([round(i * step, 1), round((i + 1) * step, 1)])
-				
-				# if overflows 
-				if divs[-1][1] > _size[0]:
-					break
-				
-		elif axis == "y":
-			step = _size[1] / q
-
-			for i in range(q):
-				divs.append([round(i * step, 1), round((i + 1) * step, 1)])
-		
-				# if overflows
-				if divs[-1][1] > _size[1]:
-					break
-				
-		return divs
 	
 	def resolve_size(self, size : list):
 		if self.fullscreen:
@@ -336,12 +300,8 @@ class Screen:
 		if size == [0, 0]:
 			size = self.size
 		
-		if isinstance(color, Gradient):
-			for obj in color.objs:
-				obj.draw()      
-
-		elif isinstance(color, Image):
-			color.draw()
+		if isinstance(color, Gradient) or isinstance(color, Image):
+			color.draw()     
 	
 		else:
 			color = resolve_color(color)

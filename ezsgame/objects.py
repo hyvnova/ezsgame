@@ -1,9 +1,10 @@
+from typing import List, Tuple, Union
 import pygame as pg, random
 from colour import Color
 from .extra.components import ComponentGroup
 from .global_data import get_id, get_screen, get_drawn_objects
-from .primitive_objects import PRect
 from .styles_resolver import resolve_color, resolve_margin, resolve_size, resolve_pos
+from .funcs import div
 
 def random_color(n=1):
 	"""
@@ -25,43 +26,43 @@ def _check_color(color):
 	else:
 		return Color(rgb=pure_rgb(color))
 	   
-def gen_gradient(size, grid, start="green", end="blue", direction="v"):
+def gen_gradient(size, div, start, end, direction="v", pos_prefix:float=0) -> List[Tuple[List, List, Tuple]]:
 	r'''
-	Draw a gradient from start to end.
+	Generates a gradient between two colors
 	- start: start color
 	- end: end color
 	- complexity: how many times to draw the gradient
 	'''
-	if direction not in ("v", "h"):
+	if (direction := direction[0].lower()) not in ("v", "h"):
 		raise ValueError("Direction must be either 'vertical' or 'horizontal'")
 	
 	start = _check_color(start)
 	end = _check_color(end)
 			
-	_size = Size(size)
+	size = resolve_size(size)
 			
-	colors = tuple(start.range_to(end,len(grid)))
+	colors = tuple(start.range_to(end,len(div)))
 	objs = []
 	
-	for i in range(len(grid)):
+	for i in range(len(div)):
 		if direction == "h":
-			pos = [grid[i][0], 0]
-			size = [grid[i][1], size[1]]
+			pos = [div[i][0] + pos_prefix, 0]
+			obj_size = [div[i][1], size[1]]
 		else:
-			pos = [0, grid[i][0]]
-			size = [size[0], grid[i][1]]
+			pos = [0, div[i][0] + pos_prefix] 
+			obj_size = [size[0], div[i][1]]
 
-		objs.append(PRect(pos=pos, size=size, color=adapt_rgb(colors[i].rgb), stroke=0))
+		objs.append((pos, obj_size, adapt_rgb(colors[i].rgb)))
 		
 		# if current x + width is bigger than screen width, end the loop
-		if grid[i][0] + grid[i][1] > _size[0] and direction == "h":
+		if direction == "h" and div[i][0] + div[i][1] > size[0]:
 			break
 			
 		# if current y + height is bigger than screen height, end the loop
-		if grid[i][0] + grid[i][1] > _size[1] and direction == "v":
+		if direction == "v" and div[i][0] + div[i][1] > size[1] :
 			break
    
-	return objs, colors
+	return objs
 		
 class Gradient:
 	r'''
@@ -76,28 +77,48 @@ class Gradient:
 	- `size`: size of the gradient `[width, height]` (default: screen size)
 	'''
 	
-	def __init__(self, start, end, direction="horizontal", complexity=120, size=None):
+	def __init__(self, *colors, direction="horizontal", complexity=120, size=None):
 		if complexity < 3:
 			complexity = 3
+   
 		if complexity > 1000:
 			complexity = 1000
+
+		if not colors or len(colors) < 2:
+			raise ValueError("You must specify at least two colors to create a gradient")
+
+		self.colors = colors
 			
-		self.screen = (screen:= get_screen())
-		
-		_size = size if size else screen.size   
-		_size = Object(pos=[0,0], size=_size).get_size()
-				
-		div_dir = "x" if direction == "h" else "y"    
-		self.objs, self.colors = gen_gradient(_size, screen.div(div_dir, complexity, _size), start, end, direction[0].lower())
-		
+		self.screen = get_screen()
+	
+		size = resolve_size(size) if size else self.screen.size  
+		self.gradient_objs = []
+		last_color = None
+  
+		for index, division in enumerate(div("x", len(colors), size), start=1):
+			if index > len(colors) - 1:
+				break
+      
+			last_color = colors[index-1]   
+
+			self.gradient_objs.extend(gen_gradient( size, 
+                                        div("x", complexity, [division[1], size[1]]),
+                                        last_color, 
+                                        colors[index], 
+                                        direction,
+                                        division[0]
+                                    )
+                            	)
+   
+             	
 	def draw(self):
-		for obj in self.objs:
-			obj.draw()
+		for obj in self.gradient_objs:
+			pg.draw.rect(self.screen.surface, obj[2], pg.Rect(obj[0], obj[1]))
 		
 	def __str__(self):
-		return "<Gradient>"
+		return f"<Gradient {self.colors}>"
 	def __repr__(self):
-		return "<Gradient>"
+		return f"Gradient(*{self.colors})"
 
 class Vector2:
 	r"""

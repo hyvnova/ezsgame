@@ -1,5 +1,6 @@
+from typing import List
 from .global_data import get_id, get_screen
-from .styles_resolver import resolve_color
+from .styles_resolver import resolve_color, resolve_size
 import pygame as pg, os, subprocess
 
 def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [0,0,0,0]):
@@ -133,3 +134,39 @@ def center(parent, obj, x_axis=True, y_axis=True):
         obj.pos[0] = parent.pos[0] + (parent.size[0] - obj.size[0]) / 2
     if y_axis:
         obj.pos[1] = parent.pos[1] + (parent.size[1] - obj.size[1]) / 2
+        
+        
+def div(axis : str, q : int, size : float = None) -> List[List[float]]:
+		r'''
+		#### Returns a list of division points of the screen in the given axis
+		
+		- `axis` : axis to divide the screen in (`x` or `y`)
+		- `q` : number of divisions
+		- `size` : Size of where to divide the screen, works as a delimiter (Optional)
+        - `pos_prefix` : Position to add to the division points (Optional)
+		'''
+		
+		size = resolve_size(size)
+		
+		divs = []
+		if axis == "x":
+			step = size[0] / q
+			
+			for i in range(q):
+				divs.append([round(i * step, 1), round((i + 1) * step, 1) ])
+				
+				# if overflows 
+				if divs[-1][1] > size[0]:
+					break
+				
+		elif axis == "y":
+			step = size[1] / q
+
+			for i in range(q):
+				divs.append([round(i * step, 1), round((i + 1) * step, 1)])
+		
+				# if overflows
+				if divs[-1][1] > size[1]:
+					break
+				
+		return divs
