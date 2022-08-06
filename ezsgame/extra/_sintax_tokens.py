@@ -7,7 +7,9 @@
 # ----------------------------------------------------------------------------
 
 # ALL TOKENS MUST BE UNIQUE OR IT CAN CAUSE ERRORS, RUN THIS FILE TO SEE IF ANY TOKEN IS DUPLICATE
-# DO NOT REMOVE ANY TOKEN
+# DO NOT REMOVE OR RENAME ANY TOKEN
+
+# ----------------------------------------------------------------------------
 
 
 STYLES_CLASS_TOKEN = "::" # used to denife a set of styles that will be applied to the object with same class 

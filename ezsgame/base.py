@@ -1,9 +1,7 @@
-
-from re import S
 from typing import Callable, List
 import pygame as pg, random, time as t, os
-from .objects import Size, Pos, Gradient, Object, resolve_color, Image, div
-from .global_data import DATA, get_screen, on_update
+from .objects import Size, Pos, Gradient, Object, resolve_color, Image
+from .global_data import DATA, on_update
 
 class Screen:
 	# check if an istance of Screen is created
@@ -41,11 +39,11 @@ class Screen:
 		
 		self.load_icon(icon)
 			 
-		self.events = EventHandler
-		self.time = TimeHandler()
+		self.events: EventHandler = EventHandler
+		self.time: TimeHandler = TimeHandler()
 
 		# init screen
-		self.init()
+		self.__init()
 		
 		# Set screen globally
 		DATA(screen=self)
@@ -107,7 +105,6 @@ class Screen:
 
 		return wrapper
 		
-		   
 	def on_event(self, event:str, name:str = "Default"):
 		r'''
 		#### Calls funcion when the event is triggered, (Base Event)
@@ -145,7 +142,6 @@ class Screen:
 		'''
 		self.events.remove_event(name)
 		
-
 	# -----------------------------------------------------------------------------
 	def load_icon(self, icon : str):
 		r'''
@@ -207,7 +203,7 @@ class Screen:
 		'''
 		pg.time.wait(time)
 	
-	def resolve_size(self, size : list):
+	def __resolve_size(self, size : list):
 		if self.fullscreen:
 			self.__size = Size(size)
 			self.size = pg.display.list_modes()[0]
@@ -238,13 +234,13 @@ class Screen:
 			else:
 				self.size = Size(size[0], size[1])
 		
-	def init(self):
+	def __init(self):
 		r'''
 		#### Initializes the screen, is called automatically
 		'''
 		
 		pg.init()
-		self.resolve_size(self.size)
+		self.__resolve_size(self.size)
 						
 		if self.resizable and self.fullscreen:
 			raise ValueError("You can't resize and fullscreen at the same time")
@@ -280,14 +276,12 @@ class Screen:
 		for func in on_update():
 			func()
 		
-		
 	def quit(self):
 		r'''
 		#### Quits the game/App  (Closes/Ends the window)
 		'''
 		pg.quit()
 		quit()
-
 
 	def fill(self, color = None, pos : list=[0, 0], size:list=[0, 0]):
 		r'''
@@ -307,168 +301,14 @@ class Screen:
 			color = resolve_color(color)
 			pg.draw.rect(self.surface, color, pg.Rect(pos, size))
 		
-	def grid_div(self, cols:int=3, rows:int=3, transpose:bool=False):
-		r'''
-		#### Returns the division of the screen into a grid -> `[[x, y, w, h], [x, y, w, h], ...]`
-		- `cols` : number of columns
-		- `rows` : number of rows
-		- `transpose` : if True, the grid will be transposed
-		'''
-		grid = []
-		divs_x = self.div("x", cols)
-		box_width = divs_x[-1][0] - divs_x[-2][0]
-		divs_y = self.div("y", rows)
-		box_height = divs_y[-1][0] - divs_y[-2][0]
-		self.grid_size = [rows, cols]
-		
-		for i in range(cols):
-			for j in range(rows):
-				if transpose:
-					grid.append([divs_x[j][0], divs_y[i][0], box_width, box_height])
-				else:
-					grid.append([divs_x[i][0], divs_y[j][0], box_width, box_height])
-		self.grid_space = len(grid)
-		self.grid_box_size = [box_width, box_height]
-		return grid
-	
 	def toggle_fullscreen(self):
 		r'''
 		#### Toggles the fullscreen mode
 		'''
 		self.fullscreen = not self.fullscreen
-		self.init()
+		self.__init()
 		
-class Interface:
-	def __init__(self, display, grid=None):
-		self.display = display
-		self.objects = []
-		self.current_z_index = 1
-		self.screen = get_screen()
-
-		self.__gen_grid(grid if grid else [5,5])
-		
-	def __gen_grid(self, size):
-		if not size or size==[]: 
-			size = []           
-			length = len(self.objects)
-			
-			
-			d = dict(zip(range(10, 90, 20), range(2, 6)))
-			for k,v in d.items():
-				if length < k:
-					n = v
-					break
-			
-			for i in range(2, length //n):
-				for x in range(2, length//n):
-					if i*x == length:
-						size = [i, x]
-						break   
-		
-		self.grid_size = size
-		self.grid_space = size[0] * size[1]
-		self.grid_box_size = [self.display.size[0]/size[0], self.display.size[1]/size[1]]
-		
-		self.grid = []
-		
-		x_values = self.screen.div("x", self.grid_size[0])
-		y_values = self.screen.div("y", self.grid_size[1])
-
-		for i in range(self.grid_size[0]):
-			for j in range(self.grid_size[1]):
-				self.grid.append([x_values[i][0], y_values[j][0]])
-   
-	def add_objects(self, *objects):
-		r'''
-		#### Adds passed objects to the interface
-		'''
-		if isinstance(objects[0], list):
-			objects = objects[0]
-		
-		for obj in objects:
-			obj.z_index = self.current_z_index
-			self.current_z_index += 1
-			
-			self.objects.append(obj)
-			
-		return self
-			
-	def remove(self, *objects):
-		r'''
-		#### Removes passed objects from the interface
-		'''
-		for obj in objects:
-			self.objects.remove(obj)
-					
-	def align(self, direction="row", spacing="auto"):
-		r'''
-		#### Aligns objects in the interface
-		- `direction` : align direction "row" or "column"
-		''' 
-		if (direction:= direction.lower()) not in ("row", "column"):
-			raise ValueError("Direction must be either 'row' or 'column'")
-		
-		if isinstance(spacing, str):
-			if spacing.lower() == "auto":
-				spacing = self.display.size[0] // (self.grid_size[0]//2 * len(self.objects))
-				
-			else:
-				raise ValueError("Spacing must be either 'auto' or a number")
-		
-		x,y = spacing//2, spacing//2
-		
-		step = [self.objects[-1].size[0] + spacing,
-				self.objects[-1].size[1] + spacing]
-		
-		for obj in self.objects:
-			obj.pos = Pos(x,y)
-			if direction == "row":
-				if obj.pos[0] + obj.size.width > self.display.pos[0] + self.display.size[0]:
-					x = spacing//2
-					y += step[1]
-					obj.pos = Pos(x,y)
-					
-					x += step[0]  
-				
-				else:
-					x += step[0]
-					
-			elif direction == "column":
-				if obj.pos[1] + obj.size.height > self.display.size.height:
-					x += step[0] + spacing//2
-					y = spacing//2
-					obj.pos = Pos(x,y)  
-					
-					y += step[1]
-					
-				else:
-					y += step[1]
-	 
-		return self
-			
-	def grid_align(self, size=[]):
-		r'''
-		#### Aligns objects in the interface grid
-		- `size` : grid dimensions (Optional)
-		''' 
-		self.__gen_grid(size)
-				
-		# add a grid pos and size to each object
-		for i in range(len(self.grid)):
-			if len(self.objects) > i:
-				self.objects[i].pos = Pos(self.grid[i])
-				self.objects[i].size = Size(self.grid_box_size)
 	
-		return self 					
-	  
-	def draw(self):
-		r'''
-		#### Draws all objects in the interface
-		'''
-		for obj in self.objects:
-			obj.draw()
-		
-
 # EVENT HANDLING ----------------------------------------------------------------------------------------------------
 class Event:
 	def __init__(self, event_type, event_name, callback:Callable, object:Object = None, name:str = "Default", **kwargs):
@@ -669,7 +509,7 @@ class EventHandler:
 				else:
 					callback()
 																	   
-	def add_event(event:str, object:Object, callback, name):
+	def add_event(event:str, object:Object, callback, name: str = "Default"):
 		r'''
 		#### Adds a event listener to a object
 		- `event` : event to be added 
@@ -688,7 +528,7 @@ class EventHandler:
 		
 		EventHandler.to_add.append(Event(event_type, event, callback, object, name))
 
-	def remove_event( name:str):
+	def remove_event(name: str):
 		f'''
 		#### Removes an event from the event list so it won't be called anymore
 		-  `name` : name of the event to be removed 
@@ -709,7 +549,7 @@ class EventHandler:
 			
 		return False
 	
-	def on_event( event : str, callback , name:str = "Default"):
+	def on_event( event : str, callback, name:str = "Default"):
 		r'''
 		#### Adds a `Base Event` to the event list, Calls function when event is triggered. 
 		- `event`: event to be added 
@@ -798,7 +638,7 @@ class EventHandler:
 			raise Exception("Event type not found", event)
 		return evs[event]
 
-   
+# Time Handler ---------------------------------------------------------------------------------------------------------   
 class TimeHandler:
 	r'''
 	- Handles the time events
@@ -810,7 +650,7 @@ class TimeHandler:
 		self.to_remove = []
 		self.to_add = []
 
-	def add( time : int, callback, name:str ="Default"):
+	def add(self, time : int, callback, name:str ="Default"):
 		r'''
 		#### Adds a `interval` that will be called every `time` milliseconds
 		- `name` : name of the event 
@@ -820,7 +660,7 @@ class TimeHandler:
 		name = f"{len(self.intervals)}.{time}" if name == "Default" else name
 		self.to_add.append([name, {"callback": callback, "time": time//1000, "last_call": t.time()}])
 
-	def remove( name:str):
+	def remove(self, name:str):
 		r'''
 		#### Removes an `interval` from the event list so it won't be called anymore
 		- `name` : name of the event to be removed 
@@ -844,13 +684,4 @@ class TimeHandler:
 			if t.time() - value["last_call"] >= value["time"]:
 				value["last_call"] = t.time()
 				value["callback"]()
-				   
-def flat(arr, depth=1):
-	r'''
-	Flattens a list
-	[1,2,[3],4] -> [1,2,3,4]
-	'''
-	if depth == 0:
-		return arr
-	else:
-		return [item for sublist in arr for item in flat(sublist, depth - 1)]
+				

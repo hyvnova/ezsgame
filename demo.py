@@ -1,19 +1,17 @@
 from ezsgame.all import *
 
-screen = Screen(show_fps=True, color="white")
+screen = Screen(show_fps=True)
 
-grid = Grid(["center", "center"], [400,400], [5,5], 
-            box_styles = {
-                "border_radius": [10,10,10,10],
-                "color" : "black",
-                "stroke" : 5
-            })
+input_box = InputBox(["center", "center"], [250, 50])
+
+@input_box.onchange("mycallback")
+def onchange(value):
+    print(value)
 
 while True:
     screen.check_events()
     screen.fill()
 
-    grid.draw()
-    grid.highlight_current({"color": "red"})
+    input_box.draw()
 
     screen.update()

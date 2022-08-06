@@ -1,7 +1,6 @@
-from typing import List
-import pygame as pg
-import random
-from ..objects import Object, Group, Circle, Rect, Text
+from typing import Any, Dict, List, Tuple, Union
+import pygame as pg, random
+from ..objects import Object, Group, Circle, Pos, Rect, Size, Text
 
 
 class IObject:
@@ -60,18 +59,99 @@ class IObject:
 
 
 class Grid(Object):
-    def __init__(self, pos, size, grid_size: List[int], **styles):
+    def __init__(self, pos:Pos, size:Size, shape: List[int], **styles):
+        """
+        #### Creates a grid
+    
+        #### Params:
+        - pos : position of the grid. [x, y]
+        - size : size of the grid. [width, height]
+        - shape : shape of the grid. [rows, cols]
+        """
+        
         super().__init__(pos, size, **styles)
 
         self.box_styles = styles.get("box_styles", {})
 
-        self.grid_size = grid_size
-        self.matrix = self.grid_div(*self.grid_size)
-        self.grid = self.grid_split(self.matrix, self.grid_size[1])
+        self.shape = shape
+        self.matrix = self.grid_div(*self.shape)
+        self.grid = self.grid_split(self.matrix, self.shape[1])
+        
+        self.objects:Dict[Tuple[int, int], Object] = {}
 
         # guarda los estilos de los cuadros que se modifican para luego poder restaurarlos
         self.modded_boxes_styles = {}
 
+    def __resolve_index(self, index:Union[int, List[int]]) -> Tuple[int, int]:
+        r'''
+        #### Resolves the index to a tuple.
+        
+        #### Params:
+        - index : index of the grid. [row, col] or index
+        '''
+        
+        # if index is int, convert it to grid index [row, col]
+        if isinstance(index, int):
+            index = (index // self.shape[1], index % self.shape[1])
+            
+        # if index is a list, convert it to tuple
+        if isinstance(index, list):
+            index = tuple(index)
+            
+        # check if index is valid
+        if index[0] >= self.shape[0] or index[1] >= self.shape[1]:
+            raise IndexError(f"Index out of range: {index} \n at Grid object with shape: {self.shape}")
+        
+        return index
+
+    def place(self, index:Union[int, Tuple[int]], obj:Object):
+        r'''
+        #### Places an object in the grid.
+
+        #### Params:
+        - index : index of the grid. [row, col] or index
+        - obj : object to place in the grid
+        '''
+        
+        index = self.__resolve_index(index)
+            
+        # check if position is taken
+        if self.objects.get(index) is not None:
+            # remove object from grid
+            del self.objects[index]
+        
+            
+        # center the object in the grid box
+        obj.pos = [self.grid[index[0]][index[1]].pos[0] + self.grid_box_size[0] / 2 - obj.size[0] / 2,
+                   self.grid[index[0]][index[1]].pos[1] + self.grid_box_size[1] / 2 - obj.size[1] / 2]
+        
+        # add the object 
+        self.objects[index] = obj
+                  
+    def get(self, index:Union[int, List[int]]) -> Object:
+        r'''
+        #### Returns the object at the given index.
+        
+        #### Params:
+        - index : index of the grid. [row, col] or index
+        '''
+        
+        index = self.__resolve_index(index)
+        return self.objects.get(index)
+    
+    def remove(self, index:Union[int, List[int]]) -> None:
+        r'''
+        #### Removes the object at the given index.
+        
+        #### Params:
+        - index : index of the grid. [row, col] or index
+        '''
+        
+        index = self.__resolve_index(index)
+        
+        if self.objects.get(index) is not None:
+            del self.objects[index]
+                  
     def div(self, axis, q):
         r'''
         Return list of division points of the screen -> [[x1, x2], [x1, x2], ...]
@@ -99,7 +179,7 @@ class Grid(Object):
         box_width = divs_x[-1][0] - divs_x[-2][0]
         divs_y = self.div("y", rows)
         box_height = divs_y[-1][0] - divs_y[-2][0]
-        self.grid_size = [rows, cols]
+        self.shape = [rows, cols]
 
         for i in range(cols):
             for j in range(rows):
@@ -116,27 +196,35 @@ class Grid(Object):
         self.grid_box_size = [box_width, box_height]
         return grid
 
-    def grid_split(self, matrix, grid_size):
+    def grid_split(self, matrix, shape):
         r'''
         Splits a matrix into a grid : [1,2,3,4,5,6,7,8,9] -> [[Unit,Unit,Unit], [Unit,Unit,Unit], [Unit,Unit,Unit]]
         '''
-        if isinstance(grid_size, list) or isinstance(grid_size, tuple):
-            grid_size = grid_size[1]
+        if isinstance(shape, list) or isinstance(shape, tuple):
+            shape = shape[1]
 
-        grid = [matrix[i:i+grid_size]
-                for i in range(0, len(matrix), grid_size)]
+        grid = [matrix[i:i+shape]
+                for i in range(0, len(matrix), shape)]
         return [[Rect(pos=i[:2], size=i[2:], **self.box_styles) for i in row] for row in grid]
 
     def draw(self):
-        screen = self.screen
-
-        pg.draw.rect(screen.surface, self.color, [
-                     *self.get_pos(), *self.size], int(self.stroke))
+        pg.draw.rect(self.screen.surface, self.color, [*self.get_pos(), *self.size], int(self.stroke))
+        
         for row in self.grid:
             for obj in row:
                 obj.draw()
 
-    def highlight_current(self, box_styles={"color": "red"}):
+        for obj in self.objects.values():
+            obj.draw()
+
+    def highlight_current(self, box_styles: Dict[str, Any] = {"color": "red"}) -> None:
+        """
+        #### Highlights the current box being hovered over.
+
+        #### Params:
+        - box_styles : styles to apply to the box being hovered over. (default: {"color": "red"})
+        """
+        
         mouse_pos = self.screen.mouse_pos()
 
         # check if mouse is not in the grid
@@ -149,7 +237,7 @@ class Grid(Object):
             (mouse_pos[1] + self.pos[1]) // self.grid_box_size[1]
         )
 
-        if pos[0] >= self.grid_size[0] or pos[1] >= self.grid_size[1]:
+        if pos[0] >= self.shape[0] or pos[1] >= self.shape[1]:
             return
 
         # get box
@@ -181,7 +269,6 @@ def _get_object(object):
 
     return obj
 
-
 def _get_object_child(parent, object, childs=[]):
     for key, value in object["elements"].items():
         if "pos" in value:
@@ -196,7 +283,6 @@ def _get_object_child(parent, object, childs=[]):
             _get_object_child(parent, value, childs)
 
     return childs
-
 
 def load_custom_object(object):
     r'''
@@ -280,7 +366,6 @@ class RangeBar(Object):
 
         return round((self.value / ((self.min + self.wheel.radius) + (self.max - self.wheel.radius))) * 100, 4)
 
-
 class Bar(Object):
     def __init__(self, pos, size, min, max, value, **styles):
         super().__init__(pos=pos, size=size, **styles)
@@ -337,33 +422,72 @@ class CheckBox(Rect):
         if self.state:
             self.checkbox.draw()
 
-
 class InputBox(Rect):
-    def __init__(self, pos, size, **styles):
+    def __init__(self, pos: Pos, size: Size, **styles):
+        """
+        #### Creates an input box use to get user input
+
+        #### Params:
+        - `pos`: The position of the input box
+        - `size`: The size of the input box
+        
+        #### Optional Params:
+        - `text_styles` : The styles of the text in the input box
+            - default: `{"color": "white", "font_size": 20, "font": "Arial"}`
+        - `overflow` : Overflow behavior. (default: hidden)
+        - Any Rect style
+        """
+        
         super().__init__(pos, size, **styles)
-        self.textsize = styles.get("textsize", 28)
-        self.textcolor = styles.get('textcolor', "white")
-        self.textfont = styles.get("textfont", "Arial")
+        self.text_styles = styles.get("text_styles", {"font": "Arial", "font_size": 28, "color": "white"})
+        
         self.value = ""
         self.overflow = styles.get("overflow", "hidden")
+        
         self.focus = False
         self.stroke = styles.get("stroke", 5)
         self.resolve_styles()
+        
         self._eventname_unfocus = f"inputbox.{self.id}.on.mousedown._desactivate"
         self._eventname_focus = f"inputbox.{self.id}.on.keydown._catch_char"
-        self.text = Text(text=self.value, pos=[self.pos[0]+self.size[0]/(self.textsize/2), self.pos[1] +
-                         self.size[1]/4], fontsize=self.textsize, color=self.textcolor, fontname=self.textfont)
-        # init
+        
+        self.text = Text(text=self.value, pos = [
+                        self.pos[0] + self.size[0] / (self.text_styles["font_size"] / 2),
+                        self.pos[1] + self.size[1]/4], 
+                        **self.text_styles)
+    
+        # lists on change callbacks by {name : callback}
+        self.onchange_callbacks = {}
+        
+        # add event listener, when object is clicked activate 
         self.screen.events.add_event(
-            event="mousedown", object=self, callback=self._activate)
-        self.screen.events.on_event(
-            "mousedown",  self._desactivate, self._eventname_unfocus)
+            event="click", object=self, callback=self._activate)
+    
+        # default event responses to focus and unfocus
         self.events = {
             "onfocus":  self._onfocus,
             "unfocus":  self._unfocus
         }
+        
+    def onchange(self, name):
+        """
+        #### Adds a callback to call when the input box value changes
+        
+        #### Params:
+        - `name`: The name of the callback
+        - `callback`: The callback function (function should take one argument, the new value)
+        """
+        
+        def wrapper(callback):
+            self.onchange_callbacks[name] = callback
+            return callback
+            
+        return wrapper
 
     def _catch_char(self, **kwargs):
+        if not kwargs:
+            return
+        
         unicode, key = kwargs["unicode"], kwargs["key"]
         if key == 8:
             self.value = self.value[:-1]
@@ -373,6 +497,15 @@ class InputBox(Rect):
             unicode = ""
 
         self.value += unicode
+        
+        # call onchange callbacks
+        for callback in self.onchange_callbacks.values():
+            try:
+                callback(self.value)
+                
+            except Exception as e:
+                raise Exception(f"Error at InputBox > onchange: {e} \n Make sure your callback function takes one argument")            
+            
         if self.overflow == "hidden":
             self._hide_overflow()
 
@@ -387,9 +520,15 @@ class InputBox(Rect):
     def _activate(self):
         if self.focus == False:
             self.focus = True
+            
+            # start catching chars on keydown
             self.screen.events.on_event(
                 "keydown", self._catch_char, self._eventname_focus)
+        
+            # call onfocus event response           
             self.events["onfocus"]()
+            
+            # add event to desactivate input box when looses focus
             self.screen.events.on_event(
                 "mousedown", self._desactivate, self._eventname_unfocus)
 
@@ -422,7 +561,6 @@ class InputBox(Rect):
         self.text.update(text=self.value)
         self.text.draw()
 
-
 class Button(Rect):
     def __init__(self, pos, size, **styles):
         if "border_radius" in styles:
@@ -436,7 +574,7 @@ class Button(Rect):
 
         if "text" in styles:
             self.text = styles['text']
-            self.fontsize = styles.get("fontsize", 28)
+            self.font_size = styles.get("font_size", 28)
             self.textcolor = styles.get('textcolor', "white")
             self.font = styles.get("font", "Arial")
 
@@ -446,7 +584,7 @@ class Button(Rect):
 
     def _gen_text_obj(self):
         self.text_obj = Text(text=self.text, pos=[
-                             self.pos[0], self.pos[1]], fontsize=self.fontsize, color=self.textcolor, fontname=self.font)
+                             self.pos[0], self.pos[1]], font_size=self.font_size, color=self.textcolor, fontname=self.font)
         self.text_obj.pos = [
             self.pos[0]-self.text_obj.size[0]/2, self.pos[1]-self.text_obj.size[1]/2]
 

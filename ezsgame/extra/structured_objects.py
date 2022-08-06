@@ -1,7 +1,6 @@
 from ..objects import *
 from ..extra.iobjects import IObject
 from ..extra._sintax_tokens import *
-from ..global_data import get_id, get_screen
 
 def add_before(func, object, **attrs):
     def wrapper():

@@ -170,3 +170,42 @@ def div(axis : str, q : int, size : float = None) -> List[List[float]]:
 					break
 				
 		return divs
+
+# Positioning functions
+def center_of(obj) -> List[float]:
+    r'''
+    #### Returns the center postion of the object
+    - obj : object -> object
+    '''
+    return [obj.pos[0] + obj.size[0]/2, obj.pos[1] + obj.size[1]/2]
+
+
+def center(obj, parent, x: bool = True, y: bool = True):
+    r'''
+    #### Centers an object in the parent object
+    - obj : object -> object to center
+    - parent : object -> parent object
+    - x -> if True, center x-axis
+    - y -> if True, center y-axis
+    '''
+    if x:
+        obj.pos[0] = parent.pos[0] + (parent.size[0] - obj.size[0]) / 2
+    if y:
+        obj.pos[1] = parent.pos[1] + (parent.size[1] - obj.size[1]) / 2
+
+
+
+def is_hovering(obj):
+    """
+    #### Returns True if the mouse is hovering over the object, False if not
+    - obj : object -> object
+    """
+
+    box = obj._get_collision_box()
+    
+    mouse_pos = pg.mouse.get_pos()
+    
+    if mouse_pos[0] >= box[0][0] and mouse_pos[0] <= box[1][0] and mouse_pos[1] >= box[0][1] and mouse_pos[1] <= box[1][1]:
+        return True
+    else:
+        return False
