@@ -367,8 +367,8 @@ class EventHandler:
 	'''
 	events  = EventList()
 
-	to_remove = []
-	to_add = []
+	to_remove: List[str] = []
+	to_add: List[Event] = []
 	
 	__ezsgame_events = ["update"]	
 											

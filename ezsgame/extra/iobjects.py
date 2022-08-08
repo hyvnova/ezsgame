@@ -104,7 +104,7 @@ class Grid(Object):
         
         return index
 
-    def place(self, index:Union[int, Tuple[int]], obj:Object):
+    def place(self, index:Union[int, Tuple[int]], obj:Object, fit=False):
         r'''
         #### Places an object in the grid.
 
@@ -120,13 +120,21 @@ class Grid(Object):
             # remove object from grid
             del self.objects[index]
         
-            
+        # fits the object in the grid without breaking the aspect ratio
+        if fit:
+            if obj.size[0] > self.grid_box_size[0]:
+                obj.size = [self.grid_box_size[0], obj.size[1] * self.grid_box_size[0] / obj.size[0]]
+                
+            if obj.size[1] > self.grid_box_size[1]:
+                obj.size = [obj.size[0] * self.grid_box_size[1] / obj.size[1], self.grid_box_size[1]]
+                
         # center the object in the grid box
         obj.pos = [self.grid[index[0]][index[1]].pos[0] + self.grid_box_size[0] / 2 - obj.size[0] / 2,
                    self.grid[index[0]][index[1]].pos[1] + self.grid_box_size[1] / 2 - obj.size[1] / 2]
         
         # add the object 
         self.objects[index] = obj
+
                   
     def get(self, index:Union[int, List[int]]) -> Object:
         r'''

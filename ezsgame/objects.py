@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple, Union
 import pygame as pg
 import random
 from colour import Color
@@ -619,85 +619,37 @@ class Ellipse(Object):
                     *self.get_pos(), *self.size], int(self.stroke))
 
 
-class Group:
+class Group(dict):
     r"""
     #### Group
     
 	#### Parameters
-	- [*args] objects : objects to add in the group
+    - [*args] objects : objects to add in the group `Object, ..`
+    - [**kwargs] named_objects : named objects to add in the group `name = Object, ..`
+
+    #### Notes
+    - named objects can be accessed by: `group["name"]`
+    - no named objects can be accessed by: `group[object.id]`
+
     """
     
-    def __init__(self, *args):
-        self.screen = get_screen()
-        self.objects = [*args]
-
-    def __len__(self):
-        return len(self.objects)
-
-    def __iter__(self):
-        self.__current_index = 0
-        return iter(self.objects)
-
-    def __next__(self):
-        if self.__current_index >= len(self.objects):
-            raise StopIteration
-        else:
-            self.__current_index += 1
-            return self.objects[self.__current_index - 1]
-
-    def __getitem__(self, other):
-        if isinstance(other, int):
-            return self.objects[other]
-
-        elif isinstance(other, slice):
-            return self.__getslice__(other)
-
-        elif isinstance(other, Object):
-            return self.objects[self.objects.index(other)]
-
-        else:
-            raise TypeError("Index must be an integer, slice or Object")
-
-    def __contains__(self, thing):
-        return thing in self.objects
-
-    def __getslice__(self, other):
-        return self.objects[other.start:other.stop:other.step]
-
-    def __delitem__(self, other):
-        if isinstance(other, int):
-            del self.objects[other]
-
-        elif isinstance(other, slice):
-            self.__delslice__(other)
-
-        else:
-            raise KeyError("Index must be an integer or slice")
-
-    def __delslice__(self, other):
-        del self.objects[other.start:other.stop:other.step]
-
-    def __setitem__(self, other, item):
-        self.objects[other] = item
-
-    def add(self, *objects):
-        self.objects.append(*objects)
-
-    def remove(self, obj):
-        self.objects.remove(obj)
+    def __init__(self,*objects, **named_objects):
+        objects = {obj.id : obj for obj in objects}
+        super().__init__(**objects, **named_objects)
+        
+        for name, value in self.items():
+            self.__setattr__(name, value)
+        
+    
+    def add(self, **objects):
+        self.update(**objects)
 
     def draw(self):
-        for obj in self.objects:
+        for obj in self.values():
             obj.draw()
 
-    def __del__(self):
-        for obj in self.objects:
-            del obj
-
-        del self
-
     def map(self, func):
-        for obj in self.objects:
+        for obj in self.values():
             func(obj)
 
     def __str__(self):
@@ -707,16 +659,21 @@ class Group:
     def __repr__(self):
         return self.__str__()
 
-    def filter(self, func):
-        self.objects = [obj for obj in self.objects if func(obj)]
-        return self.objects
+    def filter(self, func) -> 'Group':
+        self = {k: v for k, v in self.items() if func(v)}
+        return self
 
-    def copy(self):
-        return Group(*self.objects)
-
-    def __add__(a, b):
-        return Group(*a, *b)
-
+    def copy(self) -> 'Group':
+        return Group(**self)
+    
+    # item setters
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        self.__dict__[key] = value
+    
+    def __setattr__(self, key, value):
+        super().__setitem__(key, value)
+        self.__dict__[key] = value
 
 class Line:
     r"""

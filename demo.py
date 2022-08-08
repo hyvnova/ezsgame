@@ -2,16 +2,27 @@ from ezsgame.all import *
 
 screen = Screen(show_fps=True)
 
-input_box = InputBox(["center", "center"], [250, 50])
 
-@input_box.onchange("mycallback")
-def onchange(value):
-    print(value)
+class MyComponent:
+    activation_method = ComponentTemplate.activation_methods.on_click
+    
+    def init(self, **kwargs):
+        pass
+    
+    def activate(self):
+        self.object.color = "red"
+        
+    def desactivate(self):
+        self.object.color = "white"
+
+my_component = ComponentTemplate.create(MyComponent, True)
+
+rect = Rect(["center", "center"], [100, 100], components=[my_component])
 
 while True:
     screen.check_events()
     screen.fill()
 
-    input_box.draw()
+    rect.draw()
 
     screen.update()

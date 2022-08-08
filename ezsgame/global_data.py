@@ -1,14 +1,8 @@
 from uuid import uuid4
 
-__USED_IDS = set()
-def get_id() -> int:
-    global __USED_IDS
+def get_id() -> str:
     id = int(uuid4())
-    while id in __USED_IDS:
-        id = int(uuid4())
-        
-    __USED_IDS.add(id)
-    return id
+    return str(id)
     
 class Data:
     def __init__(self):
