@@ -1,11 +1,16 @@
-from typing import Dict, List, Tuple, Union
-import pygame as pg
-import random
+from typing import List, Tuple
+import pygame as pg, random, os
 from colour import Color
 from .extra.components import ComponentGroup
 from .global_data import get_id, get_screen, get_drawn_objects
 from .styles_resolver import resolve_color, resolve_margin, resolve_size, resolve_pos
 from .funcs import div
+from .fonts import Fonts, FontFamily
+
+
+# Initialize vars ---------------------------------------------------------
+pg.font.init()
+
 
 # Gradient and colors ------------------------------------------------------------
 def random_color(n=1):
@@ -469,10 +474,12 @@ class Text(Object):
     - `font_size`: font size of the text
 
     #### Optional Arguments (Keyword Arguments)
-    - `font` : font of the text `"Arial or "path/to/font.ttf"`
+    - `font` : font of the text `"Arial or "path/to/font.ttf"` or `ezsgame font`
     - `color`: color of the text `"white" or (R, G, B)`
     - `margin`: margin of the text `[top, right, bottom, left]`
     - `components` : components to add in the object `[Component, ..]`
+    - `bold` : if True, the text will be bold `bool`    
+    - `italic` : if True, the text will be italic `bool`
     '''
 
     def __init__(self, text, pos, font_size, **styles):
@@ -480,7 +487,10 @@ class Text(Object):
         self.font_size = font_size
         self.color = styles.get("color", "white")
         self.text = text
-        self.text_obj = self.load_font(text, self.font, font_size, self.color)
+        self.bold = styles.get("bold", False)
+        self.italic = styles.get("italic", False)
+        
+        self.text_obj = self.load_font()
 
         if "pos" in styles:
             del styles["pos"]
@@ -490,35 +500,46 @@ class Text(Object):
         super().__init__(pos=pos, size=[
             self.text_obj.get_width(), self.text_obj.get_height()], **styles)
 
-    def load_font(self, text, name, size, color="white"):
+    def load_font(self):
         # load local font
-        pg.font.init()
-        name = name.lower()
-        # if font in system fonts
-        if name in pg.font.get_fonts():
-            font = pg.font.SysFont(name, size)
+        
+        # is font is a ezsgame font
+        if isinstance(self.font, FontFamily):
+            font = self.font.get_font(self.font_size)
+        
+        # if font is a path | str
+        elif isinstance(self.font, str):
+            
+            # if font in system fonts
+            if font in pg.font.get_fonts():
+                font = pg.font.SysFont(font, self.font_size, self.bold, self.italic)
 
-        # if font is a path
-        elif name.endswith(".ttf"):
-            font = pg.font.Font(name, size)
-
+            # if font is a path
+            elif font.endswith(".ttf"):
+                try:
+                    font = pg.font.Font(font, self.font_size)
+                except Exception as e:
+                    raise ValueError(f"Error loading font: {e}")
+                
+            else:
+                raise ValueError("Invalid font name or path: " + self.font) 
+            
         else:
-            raise Exception("Font not found", name)
-
-        return font.render(text, True, color)
+            raise ValueError("Invalid font: " + self.font)
+        
+        return font.render(self.text, True, self.color)
 
     def update(self, **atributes):
         if "text" in atributes:
             self.text = atributes["text"]
-            self.text_obj = self.load_font(
-                self.text, self.font, self.font_size, self.color)
+            self.text_obj = self.load_font()
+            
             self.size = [self.text_obj.get_width(), self.text_obj.get_height()]
 
         super().__dict__.update(**atributes)
 
     def draw(self):
-        self.text_obj = self.load_font(
-            self.text, self.font, self.font_size, self.color)
+        self.text_obj = self.load_font()
         self.screen.surface.blit(self.text_obj, self.get_pos())
 
 

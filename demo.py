@@ -2,27 +2,21 @@ from ezsgame.all import *
 
 screen = Screen(show_fps=True)
 
+# #::reload
+# rect = Rect(["center", "center"], [100, 100])
+# #::endreload
 
-class MyComponent:
-    activation_method = ComponentTemplate.activation_methods.on_click
-    
-    def init(self, **kwargs):
-        pass
-    
-    def activate(self):
-        self.object.color = "red"
-        
-    def desactivate(self):
-        self.object.color = "white"
+# reloader = Reload("demo.py", globals(), locals())
 
-my_component = ComponentTemplate.create(MyComponent, True)
-
-rect = Rect(["center", "center"], [100, 100], components=[my_component])
+mi_text = Text("Mi texto", ["center", "center"], 40, color="white",
+               
+               font=Fonts.OpenSans)
 
 while True:
     screen.check_events()
     screen.fill()
 
-    rect.draw()
+    # rect.draw()
+    mi_text.draw()
 
     screen.update()
