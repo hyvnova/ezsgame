@@ -1,6 +1,5 @@
 from typing import List
 from .global_data import get_id, get_screen
-from .styles_resolver import resolve_color, resolve_size
 import pygame as pg, os, subprocess
 
 def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [0,0,0,0]):
@@ -19,8 +18,6 @@ def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [
 
     size = [obj_size[0] * size, obj_size[1] * size]
     pos = [obj_pos[0] - (size[0] - obj_size[0]) / 2, obj_pos[1] - (size[1] - obj_size[1]) / 2]
-
-    color = resolve_color(color)
 
     pg.draw.rect(get_screen().surface, color, [*pos, *size], stroke, *border_radius)
 
@@ -145,8 +142,6 @@ def div(axis : str, q : int, size : float = None) -> List[List[float]]:
 		- `size` : Size of where to divide the screen, works as a delimiter (Optional)
         - `pos_prefix` : Position to add to the division points (Optional)
 		'''
-		
-		size = resolve_size(size)
 		
 		divs = []
 		if axis == "x":

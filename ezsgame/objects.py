@@ -3,7 +3,7 @@ import pygame as pg, random, os
 from colour import Color
 from .extra.components import ComponentGroup
 from .global_data import get_id, get_screen, get_drawn_objects
-from .styles_resolver import resolve_color, resolve_margin, resolve_size, resolve_pos
+from .styles_resolver import resolve_color, resolve_margins, resolve_measure, resolve_size, resolve_position
 from .funcs import div
 from .fonts import Fonts, FontFamily
 
@@ -135,7 +135,8 @@ class Vector2:
     r"""
     #### 2 Values Vector, parent of `Pos` and `Size`
     """
-
+    __slots__ = "_a", "_b"
+    
     def __init__(self, a=0, b=0):
         self.__call__(a, b)
 
@@ -148,9 +149,12 @@ class Vector2:
         return Vector2(a._a - x, a._b - y)
 
     def __mul__(a, b):
-        x, y = b
-        return Vector2(a._a * x, a._b * y)
+        if isinstance(b, Vector2):
+            return a._a * b._a + a._b * b._b    
 
+        elif isinstance(b, (int, float)):
+            return Vector2(a._a * b, a._b * b)
+    
     def __call__(self, a=0, b=0):
         if isinstance(a, list) or isinstance(a, tuple) or isinstance(a, Vector2):
             self._a = a[0]
@@ -272,53 +276,77 @@ class Pos (Vector2):
 class Object:
     r"""
     Object is a base class for all objects in the game.
-    Cannot be instantiated.
+    should not be instantiated.
     """
 
-    def __init__(self, pos: Pos, size: Size, **styles):
+    __slots__ = "pos", "size", "screen", "id", "color", "margins", "stroke", "components", "behavior", "__on_draw", "absolute"
+
+    def __init__(self, **props):
+        """
+        #### Parameters (props)
+        - `parent`: parent object (default: Screen)
+           
+        - `pos`: position of element (default: (0, 0) )
+        - `absolute`: if True, element position is absolute, otherwise element position is relative to parent position (default: False)
+        - `margins` : margins of element (default: (0, 0, 0, 0) )
+        
+        - `size`: size of element
+        
+        - `color`: color of element (default: white )
+         
+        """
         self.id = get_id()
         self.screen = get_screen()
+        
+        self.parent = props.get('parent', get_screen())
+        
+        self.margins: List[float] = resolve_margins(props.get('margins', [0, 0, 0, 0]), self.parent.size)
+        
+        # if not size, size = 10% of parent size
+        self.size: Size = props.get('size', self.parent.size.copy() * 0.1)
+        self.pos: Pos = props.get('pos', Pos(0, 0))
+        
+        self.size = resolve_size(self, self.parent)
+        self.pos = resolve_position(self, self.parent, props.get('absolute', False))
+        
+        self.absolute = props.get('absolute', False) # if True, element position is absolute, otherwise element position is relative to parent position
 
-        self.color = styles.get("color", "white")
-        # top, right, bottom, left
-        self.margin = styles.get("margin", [0, 0, 0, 0])
-        self.stroke = styles.get("stroke", 0)
-        self.z_index = styles.get("z_index", 1)
+        self.color: Color = resolve_color(props.get('color', 'white'))
+       
+        if (styles := props.get("styles")) :
+            for name, value in styles.items():
+                setattr(self, name, value)
 
-        # if only 1 measure is given, use it for both measures
-        if len(pos) == 1:
-            pos = [pos[0], pos[0]]
-        self.pos = Pos(*pos)
 
-        # if only 1 axis is given, use it for both axis
-        if len(size) == 1:
-            size = [size[0], size[0]]
-        self.size = Size(*size)
-
-        if "styles" in styles:
-            for k, v in styles["styles"].items():
-                setattr(self, k, v)
-
-        self.behavior = styles.get("behavior",
+        self.behavior = props.get("behavior",
                                    # defualt behavior
                                    {"pos": "dynamic"}
                                    )
 
         self.__on_draw = {}
+        self.__last_props = {}
 
-        self.components = ComponentGroup(self,  *styles.get("components", []))
+        self.components = ComponentGroup(self,  *props.get("components", []))
 
         self.resolve_styles()
-        # Calls _draw() before draw()
+        # Calls __after_draw() before draw() to call on draw methods
 
-        def _draw_before(draw_func):
+        def _draw_manager(draw_func):
             def wrapper():
-                draw_func()
-                self._draw()
+                
+                props = {k:v for k,v in self.__dict__.items() if not k.startswith("_")}
+                
+                if self.__last_props != props:
+                    get_drawn_objects().append(self.id)
+                    draw_func()                    
+                    self.__last_props = props
 
+                self.__after_draw()
+                
             return wrapper
+        
         try:
-            self.draw = _draw_before(self.draw)
+            self.draw = _draw_manager(self.draw)
         except:
             pass
 
@@ -383,7 +411,7 @@ class Object:
 
     def resolve_styles(self):
         r"""
-        #### Resolves the styles of the object (Ex. size, margin, stroke)
+        #### Resolves the styles of the object (Ex. size, margins, stroke)
         """
 
         if not isinstance(self.size, Size):
@@ -394,11 +422,11 @@ class Object:
         # Resolve properties
         self.color = resolve_color(self.color)
 
-        self.margin = resolve_margin(self.margin)
+        self.margins = resolve_margins(self.margins, self.parent.size)
 
-        self.size = resolve_size(self.size)
+        self.size = resolve_size(self, self.parent)
 
-        self.pos = resolve_pos(self.pos, self.size, self.margin)
+        self.pos = resolve_position(self, self.parent, self.absolute)
 
     def get_pos(self, ref=False):
         """
@@ -424,14 +452,12 @@ class Object:
     def __str__(self):
         return f"<Object: {self.__class__.__name__}, ID: {self.id}>"
 
-    def _draw(self):
+    def __after_draw(self):
         r'''
         manages Object draw method and calls `on_draw` functions
         '''
         for func in self.__on_draw.values():
             func()
-
-        get_drawn_objects().append(self.id)
 
 
 class Rect(Object):
@@ -444,26 +470,31 @@ class Rect(Object):
     #### Optional Arguments (Keyword Arguments)
     - `color`: color of the rect `"white" or (R, G, B)`
     - `stroke`: stroke of the rect `int`
-    - `margin`: margin of the rect `[top, right, bottom, left]`
+    - `margins`: margins of the rect `[top, right, bottom, left]`
     - `border_radius`: border radius of the rect `[top-left, top-right, bottom-right, bottom-left]`
     - `components` : components to add in the rect `[Component, ..]`
     '''
 
-    def __init__(self, pos: Pos, size: Size, **styles):
-        super().__init__(pos, size, **styles)
+    def __init__(self, pos: Pos, size: Size, **props):
+        super().__init__(pos=pos, size=size, **props)
 
         # top-left, top-right, bottom-right, bottom-left
-        self.border_radius = styles.get("border_radius", [0, 0, 0, 0])
+        self.border_radius = props.get("border_radius", [0, 0, 0, 0])
+        
         if len(self.border_radius) == 1:
             self.border_radius = [self.border_radius[0]] * 4
+            
         elif len(self.border_radius) == 2:
             self.border_radius = [self.border_radius[0]
                                   * 2] * 2 + [self.border_radius[1] * 2] * 2
+            
+        self.stroke = props.get("stroke", 0)
+        self.stroke = resolve_measure(self.stroke, self.parent)    
 
     def draw(self):
+        print("drawing rect")
         pg.draw.rect(self.screen.surface, self.color, [
                      *self.get_pos(), *self.size], int(self.stroke), *self.border_radius)
-
 
 class Text(Object):
     r'''
@@ -474,31 +505,33 @@ class Text(Object):
     - `font_size`: font size of the text
 
     #### Optional Arguments (Keyword Arguments)
-    - `font` : font of the text `"Arial or "path/to/font.ttf"` or `ezsgame font`
+    - `font` : font of the text `"Arial or "path/to/font.ttf"` or `ezsgame font` (default: `OpenSans`)
     - `color`: color of the text `"white" or (R, G, B)`
-    - `margin`: margin of the text `[top, right, bottom, left]`
+    - `margins`: margins of the text `[top, right, bottom, left]`
     - `components` : components to add in the object `[Component, ..]`
     - `bold` : if True, the text will be bold `bool`    
     - `italic` : if True, the text will be italic `bool`
     '''
 
-    def __init__(self, text, pos, font_size, **styles):
-        self.font = styles.get("font", "Arial")
+    __slots__ = "font", "font_size", "text", "bold", "italic", "text_obj"
+
+    def __init__(self, text, pos, font_size, **props):
+        self.font = props.get("font", Fonts.OpenSans)
         self.font_size = font_size
-        self.color = styles.get("color", "white")
+        self.color = props.get("color", "white")
         self.text = text
-        self.bold = styles.get("bold", False)
-        self.italic = styles.get("italic", False)
+        self.bold = props.get("bold", False)
+        self.italic = props.get("italic", False)
         
         self.text_obj = self.load_font()
 
-        if "pos" in styles:
-            del styles["pos"]
-        if "size" in styles:
-            del styles["size"]
+        if "pos" in props:
+            del props["pos"]
+        if "size" in props:
+            del props["size"]
 
         super().__init__(pos=pos, size=[
-            self.text_obj.get_width(), self.text_obj.get_height()], **styles)
+            self.text_obj.get_width(), self.text_obj.get_height()], **props)
 
     def load_font(self):
         # load local font
@@ -542,7 +575,6 @@ class Text(Object):
         self.text_obj = self.load_font()
         self.screen.surface.blit(self.text_obj, self.get_pos())
 
-
 class Image(Rect):
     r'''
     #### Image
@@ -553,12 +585,12 @@ class Image(Rect):
 
     #### Optional Arguments (Keyword Arguments)
     - `scale` : scale the image to the size `bool`
-    - `margin`: margin of the image `[top, right, bottom, left]`
+    - `margins`: margins of the image `[top, right, bottom, left]`
     - `components` : components to add in the object `[Component, ..]`
     '''
 
-    def __init__(self, pos, size, image, scale=True, **styles):
-        super().__init__(pos, size, **styles)
+    def __init__(self, pos, size, image, scale=True, **props):
+        super().__init__(pos, size, **props)
         try:
             self.image = pg.image.load(image)
         except:
@@ -582,7 +614,6 @@ class Image(Rect):
         self.image = pg.transform.scale(self.image, new_size)
         self.size = [self.image.get_width(), self.image.get_height()]
 
-
 class Circle(Object):
     r'''
     #### Circle
@@ -593,16 +624,16 @@ class Circle(Object):
     #### Optional Arguments (Keyword Arguments)
     - `color`: color of the circle `"white" or (R, G, B)`
     - `stroke`: stroke of the circle `int`
-    - `margin`: margin of the circle `[top, right, bottom, left]`
+    - `margins`: margins of the circle `[top, right, bottom, left]`
     - `components` : components to add in the object `[Component, ..]`
     '''
 
-    def __init__(self, pos, radius, **styles):
+    def __init__(self, pos : Pos, radius: float, **props):
         if isinstance(radius, str):
             if radius.endswith("%"):
                 radius = int(float(radius[:-1]) / 100 * get_screen().size[0])
 
-        super().__init__(pos=pos, size=[radius*2, radius*2],  **styles)
+        super().__init__(pos=pos, size=[radius*2, radius*2],  **props)
         self.radius = radius
 
     def draw(self):
@@ -617,7 +648,6 @@ class Circle(Object):
                                                   self.size[0], pos[1] + self.size[1]]
                 ]  # esquina superior izq, superior derecha, infeior izq, inferior derecha
 
-
 class Ellipse(Object):
     r'''
         #### Ellipse
@@ -628,17 +658,16 @@ class Ellipse(Object):
         #### Optional Arguments (Keyword Arguments)
         - `color`: color of the Ellipse `"white" or (R, G, B)`
         - `stroke`: stroke of the Ellipse `int`
-        - `margin`: margin of the Ellipse `[top, right, bottom, left]`
+        - `margins`: margins of the Ellipse `[top, right, bottom, left]`
         - `components` : components to add in the object `[Component, ..]`
         '''
 
-    def __init__(self, pos: Pos, size: Size, **styles):
-        super().__init__(pos=pos, size=size, **styles)
+    def __init__(self, pos: Pos, size: Size, **props):
+        super().__init__(pos=pos, size=size, **props)
 
     def draw(self):
         pg.draw.ellipse(self.screen.surface, self.color, [
                     *self.get_pos(), *self.size], int(self.stroke))
-
 
 class Group(dict):
     r"""
@@ -709,11 +738,11 @@ class Line:
 	
     """
     
-    def __init__(self, start: Pos, end: Pos, width: int = 5, **styles):
+    def __init__(self, start: Pos, end: Pos, width: int = 5, **props):
         self.start = start
         self.end = end
         self.width = width
-        self.color = styles.get("color", "white")
+        self.color = props.get("color", "white")
         self.screen = get_screen()
 
     def draw(self):

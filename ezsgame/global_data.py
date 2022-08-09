@@ -8,7 +8,9 @@ class Data:
     def __init__(self):
         self.drawn_objects = []
         self.on_update = {}
-    
+
+        
+        
     def __call__(self, **attrs):
         self.__dict__.update(attrs)
         
@@ -24,11 +26,6 @@ class Data:
     def __setattr__(self, key, value):
         self.__dict__[key] = value
         
-    def set(self, key, value):
-        self.__dict__[key] = value
-    
-    def get(self, key):
-        return self.__dict__[key]
             
 DATA = Data()
 

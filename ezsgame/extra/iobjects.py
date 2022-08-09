@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Tuple, Union
 import pygame as pg, random
-from ..objects import Object, Group, Circle, Pos, Rect, Size, Text
+from ..objects import Object, Circle, Pos, Rect, Size, Text
 
 
 class IObject:
@@ -19,7 +19,6 @@ class IObject:
 
         self.object = object
         self.screen = self.object.screen
-        self.objects = Group()
         self._clicked = False
 
     @property
@@ -56,7 +55,6 @@ class IObject:
         self.screen.events.on_event(
             "mouseup", lambda: self._process_click(func), event_name)
         return func
-
 
 class Grid(Object):
     def __init__(self, pos:Pos, size:Size, shape: List[int], **styles):
@@ -266,41 +264,6 @@ class Grid(Object):
         for k, v in box_styles.items():
             obj.__setattr__(k, v)
 
-
-# Loading custom object from a file -------------------------------------------------
-def _get_object(object):
-    args = {k: v for k, v in object.items() if k != "type" and k != "elements"}
-    try:
-        obj = eval(object["type"].capitalize())(**args)
-    except Exception as e:
-        raise Exception("Could not load object: " + str(e))
-
-    return obj
-
-def _get_object_child(parent, object, childs=[]):
-    for key, value in object["elements"].items():
-        if "pos" in value:
-            value["pos"] = [value["pos"][0] + parent.pos[0],
-                            value["pos"][1] + parent.pos[1]]
-
-        parent = _get_object(value)
-        childs.append(parent)
-
-    for value in object["elements"].values():
-        if "elements" in value:
-            _get_object_child(parent, value, childs)
-
-    return childs
-
-def load_custom_object(object):
-    r'''
-    Load a custom object from a json file
-    '''
-    obj = Group(_get_object(object))
-    obj.add(_get_object_child(obj.objects[0], object))
-    return obj
-
-
 class RangeBar(Object):
     def __init__(self, pos, size, min, max, value, **styles):
         for item in (min, max, value):
@@ -406,7 +369,6 @@ class Bar(Object):
         self._update_value()
         self.fill_bar.draw()
         self.bar.draw()
-
 
 class CheckBox(Rect):
     def __init__(self, pos, size, **styles):

@@ -1,14 +1,10 @@
 from typing import Callable, List
-import pygame as pg
-import random
-import time
-import os
+import pygame as pg, random, time, os
 from .objects import Size, Pos, Gradient, Object, resolve_color, Image
 from .global_data import DATA, on_update
 
-
 class Screen:
-    __slots__ = "size", "pos", "title", "icon", "depth", "vsync", "fullscreen", "resizable", "color", "surface", "clock", "show_fps", "delta_time", "fps"
+    __slots__ = "size", "pos", "title", "icon", "depth", "vsync", "fullscreen", "resizable", "color", "surface", "clock", "show_fps", "delta_time", "fps", "__last_color"
     
     # check if an istance of Screen is created
     is_created: bool = False
@@ -41,6 +37,7 @@ class Screen:
         self.show_fps = show_fps
         self.delta_time = 0
     
+        self.__last_color = None
 
         self.load_icon(icon)
 
@@ -207,17 +204,24 @@ class Screen:
         - `pos` : position of the fill start (Optional)
         - `size` : size of the fill (Optional)
         '''
-        color = self.color if color == None else color
-        if size == [0, 0]:
-            size = self.size
+    
+        # if color changed or any object will be draw         
+        if DATA.drawn_objects or self.color != self.__last_color:
+            print("fill")
+            color = self.color if color == None else color
+            
+            if size == [0, 0]:
+                size = self.size
 
-        if isinstance(color, Gradient) or isinstance(color, Image):
-            color.draw()
+            if isinstance(color, Gradient) or isinstance(color, Image):
+                color.draw()
 
-        else:
-            color = resolve_color(color)
-            pg.draw.rect(self.surface, color, pg.Rect(pos, size))
-
+            else:
+                color = resolve_color(color)
+                pg.draw.rect(self.surface, color, pg.Rect(pos, size))
+            
+            self.__last_color = self.color
+    
     def toggle_fullscreen(self):
         r'''
         #### Toggles the fullscreen mode

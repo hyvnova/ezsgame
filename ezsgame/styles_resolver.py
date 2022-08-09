@@ -1,77 +1,71 @@
+from collections import namedtuple
+from typing import List
 from colour import Color
-from .global_data import get_screen
+from .funcs import center_of
+import re
 
 adapt_rgb = lambda rgb: tuple(map(lambda i: i*255, rgb))
 
-def center_of(obj):
-    r'''
-    #### Returns the center postion of the object
-    - obj : object -> object
-    '''
-    return [obj.pos[0] + obj.size[0]/2, obj.pos[1] + obj.size[1]/2]
+# typing aliases
+Object = namedtuple("Object", [...])
+Pos = namedtuple("Pos", ["x", "y"])
+Size = namedtuple("Size", ["width", "height"])
 
-def resolve_measure(measure, size):
-    if isinstance(measure, str):
-        if measure.endswith("%"):
-            return float(measure[:-1]) * size / 100
+def resolve_measure(measure:str, parent_size:float) -> float:
+    if isinstance(measure, (int, float)):
+        return measure
+    
+    if not isinstance(measure, str):
+        raise ValueError("Invalid measure value type: " + measure)
+    
+    # if measure is a percentage    
+    elif measure.endswith("%"):
+            return float(measure[:-1]) * parent_size / 100
+    
+    # if measure is aspect ratio of parent
+    elif re.match("[0-9]+/[0-9]+", measure):
+            ratio = measure.split("/")
+            try:
+                measure = parent_size * int(ratio[0]) / int(ratio[1])
+                
+            except ZeroDivisionError as e:
+                raise ValueError("Invalid aspect ratio: ", measure + " (divided by zero)")
         
-        else:
-            raise ValueError("Invalid measure value", measure)
+    return measure
+
+def resolve_position(child: Object, parent: Object, absolute: bool) -> Pos:
+    """
+    #### Resolves child position
     
-    return measure 
-
-def resolve_color(color):   
-    if isinstance(color, str):
-        if color.startswith("#"):
-            return adapt_rgb(Color(color).rgb)
-        
-        return adapt_rgb(Color(color).get_rgb())
+    #### Parameters
+    - `child`: child object
+    - `parent`: parent object
+    - `absolute`: if True, child position is absolute, otherwise child position is relative to parent position
     
-    return color
-
-def resolve_margin(margin):
-    screen = get_screen()
-
-    for i,m in enumerate(margin):
-        screen_i = 0 if i%2 == 0 else 1        
-
-        margin[i] = resolve_measure(m, screen.size[screen_i])
-
-    return margin
-
-def resolve_size(size):
-    screen = get_screen()
+    #### Returns
+    - `Pos`: child position
+    """
     
-    # if only 1 axis is given, use it for both axis
-    if len(size) == 1:
-        size = [size[0],size[0]]
+    pos = child.pos
+    size = child.size
+    
+    parent_size = parent.size
+    parent_center = center_of(parent)
 
-    for i,s in enumerate(size):
-        screen_i = 0 if i%2 == 0 else 1
-
-        size[i] = resolve_measure(s, screen.size[screen_i])
-   
-    return size
-
-def resolve_pos(pos,size, margin):
-    screen = get_screen()
+    margin_x = child.margins[3] + child.margins[1]
+    margin_y = child.margins[0] + child.margins[2]
+    
     
     if len(pos) == 1:
-        pos = [pos[0],pos[0]]
-
-    margin_x = margin[3] + margin[1]
-    margin_y = margin[0] + margin[2]
-    
-    screen_center = center_of(screen)
-    
+        pos = Pos(pos[0], pos[0])
+        
     # align position x
-    
     if isinstance(pos[0], int) or isinstance(pos[0], float):
-        pos[0] += margin_x 
+        pos[0] += margin_x
 
     elif isinstance(pos[0], str):
         if pos[0].endswith("%"):
-            pos[0] = float(pos[0][:-1]) * screen.width / 100
+            pos[0] = float(pos[0][:-1]) * parent_size.width / 100
 
         else:
             pos[0] = pos[0].lower()
@@ -80,24 +74,27 @@ def resolve_pos(pos,size, margin):
                     raise ValueError("Invalid x-axis position value", pos[0])
                 
             if pos[0] == "center":
-                pos[0] =   screen.size[0]/2 - size[0]/2
+                pos[0] = parent_size[0]/2 - size[0]/2
+                
             elif pos[0] == "right":
-                pos[0] = screen.size[0] - size[0] - margin_x
+                pos[0] = parent_size[0] - size[0] - margin_x
+                
             elif pos[0] == "right-center":
-                pos[0] = screen.size[0] - size[0] / 2 - screen_center[0]/2 - margin_x
+                pos[0] = parent_size[0] - size[0] / 2 - parent_center[0]/2 - margin_x
+                
             elif pos[0] == "left":
                 pos[0] = margin_x
+                
             elif pos[0] == "left-center":
-                pos[0] = screen_center[0]/2 - size[0] / 2 + margin_x
+                pos[0] = parent_center[0]/2 - size[0] / 2 + margin_x
         
-        
-    # align position y
+     # align position y
     if isinstance(pos[1], int) or isinstance(pos[1], float):
         pos[1] += margin_y
     
     elif isinstance(pos[1], str):
         if pos[1].endswith("%"):
-            pos[1] = float(pos[1][:-1]) * screen.height / 100
+            pos[1] = float(pos[1][:-1]) * parent_size.height / 100
         
         else:
             pos[1] = pos[1].lower()        
@@ -106,16 +103,75 @@ def resolve_pos(pos,size, margin):
                 raise ValueError("Invalid y-axis position value", pos[1])
             
             if pos[1] == "center":
-                pos[1] = screen.size[1]/2 - size[1]/2
+                pos[1] = parent_size[1]/2 - size[1]/2
+                
             elif pos[1] == "top":
                 pos[1] = margin_y
+                
             elif pos[1] == "top-center":
-                pos[1] = screen_center[1]/ 2 - size[1]/2  + margin_y 
+                pos[1] = parent_center[1]/ 2 - size[1]/2  + margin_y 
+                
             elif pos[1] == "bottom":
-                pos[1] = screen.size[1] - size[1] - margin_y
+                pos[1] = parent_size[1] - size[1] - margin_y
+                
             elif pos[1] == "bottom-center":
-                pos[1] = screen.size[1] - size[1]/2 - screen_center[1]/2 - margin_y
-                    
-                    
-    return pos
+                pos[1] = parent_size[1] - size[1]/2 - parent_center[1]/2 - margin_y
 
+
+    if not absolute:
+        return Pos(pos[0] + parent.pos[0], pos[1] + parent.pos[1])
+    
+    return Pos(pos[0], pos[1])
+
+def resolve_size(child: Object, parent: Object) -> Size:
+    """
+    #### Resolves child size
+    
+    #### Parameters
+    - `child`: child object
+    - `parent`: parent object
+    
+    #### Returns
+    - `Size`: child size
+    """
+    
+    size = child.size
+    parent_size = parent.size
+    
+    margin_x = child.margins[3] + child.margins[1]
+    margin_y = child.margins[0] + child.margins[2]
+    
+    if len(size) == 1:
+        size = Size(size[0], size[0])
+    
+    # align size x
+    if isinstance(size[0], int) or isinstance(size[0], float):
+        size[0] += margin_x
+    
+    elif isinstance(size[0], str):
+        size[0] = resolve_measure(size[0], parent_size.width)
+        
+    # align size y
+    if isinstance(size[1], int) or isinstance(size[1], float):
+        size[1] += margin_y
+    
+    elif isinstance(size[1], str):
+        size[1] = resolve_measure(size[1], parent_size.height)
+       
+    return Size(size[0], size[1])
+       
+def resolve_margins(margins, parent_size:Size) -> List[float]:
+    for i,m in enumerate(margins):
+        screen_i = 0 if i%2 == 0 else 1        
+        margins[i] = resolve_measure(m, parent_size[screen_i])
+
+    return margins
+
+def resolve_color(color) -> Color:  
+    if isinstance(color, str):
+        if color.startswith("#"):
+            return adapt_rgb(Color(color).rgb)
+        
+        return adapt_rgb(Color(color).get_rgb())
+    
+    return color
