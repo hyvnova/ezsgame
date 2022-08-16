@@ -594,6 +594,7 @@ class TimeHandler:
     to_remove: List[str] = []
     to_add: List[Interval] = []
 
+<<<<<<< HEAD
     def add(call_time: int, callback, name: str = "Default"):
         r'''
         #### Adds a `interval` that will be called every `time` milliseconds
@@ -729,3 +730,39 @@ def remove_event(name: str):
     EventHandler.remove_event(name)
 
 get_mouse_pos = lambda: Pos(pg.mouse.get_pos())
+=======
+	def remove(self, name:str):
+		r'''
+		#### Removes an `interval` from the event list so it won't be called anymore
+		- `name` : name of the event to be removed 
+		'''
+		self.to_remove.append(name)
+		
+	def check(self):
+		r'''
+		#### Manages the time events
+		'''
+		for name in self.to_remove:
+			if name in self.intervals:
+				del self.intervals[name]
+		self.to_remove = []
+				
+		for item in self.to_add:
+			self.intervals[item[0]] = item[1]
+		self.to_add = []
+		
+		for value in self.intervals.values():
+			if t.time() - value["last_call"] >= value["time"]:
+				value["last_call"] = t.time()
+				value["callback"]()
+				   
+def flat(arr, depth=1):
+	r'''
+	Flattens a list
+	[1,2,[3],4] -> [1,2,3,4]
+	'''
+	if depth == 0:
+		return arr
+	else:
+		return [item for sublist in arr for item in flat(sublist, depth - 1)]
+>>>>>>> 601d0e9277ee615fb37c4788399a74d1a37926ef
