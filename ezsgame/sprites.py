@@ -5,9 +5,9 @@ pgSpriteClass = pygame.sprite.Sprite
 
 class Sprite(pgSpriteClass, Object):
     
-    def __init__(self, pos, size, sprite, scale=True, **styles):
+    def __init__(self, pos, size, sprite, scale=True, **props):
         pgSpriteClass.__init__(self)
-        Object.__init__(self, pos, size, **styles)
+        Object.__init__(self, pos=pos, size=size, **props)
         
         self.sprite = sprite
 
@@ -21,9 +21,12 @@ class Sprite(pgSpriteClass, Object):
         self.rect.size = size
         self.start_pos = pos
         
-       
-    def draw(self):
+    def __update(self):
+        self.image = pygame.transform.scale(self.image, self.size)
+        self.rect = self.image.get_rect()
         self.rect.topleft = self.pos
         self.rect.size = self.size
-        
+       
+    def draw(self):
+        self.__update()
         self.screen.surface.blit(self.image, self.rect)

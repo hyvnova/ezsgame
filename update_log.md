@@ -3,12 +3,12 @@
 - **Line** object
 - **center_of** function
 - **Grid** objects now can fully style boxes, and **place**, **get** and **remove** functions to manipulate objects inside the grid.
-
+- **left_click** and **right_click** events
 
 # Changes
 - **Vector2** class now can manage operations of sum, substraction and multiplication of vectors
-- removed **Primitive Objects**, **styles**, **require**, **scene** modules
-
+- removed **Animations**, **Primitive Objects**, **styles**, **require**, **scene**, **structured object** modules
+- now you can import everything using `from ezsgame import *` isntead of `from ezsgame.all import *`
 
 # Fixed
 - **Grid** > **highlight_current** function now works correctly

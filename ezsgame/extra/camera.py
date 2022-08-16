@@ -1,6 +1,6 @@
 import pygame
 from abc import ABC, abstractmethod
-from .global_data import get_screen
+from ..global_data import get_screen
 
 vec = pygame.math.Vector2
 

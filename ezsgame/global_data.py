@@ -1,37 +1,20 @@
+from turtle import Screen
 from uuid import uuid4
+
 
 def get_id() -> str:
     id = int(uuid4())
     return str(id)
     
-class Data:
-    def __init__(self):
-        self.drawn_objects = []
-        self.on_update = {}
+class DATA:
+    on_update = {}
 
-        
-        
-    def __call__(self, **attrs):
-        self.__dict__.update(attrs)
-        
-    def __getitem__(self, key):
-        return self.__dict__[key]
-    
-    def __setitem__(self, key, value):
-        self.__dict__[key] = value
-        
-    def __getattr__(self, key):
-        return self.__dict__[key]
-
-    def __setattr__(self, key, value):
-        self.__dict__[key] = value
-        
-            
-DATA = Data()
+    Screen = None
+    EventHandler = None
+    TimeHandler = None
 
 #shortcuts to DATA
 get_screen = lambda: DATA.screen
-get_drawn_objects = lambda: DATA.drawn_objects 
 
 def on_update(key=None,val=None):
     r"""

@@ -1,10 +1,11 @@
+from ctypes import Union
 from typing import List, Tuple
-import pygame as pg, random, os
+import pygame as pg, random
 from colour import Color
 from .extra.components import ComponentGroup
-from .global_data import get_id, get_screen, get_drawn_objects
-from .styles_resolver import resolve_color, resolve_margins, resolve_measure, resolve_size, resolve_position
-from .funcs import div
+from .global_data import get_id, get_screen
+from .styles_resolver import *
+from .funcs import div, center
 from .fonts import Fonts, FontFamily
 
 
@@ -19,9 +20,6 @@ def random_color(n=1):
     If n is bigger returns a list with random colors -> [(234, 55, 233), ...]
     """
     return [random_color() for i in range(n)] if n > 1 else (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-
-def adapt_rgb(rgb): return tuple(map(lambda i: i*255, rgb))
-def pure_rgb(color): return tuple(map(lambda i: i/255, color))
 
 def _check_color(color):
     if isinstance(color, str):
@@ -130,147 +128,6 @@ class Gradient:
     def __repr__(self):
         return f"Gradient(*{self.colors})"
 
-# Utility classes ---------------------------------------------------------------
-class Vector2:
-    r"""
-    #### 2 Values Vector, parent of `Pos` and `Size`
-    """
-    __slots__ = "_a", "_b"
-    
-    def __init__(self, a=0, b=0):
-        self.__call__(a, b)
-
-    def __add__(a, b):
-        x, y = b
-        return Vector2(a._a + x, a._b + y)
-
-    def __sub__(a, b):
-        x, y = b
-        return Vector2(a._a - x, a._b - y)
-
-    def __mul__(a, b):
-        if isinstance(b, Vector2):
-            return a._a * b._a + a._b * b._b    
-
-        elif isinstance(b, (int, float)):
-            return Vector2(a._a * b, a._b * b)
-    
-    def __call__(self, a=0, b=0):
-        if isinstance(a, list) or isinstance(a, tuple) or isinstance(a, Vector2):
-            self._a = a[0]
-            self._b = a[1]
-
-        else:
-            self._a = a
-            self._b = b
-
-    def __str__(self):
-        return f"<Vector2 : {self._a}, {self._b}>"
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __iter__(self):
-        self.__current_index = 0
-        return iter([self._a, self._b])
-
-    def __next__(self):
-        if self.__current_index == 0:
-            self.__current_index += 1
-            return self._a
-        elif self.__current_index == 1:
-            self.__current_index += 1
-            return self._b
-        else:
-            raise StopIteration
-
-    def __getitem__(self, index):
-        if index == 0:
-            return self._a
-        elif index == 1:
-            return self._b
-        else:
-            raise IndexError
-
-    def __setitem__(self, index, value):
-        if index == 0:
-            self._a = value
-        elif index == 1:
-            self._b = value
-        else:
-            raise IndexError
-
-    def __len__(self):
-        return 2
-
-    def copy(self):
-        return Vector2(self._a, self._b)
-
-    def ref(self):
-        return self
-
-    def __eq__(self, other):
-        if isinstance(other, Vector2):
-            return self._a == other._a and self._b == other._b
-        else:
-            return False
-
-    def __ne__(self, other):
-        return not self == other
-
-class Size (Vector2):
-    r"""
-    #### Size
-    #### Parameters
-    - `width`: width  `int` or `[width, height]`
-    - `height`: height `int` or `[width, height]`
-    """
-
-    def __init__(self, width=0, height=0):
-        super().__init__(width, height)
-
-    @property
-    def width(self):
-        return self._a
-
-    @width.setter
-    def width(self, value):
-        self._a = value
-
-    @property
-    def height(self):
-        return self._b
-
-    @height.setter
-    def height(self, value):
-        self._b = value
-
-class Pos (Vector2):
-    r"""
-    #### Position
-    #### Parameters
-    - `x`: x position `number` or `[x, y]`
-    - `y`: y position `number`
-    """
-
-    def __init__(self, x=0, y=0):
-        super().__init__(x, y)
-
-    @property
-    def x(self):
-        return self._a
-
-    @x.setter
-    def x(self, value):
-        self._a = value
-
-    @property
-    def y(self):
-        return self._b
-
-    @y.setter
-    def y(self, value):
-        self._b = value
 
 # Objects -----------------------------------------------------------------------
 class Object:
@@ -279,7 +136,7 @@ class Object:
     should not be instantiated.
     """
 
-    __slots__ = "pos", "size", "screen", "id", "color", "margins", "stroke", "components", "behavior", "__on_draw", "absolute"
+    __slots__ = "pos", "size", "screen", "id", "color", "margins", "stroke", "components", "behavior", "__on_draw", "absolute", "parent", "visible"
 
     def __init__(self, **props):
         """
@@ -298,7 +155,7 @@ class Object:
         self.id = get_id()
         self.screen = get_screen()
         
-        self.parent = props.get('parent', get_screen())
+        self.parent = props.get('parent', self.screen)
         
         self.margins: List[float] = resolve_margins(props.get('margins', [0, 0, 0, 0]), self.parent.size)
         
@@ -313,6 +170,10 @@ class Object:
 
         self.color: Color = resolve_color(props.get('color', 'white'))
        
+        self.stroke = resolve_measure(props.get('stroke', 0), self.parent.size)
+       
+        self.visible = props.get('visible', True)
+       
         if (styles := props.get("styles")) :
             for name, value in styles.items():
                 setattr(self, name, value)
@@ -324,7 +185,6 @@ class Object:
                                    )
 
         self.__on_draw = {}
-        self.__last_props = {}
 
         self.components = ComponentGroup(self,  *props.get("components", []))
 
@@ -333,18 +193,12 @@ class Object:
 
         def _draw_manager(draw_func):
             def wrapper():
-                
-                props = {k:v for k,v in self.__dict__.items() if not k.startswith("_")}
-                
-                if self.__last_props != props:
-                    get_drawn_objects().append(self.id)
-                    draw_func()                    
-                    self.__last_props = props
-
+                if self.visible:
+                    draw_func() 
+                                       
                 self.__after_draw()
                 
             return wrapper
-        
         try:
             self.draw = _draw_manager(self.draw)
         except:
@@ -488,11 +342,8 @@ class Rect(Object):
             self.border_radius = [self.border_radius[0]
                                   * 2] * 2 + [self.border_radius[1] * 2] * 2
             
-        self.stroke = props.get("stroke", 0)
-        self.stroke = resolve_measure(self.stroke, self.parent)    
 
     def draw(self):
-        print("drawing rect")
         pg.draw.rect(self.screen.surface, self.color, [
                      *self.get_pos(), *self.size], int(self.stroke), *self.border_radius)
 
@@ -516,6 +367,7 @@ class Text(Object):
     __slots__ = "font", "font_size", "text", "bold", "italic", "text_obj"
 
     def __init__(self, text, pos, font_size, **props):
+        
         self.font = props.get("font", Fonts.OpenSans)
         self.font_size = font_size
         self.color = props.get("color", "white")
@@ -530,8 +382,7 @@ class Text(Object):
         if "size" in props:
             del props["size"]
 
-        super().__init__(pos=pos, size=[
-            self.text_obj.get_width(), self.text_obj.get_height()], **props)
+        super().__init__(pos=pos, size=[self.text_obj.get_width(), self.text_obj.get_height()], **props)
 
     def load_font(self):
         # load local font
@@ -563,13 +414,16 @@ class Text(Object):
         return font.render(self.text, True, self.color)
 
     def update(self, **atributes):
-        if "text" in atributes:
-            self.text = atributes["text"]
-            self.text_obj = self.load_font()
+        for k,v in atributes.items():
+            if k in self.__slots__:
+                setattr(self, k, v)
+            else:
+                raise ValueError(f"Invalid atribute: {k}")
+        
+        self.text_obj = self.load_font()
             
-            self.size = [self.text_obj.get_width(), self.text_obj.get_height()]
+        self.size = Size(self.text_obj.get_width(), self.text_obj.get_height())
 
-        super().__dict__.update(**atributes)
 
     def draw(self):
         self.text_obj = self.load_font()
@@ -669,13 +523,16 @@ class Ellipse(Object):
         pg.draw.ellipse(self.screen.surface, self.color, [
                     *self.get_pos(), *self.size], int(self.stroke))
 
-class Group(dict):
+class Group:
     r"""
     #### Group
     
 	#### Parameters
-    - [*args] objects : objects to add in the group `Object, ..`
-    - [**kwargs] named_objects : named objects to add in the group `name = Object, ..`
+    - `parent` : parent of the group, objects position in the group will be relative to this object `Object`
+        - if parent is a string, it will be searched in the group items
+        
+    - [*args] `objects` : objects to add in the group `Object, ..`
+    - [**kwargs] `named_objects` : named objects to add in the group `name = Object, ..`
 
     #### Notes
     - named objects can be accessed by: `group["name"]`
@@ -683,18 +540,69 @@ class Group(dict):
 
     """
     
-    def __init__(self,*objects, **named_objects):
-        objects = {obj.id : obj for obj in objects}
-        super().__init__(**objects, **named_objects)
+    def __init__(self, *objects, **named_objects):
+        self.__objects = {}
         
-        for name, value in self.items():
-            self.__setattr__(name, value)
+        parent = named_objects.get("parent", None)
+        if parent:
+            del named_objects["parent"]
         
+        self.add(*objects, **named_objects)
+        
+        if parent:
+            if isinstance(parent, str):
+                parent = self.__objects[parent]
+                
+        else:
+            parent = None
+
+        self.__parent = parent
+        self.__last_parent_pos = Pos(0,0)
+        
+    def add(self, *objects, **named_objects):
+        for obj in objects:
+            self.__objects[obj.id] = obj
+        
+        self.__objects.update(named_objects)
     
-    def add(self, **objects):
-        self.update(**objects)
+    def remove(self, name: str):
+        self.__objects.pop(name)
+
+    def align_objects(self, auto_size = True):
+        # aligns objects in the group
+        if self.__parent.pos != self.__last_parent_pos:
+                
+            margin = self.__parent.size[1]*0.1
+                
+            current_y = self.__parent.pos[1] + margin
+            
+            for obj in self.__objects.values():
+                if obj != self.__parent:
+                
+                    center(obj, self.__parent)
+                    obj.pos[1] = current_y
+                
+                    current_y += obj.size[1] + margin
+                    
+                    if auto_size:
+                        # if overflow, resize parent
+                        
+                        # x axis
+                        if obj.pos[0] + obj.size[0] > self.__parent.pos[0] + self.__parent.size[0]:
+                            self.__parent.size[0] = obj.pos[0] + obj.size[0] + margin * 1.5
+                            center(obj, self.__parent)
+                            
+                        # y axis
+                        if obj.pos[1] + obj.size[1] > self.__parent.pos[1] + self.__parent.size[1]:
+                            self.__parent.size[1] = obj.pos[1] + obj.size[1] + margin * 1.5
+
+            self.__last_parent_pos = self.__parent.pos
 
     def draw(self):
+        # align objects to paren    
+        if self.__parent:
+            self.align_objects()
+        
         for obj in self.values():
             obj.draw()
 
@@ -710,21 +618,58 @@ class Group(dict):
         return self.__str__()
 
     def filter(self, func) -> 'Group':
-        self = {k: v for k, v in self.items() if func(v)}
-        return self
+        d = {k: v for k, v in self.items() if func(v)}
+        return d
 
-    def copy(self) -> 'Group':
-        return Group(**self)
-    
-    # item setters
-    def __setitem__(self, key, value):
-        super().__setitem__(key, value)
-        self.__dict__[key] = value
-    
-    def __setattr__(self, key, value):
-        super().__setitem__(key, value)
-        self.__dict__[key] = value
+    # getters        
+    def __getitem__(self, key):
+        return self.__objects[key]
 
+    def __getattr__(self, name):
+        return self.__objects[name]
+    
+    def values(self, no_parent=False):
+        if no_parent and self.__parent:
+            return [v for k, v in self.__objects.items() if v != self.__parent]
+        
+        return self.__objects.values()
+    
+    def items(self, no_parent=False):
+        if no_parent and self.__parent:
+            return {k: v for k, v in self.__objects.items() if v != self.__parent}
+        
+        return self.__objects.items()
+
+    def keys(self, no_parent=False):
+        if no_parent and self.__parent:
+            return [k for k, v in self.__objects.items() if v != self.__parent]
+    
+        return self.__objects.keys()
+    
+    # delete item
+    def __delitem__(self, key):
+        self.__objects.pop(key)
+        self.__dict__.pop(key)
+        
+    def __delattr__(self, key):
+        self.__objects.pop(key)
+        self.__dict__.pop(key)
+    
+    # contains
+    def __contains__(self, key):
+        return key in self.__objects
+    
+    # iterables
+    def __iter__(self):
+        return iter(self.values())
+    
+    def __next__(self):
+        return next(self.values())
+
+    def __len__(self):
+        return len(self.__objects)
+    
+    
 class Line:
     r"""
 	#### Line

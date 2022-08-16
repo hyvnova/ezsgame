@@ -4,7 +4,7 @@ from .objects import Size, Pos, Gradient, Object, resolve_color, Image
 from .global_data import DATA, on_update
 
 class Screen:
-    __slots__ = "size", "pos", "title", "icon", "depth", "vsync", "fullscreen", "resizable", "color", "surface", "clock", "show_fps", "delta_time", "fps", "__last_color"
+    __slots__ = "size", "pos", "title", "icon", "depth", "vsync", "fullscreen", "resizable", "color", "surface", "clock", "show_fps", "delta_time", "fps", "events", "time"
     
     # check if an istance of Screen is created
     is_created: bool = False
@@ -36,16 +36,12 @@ class Screen:
         self.depth = depth
         self.show_fps = show_fps
         self.delta_time = 0
-    
-        self.__last_color = None
-
+        
         self.load_icon(icon)
 
         # init screen
         self.__init()
 
-        # Set screen globally
-        DATA(screen=self)
 
     def __str__(self):
         return "<Screen>"
@@ -97,7 +93,6 @@ class Screen:
         '''
         TimeHandler.check()
         EventHandler.check()
-        DATA.drawn_objects = []
 
     @staticmethod
     def mouse_pos():
@@ -173,7 +168,14 @@ class Screen:
         self.clock = pg.time.Clock()
 
         self.size = Size(self.size)
-
+        
+        # globalize time and event handlers
+        DATA.TimeHandler = TimeHandler
+        DATA.EventHandler = EventHandler
+        
+        # set screen globaly
+        DATA.screen = self
+        
     def update(self):
         r'''
         #### Updates the screen
@@ -205,22 +207,18 @@ class Screen:
         - `size` : size of the fill (Optional)
         '''
     
-        # if color changed or any object will be draw         
-        if DATA.drawn_objects or self.color != self.__last_color:
-            print("fill")
-            color = self.color if color == None else color
-            
-            if size == [0, 0]:
-                size = self.size
+        color = self.color if color == None else color
+        
+        if size == [0, 0]:
+            size = self.size
 
-            if isinstance(color, Gradient) or isinstance(color, Image):
-                color.draw()
+        if isinstance(color, Gradient) or isinstance(color, Image):
+            color.draw()
 
-            else:
-                color = resolve_color(color)
-                pg.draw.rect(self.surface, color, pg.Rect(pos, size))
-            
-            self.__last_color = self.color
+        else:
+            color = resolve_color(color)
+            pg.draw.rect(self.surface, color, pg.Rect(pos, size))
+        
     
     def toggle_fullscreen(self):
         r'''
@@ -377,7 +375,7 @@ class EventHandler:
                 def callback():
                     if is_event_listener:
                         # events that require be hovering
-                        if is_hovering:
+                        if is_hovering and event.object.visible:
                             event.callback()
 
                     # if is not event listener is base event, just call callback
@@ -395,11 +393,17 @@ class EventHandler:
                     elif event.event_name == "mousewheeldown" and ev.button == 5:
                         callback()
                         continue
-
-                    # other click or mousedown events
-                    else:
+                
+                    # right mouse button
+                    elif event.event_name == "rightclick" and ev.button == 3:
                         callback()
                         continue
+                            
+                    # click, mousedown or leftclick
+                    elif event.event_name in ("click", "mousedown", "leftclick") and ev.button == 1:
+                        callback()
+                        continue
+                    
 
                 # hover events
                 elif ev.type == pg.MOUSEMOTION:
@@ -442,13 +446,11 @@ class EventHandler:
         - `object` : object to be added to the event 
         - `callback` : function to be called when the event is triggered
         '''
-
-        event = event.lower()
-
+        
+        event, event_type = EventHandler._convert_to_pgevent(event)
+        
         if name == "Default":
             name = f"{event}.{object.id}.{len(EventHandler.events)}"
-
-        event_type = EventHandler._convert_to_pgevent(event)
 
         EventHandler.to_add.append(
             Event(event_type, event, callback, object, name))
@@ -482,7 +484,7 @@ class EventHandler:
         -  `callback`: function to be called when the event is triggered ``function``
         - `name`: name of event (optional)
         '''
-        event = event.lower()
+        
         name = f"base_event.{event}.{len(EventHandler.events)}" if name == "Default" else name
 
         # if is ezsgame event
@@ -491,7 +493,7 @@ class EventHandler:
                 Event("ezsgame", event, callback, None, name))
             return
 
-        event_type = EventHandler._convert_to_pgevent(event)
+        event, event_type = EventHandler._convert_to_pgevent(event)
 
         EventHandler.to_add.append(
             Event(event_type, event, callback, None, name))
@@ -551,6 +553,8 @@ class EventHandler:
         evs = {
             "hover": pg.MOUSEMOTION,
             "click": pg.MOUSEBUTTONDOWN,
+            "rightclick": pg.MOUSEBUTTONDOWN,
+            "leftclick": pg.MOUSEBUTTONDOWN,
             "mousedown": pg.MOUSEBUTTONDOWN,
             "mouseup": pg.MOUSEBUTTONUP,
             "unhover": pg.MOUSEMOTION,
@@ -568,7 +572,8 @@ class EventHandler:
 
         if event not in evs:
             raise Exception("Event type not found", event)
-        return evs[event]
+        
+        return (event, evs[event])
 
 # Time Handler ---------------------------------------------------------------------------------------------------------
 class Interval:
@@ -579,7 +584,6 @@ class Interval:
         self.callback = callback
         self.name = name
         self.last_call = last_call
-
 
 class TimeHandler:
     r'''
@@ -600,7 +604,7 @@ class TimeHandler:
 
         name = f"{len(TimeHandler.intervals)}.{call_time}" if name == "Default" else name
 
-        TimeHandler.to_add.append(Interval(call_time, callback, time.time(), name))
+        TimeHandler.to_add.append(Interval(call_time, callback, 0, name)) 
 
     def remove(name: str):
         r'''
@@ -623,14 +627,17 @@ class TimeHandler:
 
         # adding intervals
         TimeHandler.intervals.extend(TimeHandler.to_add)
+       
         TimeHandler.to_add.clear()
 
         # Checking  Intervals
+        
+        current_time = pg.time.get_ticks()
         for interval in TimeHandler.intervals:
-            if time.time() - interval.last_call > interval.time:
+            
+            if current_time - interval.last_call >= interval.time:
                 interval.callback()
                 interval.last_call = time.time()
-
 
 # time decorators  ------------------------------------------------------------
 def add_interval(call_time: int, name: str = "Default") -> Callable:
@@ -720,3 +727,5 @@ def remove_event(name: str):
     - `name` : name of the event
     '''
     EventHandler.remove_event(name)
+
+get_mouse_pos = lambda: Pos(pg.mouse.get_pos())

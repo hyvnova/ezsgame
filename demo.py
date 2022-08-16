@@ -1,13 +1,22 @@
-from ezsgame.all import *
+# inicializacion de la pantalla (Max. Priority)
+from ezsgame import *
+screen: Screen = Screen(title="Inventory System", show_fps=True, color="white")
 
-screen = Screen(show_fps=True)
 
-rect = Rect(["center", "center"], [100, 100], color = "red")
+# IMPORTS -----------------------------------------------------------------------------------------------
+from UI import Interfaz
 
+
+# Incializacion de variables -------------------------------------------------------------------------
+Interfaz.init()
+
+
+# Mainloop4
 while True:
+    
     screen.check_events()
     screen.fill()
-
-    rect.draw()
-
+    
+    Interfaz.draw()
+    
     screen.update()

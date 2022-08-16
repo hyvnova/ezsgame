@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Tuple, Union
 import pygame as pg, random
 from ..objects import Object, Circle, Pos, Rect, Size, Text
+from ..global_data import DATA
 
 
 class IObject:
@@ -18,7 +19,7 @@ class IObject:
     def __init__(self, object):
 
         self.object = object
-        self.screen = self.object.screen
+        self.events = DATA.EventHandler
         self._clicked = False
 
     @property
@@ -34,16 +35,16 @@ class IObject:
         func()
 
     def click(self, func, event_name="Default"):
-        self.screen.events.add_event(
+        self.events.add_event(
             "click", self.object, lambda: self._process_click(func), event_name)
         return func
 
     def hover(self, func, event_name="Default"):
-        self.screen.events.add_event("hover", self.object, func, event_name)
+        self.events.add_event("hover", self.object, func, event_name)
         return func
 
     def unhover(self, func, event_name="Default"):
-        self.screen.events.add_event("unhover", self.object, func, event_name)
+        self.events.add_event("unhover", self.object, func, event_name)
         return func
 
     def _process_unclick(self, func):
@@ -52,9 +53,10 @@ class IObject:
             func()
 
     def unclick(self, func, event_name="Default"):
-        self.screen.events.on_event(
+        self.events.on_event(
             "mouseup", lambda: self._process_click(func), event_name)
         return func
+
 
 class Grid(Object):
     def __init__(self, pos:Pos, size:Size, shape: List[int], **styles):
@@ -67,7 +69,7 @@ class Grid(Object):
         - shape : shape of the grid. [rows, cols]
         """
         
-        super().__init__(pos, size, **styles)
+        super().__init__(pos=pos, size=size, **styles)
 
         self.box_styles = styles.get("box_styles", {})
 
@@ -88,21 +90,26 @@ class Grid(Object):
         - index : index of the grid. [row, col] or index
         '''
         
+        grid_index = (0,0)
+        
         # if index is int, convert it to grid index [row, col]
         if isinstance(index, int):
-            index = (index // self.shape[1], index % self.shape[1])
+            if index < 0 or index >= self.shape[0] * self.shape[1]:
+                raise IndexError(f"Index out of range: {index}\n at Grid")
+            
+            grid_index = (index // self.shape[1] , index % self.shape[1])
             
         # if index is a list, convert it to tuple
-        if isinstance(index, list):
-            index = tuple(index)
+        elif isinstance(index, list):
+            grid_index = tuple(index)
             
         # check if index is valid
-        if index[0] >= self.shape[0] or index[1] >= self.shape[1]:
-            raise IndexError(f"Index out of range: {index} \n at Grid object with shape: {self.shape}")
+        if grid_index[0] >= self.shape[0] or grid_index[1] >= self.shape[1]:
+            raise IndexError(f"Index out of range: {grid_index} \n at Grid object with shape: {self.shape}")
         
-        return index
+        return grid_index
 
-    def place(self, index:Union[int, Tuple[int]], obj:Object, fit=False):
+    def place(self, index:Union[int, Tuple[int]], obj:Object, fit=True):
         r'''
         #### Places an object in the grid.
 
@@ -120,11 +127,23 @@ class Grid(Object):
         
         # fits the object in the grid without breaking the aspect ratio
         if fit:
+            
+            # width overflows
             if obj.size[0] > self.grid_box_size[0]:
-                obj.size = [self.grid_box_size[0], obj.size[1] * self.grid_box_size[0] / obj.size[0]]
                 
+                new_width = self.grid_box_size[0] * 0.95
+                change_percent = new_width / obj.size[0]
+                
+                obj.size.set(new_width, obj.size[1] * change_percent)
+                
+            # height overflows
             if obj.size[1] > self.grid_box_size[1]:
-                obj.size = [obj.size[0] * self.grid_box_size[1] / obj.size[1], self.grid_box_size[1]]
+                
+                new_height = self.grid_box_size[1] * 0.95
+                change_percent = new_height / obj.size[1]
+                
+                obj.size.set(obj.size[0] * change_percent, new_height)   
+             
                 
         # center the object in the grid box
         obj.pos = [self.grid[index[0]][index[1]].pos[0] + self.grid_box_size[0] / 2 - obj.size[0] / 2,
@@ -376,8 +395,10 @@ class CheckBox(Rect):
         styles["stroke"] = 5
         super().__init__(pos, size, **styles)
 
+        self.events = DATA.EventHandler
+
         # init
-        self.screen.events.add_event(
+        self.events.add_event(
             event="mousedown", object=self, callback=self.change_state)
         self.checkbox = Rect(size=[self.size[0]/2, self.size[1]/2], pos=[
                              self.pos[0]+self.size[0]/4, self.pos[1]+self.size[1]/4], color=self.color)
@@ -421,6 +442,8 @@ class InputBox(Rect):
         self._eventname_unfocus = f"inputbox.{self.id}.on.mousedown._desactivate"
         self._eventname_focus = f"inputbox.{self.id}.on.keydown._catch_char"
         
+        self.events = DATA.EventHandler
+        
         self.text = Text(text=self.value, pos = [
                         self.pos[0] + self.size[0] / (self.text_styles["font_size"] / 2),
                         self.pos[1] + self.size[1]/4], 
@@ -430,7 +453,7 @@ class InputBox(Rect):
         self.onchange_callbacks = {}
         
         # add event listener, when object is clicked activate 
-        self.screen.events.add_event(
+        self.events.add_event(
             event="click", object=self, callback=self._activate)
     
         # default event responses to focus and unfocus
@@ -492,14 +515,14 @@ class InputBox(Rect):
             self.focus = True
             
             # start catching chars on keydown
-            self.screen.events.on_event(
+            self.events.on_event(
                 "keydown", self._catch_char, self._eventname_focus)
         
             # call onfocus event response           
             self.events["onfocus"]()
             
             # add event to desactivate input box when looses focus
-            self.screen.events.on_event(
+            self.events.on_event(
                 "mousedown", self._desactivate, self._eventname_unfocus)
 
     def _desactivate(self):
@@ -507,8 +530,8 @@ class InputBox(Rect):
             self.focus = False
         self.events["unfocus"]()
 
-        self.screen.events.remove_event(self._eventname_focus)
-        self.screen.events.remove_event(self._eventname_unfocus)
+        self.events.remove_event(self._eventname_focus)
+        self.events.remove_event(self._eventname_unfocus)
 
     def _onfocus(self):
         self.stroke = 1
@@ -530,51 +553,3 @@ class InputBox(Rect):
                      *self.get_pos(), *self.size], int(self.stroke))
         self.text.update(text=self.value)
         self.text.draw()
-
-class Button(Rect):
-    def __init__(self, pos, size, **styles):
-        if "border_radius" in styles:
-            self.border_radius = styles["border_radius"]
-            del styles["border_radius"]
-
-        else:
-            self.border_radius = [5] * 4
-
-        super().__init__(pos=pos, size=size, **styles)
-
-        if "text" in styles:
-            self.text = styles['text']
-            self.font_size = styles.get("font_size", 28)
-            self.textcolor = styles.get('textcolor', "white")
-            self.font = styles.get("font", "Arial")
-
-        self._eventname = f"button.{self.id}.on.mousedown"
-        self.screen.events.add_event(
-            event="mousedown", object=self, callback=lambda: None, name=self._eventname)
-
-    def _gen_text_obj(self):
-        self.text_obj = Text(text=self.text, pos=[
-                             self.pos[0], self.pos[1]], font_size=self.font_size, color=self.textcolor, fontname=self.font)
-        self.text_obj.pos = [
-            self.pos[0]-self.text_obj.size[0]/2, self.pos[1]-self.text_obj.size[1]/2]
-
-    def onclick(self, callback):
-        r'''
-        Calls the callback function when the button is clicked
-        '''
-        self.screen.events.add_event(
-            event="mousedown", object=self, callback=callback, name=self._eventname)
-        return self
-
-    def click(self, func):
-        r'''
-        <Decorator> Calls the callback function when the button is clicked
-        '''
-        self.onclick(func)
-        return func
-
-    def draw(self):
-        super().draw()
-        if hasattr(self, "text"):
-            self._gen_text_obj()
-            self.text_obj.draw()
