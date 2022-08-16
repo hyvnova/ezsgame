@@ -1,4 +1,3 @@
-from ctypes import Union
 from typing import List, Tuple
 import pygame as pg, random
 from colour import Color
