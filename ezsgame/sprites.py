@@ -29,4 +29,4 @@ class Sprite(pgSpriteClass, Object):
        
     def draw(self):
         self.__update()
-        self.screen.surface.blit(self.image, self.rect)
+        self.window.surface.blit(self.image, self.rect)

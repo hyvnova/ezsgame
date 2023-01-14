@@ -20,12 +20,12 @@ class Object:
     should not be instantiated.
     """
 
-    __slots__ = "pos", "size", "screen", "id", "color", "margins", "stroke", "components", "behavior", "__on_draw", "absolute", "parent", "visible"
+    __slots__ = "pos", "size", "window", "id", "color", "margins", "stroke", "components", "behavior", "__on_draw", "absolute", "parent", "visible"
 
     def __init__(self, **props):
         """
         #### Parameters (props)
-        - `parent`: parent object (default: Screen)
+        - `parent`: parent object (default: window)
            
         - `pos`: position of element (default: (0, 0) )
         - `absolute`: if True, element position is absolute, otherwise element position is relative to parent position (default: False)
@@ -37,9 +37,9 @@ class Object:
          
         """
         self.id = get_id()
-        self.screen = get_window()
+        self.window = get_window()
         
-        self.parent = props.get('parent', self.screen)
+        self.parent = props.get('parent', self.window)
         
         self.margins: List[float] = resolve_margins(props.get('margins', [0, 0, 0, 0]), self.parent.size)
         
@@ -227,7 +227,7 @@ class Rect(Object):
             
 
     def draw(self):
-        pg.draw.rect(self.screen.surface, self.color, [
+        pg.draw.rect(self.window.surface, self.color, [
                      *self.get_pos(), *self.size], int(self.stroke), *self.border_radius)
 
 class Text(Object):
@@ -310,7 +310,7 @@ class Text(Object):
 
     def draw(self):
         self.text_obj = self.load_font()
-        self.screen.surface.blit(self.text_obj, self.get_pos())
+        self.window.surface.blit(self.text_obj, self.get_pos())
 
 class Image(Rect):
     r'''
@@ -337,7 +337,7 @@ class Image(Rect):
             self.image = pg.transform.scale(self.image, self.size)
 
     def draw(self):
-        self.screen.surface.blit(self.image, self.get_pos())
+        self.window.surface.blit(self.image, self.get_pos())
 
     def rotate(self, angle):
         self.image = pg.transform.rotate(self.image, angle)
@@ -375,7 +375,7 @@ class Circle(Object):
 
     def draw(self):
         pos = self.get_pos()
-        pg.draw.circle(self.screen.surface, self.color,
+        pg.draw.circle(self.window.surface, self.color,
                        pos, self.radius, int(self.stroke))
 
     def _get_collision_box(self):
@@ -403,7 +403,7 @@ class Ellipse(Object):
         super().__init__(pos=pos, size=size, **props)
 
     def draw(self):
-        pg.draw.ellipse(self.screen.surface, self.color, [
+        pg.draw.ellipse(self.window.surface, self.color, [
                     *self.get_pos(), *self.size], int(self.stroke))
 
 class Group:
@@ -570,10 +570,10 @@ class Line:
         self.end = end
         self.width = width
         self.color = props.get("color", "white")
-        self.screen = get_window()
+        self.window = get_window()
 
     def draw(self):
-        pg.draw.line(self.screen.surface, self.color,
+        pg.draw.line(self.window.surface, self.color,
                      self.start, self.end, self.width)
 
     def _get_collision_box(self):

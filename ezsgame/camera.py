@@ -1,6 +1,6 @@
 import pygame
 from abc import ABC, abstractmethod
-from .global_data import get_screen
+from .global_data import get_window
 
 vec = pygame.math.Vector2
 
@@ -8,7 +8,7 @@ class Camera:
     def __init__(self, object, scrollmethod=None):
         self.object = object
         self.offset = vec(0, 0)
-        self.width, self.height = get_screen().size
+        self.width, self.height = get_window().size
         self.CONST = vec(-self.width / 2 + object.size[0] / 2, -self.object.size[1] + 20)
 
         if scrollmethod:

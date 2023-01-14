@@ -5,7 +5,6 @@ def get_id() -> str:
     return str(id)
     
 class DATA:
-    __slots__ = ("on_update", "window", "EventHandler", "TimeHandler")
     on_update = {}
     window = None
     EventHandler = None

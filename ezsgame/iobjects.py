@@ -179,7 +179,7 @@ class Grid(Object):
                   
     def div(self, axis, q):
         r'''
-        Return list of division points of the screen -> [[x1, x2], [x1, x2], ...]
+        Return list of division points of the window -> [[x1, x2], [x1, x2], ...]
         '''
         divs = []
         if axis == "x":
@@ -197,7 +197,7 @@ class Grid(Object):
 
     def grid_div(self, cols=3, rows=3, transpose=False):
         r'''
-        Returns the division of the screen into a grid -> [[x, y, w, h], [x, y, w, h], ...]
+        Returns the division of the window into a grid -> [[x, y, w, h], [x, y, w, h], ...]
         '''
         grid = []
         divs_x = self.div("x", cols)
@@ -233,7 +233,7 @@ class Grid(Object):
         return [[Rect(pos=i[:2], size=i[2:], **self.box_styles) for i in row] for row in grid]
 
     def draw(self):
-        pg.draw.rect(self.screen.surface, self.color, [*self.get_pos(), *self.size], int(self.stroke))
+        pg.draw.rect(self.window.surface, self.color, [*self.get_pos(), *self.size], int(self.stroke))
         
         for row in self.grid:
             for obj in row:
@@ -250,7 +250,7 @@ class Grid(Object):
         - box_styles : styles to apply to the box being hovered over. (default: {"color": "red"})
         """
         
-        mouse_pos = self.screen.mouse_pos()
+        mouse_pos = self.window.mouse_pos()
 
         # check if mouse is not in the grid
         if not mouse_pos[0] > self.pos[0] and mouse_pos[0] < self.pos[0] + self.size[0] and mouse_pos[1] > self.pos[1] and mouse_pos[1] < self.pos[1] + self.size[1]:
@@ -309,17 +309,17 @@ class RangeBar(Object):
         @self.wheel.click()
         def wheel_click():
             self._evname = f"RangeBar_{self.id}_update_value_[{random.randint(0,255)}]"
-            self.screen.time.add(
+            self.window.time.add(
                 time=10, callback=self._update_value, name=self._evname)
 
         @self.wheel.unclick()
         def wheel_unclick():
             if self.wheel.clicked:
-                self.screen.time.remove(name=self._evname)
+                self.window.time.remove(name=self._evname)
                 self.wheel.color = "white"
 
     def _update_value(self):
-        mouse_pos = self.screen.mouse_pos()[0]
+        mouse_pos = self.window.mouse_pos()[0]
 
         if mouse_pos + self.wheel.radius < self.min:
             self.value = self.min
@@ -383,7 +383,7 @@ class Bar(Object):
         self.fill_bar.size = [(p / 100) * self.size[0], self.size[1]]
 
     def draw(self):
-        screen = self.screen
+        window = self.window
 
         self._update_value()
         self.fill_bar.draw()
@@ -407,8 +407,8 @@ class CheckBox(Rect):
         self.state = not self.state
 
     def draw(self):
-        screen = self.screen
-        pg.draw.rect(screen.surface, self.color, [
+        window = self.window
+        pg.draw.rect(window.surface, self.color, [
                      *self.get_pos(), *self.size], int(self.stroke))
         if self.state:
             self.checkbox.draw()
@@ -548,8 +548,8 @@ class InputBox(Rect):
         self.events["unfocus"]()
 
     def draw(self):
-        screen = self.screen
-        pg.draw.rect(screen.surface, self.color, [
+        window = self.window
+        pg.draw.rect(window.surface, self.color, [
                      *self.get_pos(), *self.size], int(self.stroke))
         self.text.update(text=self.value)
         self.text.draw()

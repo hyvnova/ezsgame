@@ -1,4 +1,4 @@
-from ...global_data import get_id, get_screen
+from ...global_data import get_id, get_window
 
 class Controller:
     r'''
@@ -24,7 +24,7 @@ class Controller:
         self.id = get_id()
         self._evnames = []
         
-        self.screen = get_screen()
+        self.window = get_window()
         self.keys = keys
         self.use_delta_time = use_delta_time
         
@@ -54,17 +54,17 @@ class Controller:
         evname = f"Contoller.keydown.{self.id}.{index}"
         self._evnames.append(evname)
         
-        @self.screen.on_key(type="down", keys=[self.keys[index]], name=evname)
+        @self.window.on_key(type="down", keys=[self.keys[index]], name=evname)
         def keydown():
             if self.use_delta_time:
-                self.speed[index] = self._speeds[index] * self.screen.delta_time
+                self.speed[index] = self._speeds[index] * self.window.delta_time
             else:
                 self.speed[index] = self._speeds[index]
 
         evname = f"Contoller.keyup.{self.id}.{index}"
         self._evnames.append(evname)
         
-        @self.screen.on_key(type="up", keys=[self.keys[index]], name=evname)
+        @self.window.on_key(type="up", keys=[self.keys[index]], name=evname)
         def keyup():
             self.speed[index] = 0
         
@@ -122,7 +122,7 @@ class Controller:
     def __del__(self):
         if self.__dict__.get("_evnames", None):
             for evname in self._evnames:
-                self.screen.remove_event(evname)
+                self.window.remove_event(evname)
             
         del self
               

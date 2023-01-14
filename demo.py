@@ -1,6 +1,6 @@
 # inicializacion de la pantalla (Max. Priority)
 from ezsgame import *
-screen: Screen = Screen(title="Inventory System", show_fps=True, color="white")
+window: Window = Window(title="Inventory System", show_fps=True, color="white")
 
 
 # IMPORTS -----------------------------------------------------------------------------------------------
@@ -11,12 +11,12 @@ from UI import Interfaz
 Interfaz.init()
 
 
-# Mainloop4
+# Mainloop
 while True:
     
-    screen.check_events()
-    screen.fill()
+    window.check_events()
+    window.fill()
     
     Interfaz.draw()
     
-    screen.update()
+    window.update()

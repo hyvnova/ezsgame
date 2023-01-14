@@ -1,5 +1,5 @@
 from typing import List
-from .global_data import get_id, get_screen
+from .global_data import get_id, get_window
 import pygame as pg, os, subprocess
 
 def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [0,0,0,0]):
@@ -19,7 +19,7 @@ def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [
     size = [obj_size[0] * size, obj_size[1] * size]
     pos = [obj_pos[0] - (size[0] - obj_size[0]) / 2, obj_pos[1] - (size[1] - obj_size[1]) / 2]
 
-    pg.draw.rect(get_screen().surface, color, [*pos, *size], stroke, *border_radius)
+    pg.draw.rect(get_window().surface, color, [*pos, *size], stroke, *border_radius)
 
 def copy(obj, different=False):
     new_obj = copy.copy(obj)
@@ -32,7 +32,7 @@ def is_out(obj):
     Return True if objects is out of bounds and direction of that bound (top, bottom, right, left)
     -> [bool, "direction"]
     '''
-    screen = get_screen()
+    screen = get_window()
     
     if obj.pos[0] + obj.size[0] < 0 or obj.pos[0] - obj.size[0]/4 > screen.size[0]:
         return True, "left" if obj.pos[0] + obj.size[0]/2 <= 0 else "right"

@@ -1,4 +1,4 @@
-from ..global_data import get_screen
+from ..global_data import get_window
 
 class Reload:
     def __init__(self, file, _globals, _locals):
@@ -8,7 +8,7 @@ class Reload:
         self.code = ""
         self._start_code = ""
                       
-        self.screen = get_screen()
+        self.window = get_window()
         
         with open (self.file, "r") as f:
             file_content = f.read()        

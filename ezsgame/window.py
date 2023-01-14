@@ -1,7 +1,11 @@
 import pygame as pg, random, os
-from .objects import Size, Pos, Gradient, resolve_color, Image
+from .objects import Image
 from .global_data import DATA, on_update
 
+from .types import Size, Pos
+from .colors import Gradient
+from .styles_resolver import resolve_color
+  
 # handlers
 from .event_handler import EventHandler
 from .time_handler import TimeHandler
@@ -133,7 +137,7 @@ class Window:
                 self.size = pg.display.list_modes()[0]
             else:
                 raise Exception(
-                    "Screen size should \"max\" || \"full\" or list [width, height] ")
+                    "window size should \"max\" || \"full\" or list [width, height] ")
 
         elif len(size) == 2:
             if size[0] in ("max", "full", "100%"):
@@ -177,7 +181,7 @@ class Window:
         DATA.EventHandler = EventHandler
         
         # set Window globaly
-        DATA.screen = self
+        DATA.window = self
         
     def update(self):
         r'''
@@ -228,3 +232,5 @@ class Window:
         '''
         self.fullscreen = not self.fullscreen
         self.__init()
+
+get_mouse_pos = Window.mouse_pos

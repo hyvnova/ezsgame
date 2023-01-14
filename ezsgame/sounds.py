@@ -1,3 +1,4 @@
+from typing import Optional
 import pygame as pg
 from .global_data import get_id
 
@@ -40,7 +41,9 @@ class Mixer:
             del sound
   
 class Sound:
-    def __init__(self, file):
+    defualt_mixer = Mixer()
+    
+    def __init__(self, file, mixer: Optional[Mixer]):
         try:
             self.sound = pg.mixer.Sound(file)
         except Exception as e:
@@ -49,7 +52,10 @@ class Sound:
         self.sound.set_volume(0.5)
         self.volume = 0.5
         self._id = get_id()
-        mixer._load_sound(self)
+        
+        self.mixer = mixer or Sound.defualt_mixer
+        
+        self.mixer._load_sound(self)
         self.length = self.sound.get_length()
         
     @property
@@ -82,8 +88,8 @@ class Sound:
         return f"<Object: Sound, ID: {self._id}>"
     
     def __del__(self):
-        if self in mixer.sounds:
-            mixer.remove(self)
+        if self in self.mixer.sounds:
+            self.mixer.remove(self)
         del self.sound
         
     def raw(self):

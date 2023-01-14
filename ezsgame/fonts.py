@@ -1,4 +1,3 @@
-from tkinter.filedialog import Open
 import pygame as pg, os
 
 FONTS_PATH = "ezsgame/assets/fonts"

@@ -1,6 +1,6 @@
 from ezsgame import *
 
-screen: Screen = get_screen()
+window: Window = get_window()
 
 """
 Declaracion del "widget" vista izquierda

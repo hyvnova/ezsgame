@@ -2,7 +2,7 @@ from typing import Dict
 from ezsgame import *
 from vistas import right, left
 
-screen: Screen = get_screen()
+window: Window = get_window()
 EventHandler = DATA.EventHandler
 
     
@@ -23,10 +23,10 @@ def get_arrow(direction:str, view_direction:str) -> Image:
         arrow.rotate(90)
     
     elif direction == "right":
-        arrow.pos[0] = screen.size[0] - arrow.get_size()[0] - 20
+        arrow.pos[0] = window.size[0] - arrow.get_size()[0] - 20
         arrow.rotate(-90)
         
-    center(arrow, screen, x=False)
+    center(arrow, window, x=False)
         
     arrow.extends(IObject)
         

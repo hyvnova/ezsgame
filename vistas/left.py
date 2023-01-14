@@ -1,7 +1,7 @@
 from ezsgame import *
 from .right import to_place
 
-screen: Screen = get_screen()
+window: Window = get_window()
 
 """
 Declaracion del "widget" vista izquierda
@@ -25,7 +25,7 @@ def flash_message(message, time):
     background.visible = True
     background.size = text.size + 20
     
-    center(background, screen, y=False)
+    center(background, window, y=False)
     center(text, background, y=True)
     
     @add_interval(time, "flash_message")
@@ -109,13 +109,13 @@ def open_option_menu():
     background = option_menu.background
 
     # align option menu to mouse position
-    if mouse_pos[0] + background.size[0] > screen.size[0]:
+    if mouse_pos[0] + background.size[0] > window.size[0]:
         background.pos[0] = mouse_pos[0] - background.size[0]
     else:
         background.pos[0] = mouse_pos[0]
         
         
-    if mouse_pos[1] + background.size[1] > screen.size[1]:
+    if mouse_pos[1] + background.size[1] > window.size[1]:
         background.pos[1] = mouse_pos[1] - background.size[1]
     else:
         background.pos[1] = mouse_pos[1]    
@@ -133,7 +133,7 @@ def draw():
         outline(selected[1], color="red", border_radius=[5], size=1.15)
         
         selected_text.text = "Selected: " + selected[0]
-        center(selected_text, screen, y=False)
+        center(selected_text, window, y=False)
         selected_text.draw()
         
     if draw_option_menu:

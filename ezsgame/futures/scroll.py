@@ -1,19 +1,19 @@
 from ..objects import Rect
-from .iobjects import IObject
-from ..global_data import get_screen, get_id
+from ..iobjects import IObject
+from ..global_data import get_window, get_id
 
 class Scroll:
 	def __init__(self, scroll_speed=10):
 		self.id = get_id()
-		self.screen = get_screen()
+		self.window = get_window()
 		self.objects = []
 		self.scroll_speed = scroll_speed
 
-		self.biggest_y = self.screen.size.height
+		self.biggest_y = self.window.size.height
 		self.lowest_y = 0
 
 		# visual objects
-		self.bar = Rect(pos=[ self.screen.size.width - 15, 0  ], size=[ 15, self.screen.size.height ], color="white", stroke=2,
+		self.bar = Rect(pos=[ self.window.size.width - 15, 0  ], size=[ 15, self.window.size.height ], color="white", stroke=2,
 						border_radius=[10])
 	
 		self.thumb = Rect(pos=[ (self.bar.pos.x + self.bar.size.width / 4) - 2 , self.bar.pos.y], size=[ 15, self.bar.size.height ], 
@@ -30,11 +30,11 @@ class Scroll:
 		# thumb interactions
 		@self.thumb.click
 		def on_thumb_click():
-			self.screen.time.add(30, self._move, self._evname_moving)
+			self.window.time.add(30, self._move, self._evname_moving)
 
 		@self.thumb.unclick
 		def on_thumb_unclick():
-			self.screen.remove_interval(self._evname_moving)
+			self.window.remove_interval(self._evname_moving)
 			
 	def __thumb_size(self):
 		# calculates thumb size
@@ -65,7 +65,7 @@ class Scroll:
 		self.thumb.size.height = self.__thumb_size()
 		
 	def _move(self):
-		pos = self.screen.mouse_pos()
+		pos = self.window.mouse_pos()
   
 		# if thumb is at top but theres still content to scroll
 		if self.thumb.pos.y == self.bar.pos.y and self.thumb.pos.y > self.lowest_y:

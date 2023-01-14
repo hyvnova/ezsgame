@@ -52,11 +52,11 @@ def gen_gradient(size, div, start, end, direction="v", pos_prefix: float = 0) ->
 
         objs.append((pos, obj_size, adapt_rgb(colors[i].rgb)))
 
-        # if current x + width is bigger than screen width, end the loop
+        # if current x + width is bigger than window width, end the loop
         if direction == "h" and div[i][0] + div[i][1] > size[0]:
             break
 
-        # if current y + height is bigger than screen height, end the loop
+        # if current y + height is bigger than window height, end the loop
         if direction == "v" and div[i][0] + div[i][1] > size[1]:
             break
 
@@ -72,7 +72,7 @@ class Gradient:
     #### Optional Arguments (Keyword Arguments)
     - `direction`: direction of the gradient `"horizontal"` or `"vertical"`
     - `complexity`: space between each color stripe (higher -> load time) `int`
-    - `size`: size of the gradient `[width, height]` (default: screen size)
+    - `size`: size of the gradient `[width, height]` (default: window size)
     '''
 
     def __init__(self, *colors, direction="horizontal", complexity=120, size=None):
