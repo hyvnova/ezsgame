@@ -1,8 +1,6 @@
 import pygame as pg
 from .global_data import get_id
 
-pg.mixer.init()
-
 class Mixer:
     def __init__(self):
         if pg.mixer.get_init() is None:
@@ -40,9 +38,7 @@ class Mixer:
     def clear(self):
         for sound in self.sounds:
             del sound
-
-mixer = Mixer()
-            
+  
 class Sound:
     def __init__(self, file):
         try:

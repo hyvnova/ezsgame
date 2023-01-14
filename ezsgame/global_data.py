@@ -1,20 +1,18 @@
-from turtle import Screen
 from uuid import uuid4
-
 
 def get_id() -> str:
     id = int(uuid4())
     return str(id)
     
 class DATA:
+    __slots__ = ("on_update", "window", "EventHandler", "TimeHandler")
     on_update = {}
-
-    Screen = None
+    window = None
     EventHandler = None
     TimeHandler = None
 
 #shortcuts to DATA
-get_screen = lambda: DATA.screen
+get_window = lambda: DATA.window
 
 def on_update(key=None,val=None):
     r"""
