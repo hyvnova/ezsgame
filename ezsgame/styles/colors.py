@@ -1,10 +1,25 @@
 from colour import Color
 import random
-from .styles_resolver import *
+
+from ezsgame.types import Size
 import pygame as pg
 from typing import List, Tuple
-from .global_data import get_window
-from .funcs import div
+from ..global_data import get_window
+from ..funcs import div
+
+
+def adapt_rgb(rgb): return tuple(map(lambda i: i*255, rgb))
+def pure_rgb(color): return tuple(map(lambda i: i/255, color))
+
+def resolve_color(color) -> Color:
+    if isinstance(color, str):
+        if color.startswith("#"):
+            return adapt_rgb(Color(color).rgb)
+
+        return adapt_rgb(Color(color).get_rgb())
+
+    return color
+
 
 def random_color(n=1):
     """
@@ -12,6 +27,7 @@ def random_color(n=1):
     If n is bigger returns a list with random colors -> [(234, 55, 233), ...]
     """
     return [random_color() for i in range(n)] if n > 1 else (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
 
 def _check_color(color):
     if isinstance(color, str):
@@ -24,7 +40,8 @@ def _check_color(color):
     else:
         return Color(rgb=pure_rgb(color))
 
-def gen_gradient(size, div, start, end, direction="v", pos_prefix: float = 0) -> List[Tuple[List, List, Tuple]]:
+
+def gen_gradient(size: Size, div, start, end, direction="v", pos_prefix: float = 0) -> List[Tuple[List, List, Tuple]]:
     r'''
     Generates a gradient between two colors
     - start: start color
@@ -36,8 +53,6 @@ def gen_gradient(size, div, start, end, direction="v", pos_prefix: float = 0) ->
 
     start = _check_color(start)
     end = _check_color(end)
-
-    size = resolve_size(size)
 
     colors = tuple(start.range_to(end, len(div)))
     objs = []
@@ -61,6 +76,7 @@ def gen_gradient(size, div, start, end, direction="v", pos_prefix: float = 0) ->
             break
 
     return objs
+
 
 class Gradient:
     r'''
@@ -107,8 +123,8 @@ class Gradient:
                                                    colors[index],
                                                    direction,
                                                    division[0]
-            )
-            )
+                                                   )
+                                      )
 
     def draw(self):
         for obj in self.gradient_objs:

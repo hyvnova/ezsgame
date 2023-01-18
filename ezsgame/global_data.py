@@ -6,9 +6,9 @@ def get_id() -> str:
     
 class DATA:
     on_update = {}
-    window = None
-    EventHandler = None
-    TimeHandler = None
+    window = object
+    EventHandler = object
+    TimeHandler = object
 
 #shortcuts to DATA
 get_window = lambda: DATA.window

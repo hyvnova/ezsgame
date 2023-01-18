@@ -1,9 +1,14 @@
-from typing import List
+from pathlib import Path
+from typing import Any, Dict, Iterable
 import pygame as pg
-from colour import Color
-from .futures.components import ComponentGroup
+
+from ezsgame.styles.units import Measure
+
+from .styles.style import Styles
+
+from .futures.components import ComponentGroup, Component
 from .global_data import get_id, get_window
-from .styles_resolver import *
+from .styles.styles_resolver import resolve_measure, resolve_color, Color
 from .funcs import center
 from .fonts import Fonts, FontFamily
 
@@ -20,61 +25,39 @@ class Object:
     should not be instantiated.
     """
 
-    __slots__ = "pos", "size", "window", "id", "color", "margins", "stroke", "components", "behavior", "__on_draw", "absolute", "parent", "visible"
+    __slots__ = ("pos", "size", "window", "id", "components", "behavior", "__on_draw", "parent")
 
-    def __init__(self, **props):
+    def __init__(
+        self, 
+        pos: Pos | Iterable[Measure],
+        size: Size | Iterable[Measure],
+        styles: Styles = Styles(),
+        parent: "Object" = get_window(),
+        components: Iterable[Component] = [],
+        **_styles: Dict[str, Any]
+    ):
         """
-        #### Parameters (props)
-        - `parent`: parent object (default: window)
-           
-        - `pos`: position of element (default: (0, 0) )
-        - `absolute`: if True, element position is absolute, otherwise element position is relative to parent position (default: False)
-        - `margins` : margins of element (default: (0, 0, 0, 0) )
-        
-        - `size`: size of element
-        
-        - `color`: color of element (default: white )
-         
+        Base class for most object, handlers object default and required behavior
         """
         self.id = get_id()
-        self.window = get_window()
-        
-        self.parent = props.get('parent', self.window)
-        
-        self.margins: List[float] = resolve_margins(props.get('margins', [0, 0, 0, 0]), self.parent.size)
-        
-        # if not size, size = 10% of parent size
-        self.size: Size = props.get('size', self.parent.size.copy() * 0.1)
-        self.pos: Pos = props.get('pos', Pos(0, 0))
-        
-        self.size = resolve_size(self, self.parent)
-        self.pos = resolve_position(self, self.parent, props.get('absolute', False))
-        
-        self.absolute = props.get('absolute', False) # if True, element position is absolute, otherwise element position is relative to parent position
+        self.parent = parent
 
-        self.color: Color = resolve_color(props.get('color', 'white'))
-       
-        self.stroke = resolve_measure(props.get('stroke', 0), self.parent.size)
-       
-        self.visible = props.get('visible', True)
-       
-        if (styles := props.get("styles")) :
-            for name, value in styles.items():
-                setattr(self, name, value)
+        self.pos = pos if isinstance(pos, Pos) else Pos(*pos)
+        self.size = size if isinstance(size, Size) else Size(*size)
 
+        # defualt behavior - needs it own type and rework
+        self.behavior = {"pos": "dynamic"}
 
-        self.behavior = props.get("behavior",
-                                   # defualt behavior
-                                   {"pos": "dynamic"}
-                                   )
+        self.styles = styles or Styles(**_styles)
+        
+        styles.resolve(self.parent.size)
 
         self.__on_draw = {}
 
-        self.components = ComponentGroup(self,  *props.get("components", []))
+        self.components = ComponentGroup(self, *components)
 
-        self.resolve_styles()
+
         # Calls __after_draw() before draw() to call on draw methods
-
         def _draw_manager(draw_func):
             def wrapper():
                 if self.visible:
@@ -87,24 +70,6 @@ class Object:
             self.draw = _draw_manager(self.draw)
         except:
             pass
-
-    def update_styles(self, styles=None, **kwargs):
-        r"""
-        #### Updates the object's styles
-
-        #### Parameters
-        - `styles`: `dict` of styles to update (default: None)
-        - `**kwargs`: keyword arguments of styles to update
-        """
-
-        if styles:
-            for k, v in styles.items():
-                setattr(self, k, v)
-
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-        self.resolve_styles()
 
     def extends(self, *classes):
         r"""
@@ -142,50 +107,9 @@ class Object:
             del self.__on_draw[name]
 
     def _get_collision_box(self):
-        self.resolve_styles()
-        return [self.pos, [self.pos[0] + self.size[0], self.pos[1]],
-                [self.pos[0], self.pos[1] + self.size[1]],
-                [self.pos[0] + self.size[0], self.pos[1] + self.size[1]]]  # esquina superior izq, superior derecha, infeior izq, inferior derecha
-
-    def resolve_styles(self):
-        r"""
-        #### Resolves the styles of the object (Ex. size, margins, stroke)
-        """
-
-        if not isinstance(self.size, Size):
-            self.size = Size(*self.size)
-        if not isinstance(self.pos, Pos):
-            self.pos = Pos(*self.pos)
-
-        # Resolve properties
-        self.color = resolve_color(self.color)
-
-        self.margins = resolve_margins(self.margins, self.parent.size)
-
-        self.size = resolve_size(self, self.parent)
-
-        self.pos = resolve_position(self, self.parent, self.absolute)
-
-    def get_pos(self, ref=False):
-        """
-        #### Returns postion of the object after revolsing styles
-
-        #### Parameters
-        - `ref`: if True, returns a "reference" to the position `bool`(default: False)
-        """
-        self.resolve_styles()
-        self.pos = Pos(*self.pos)
-        return self.pos.ref() if ref else Pos(self.pos.copy())
-
-    def get_size(self, ref=False):
-        """
-        #### Returns size of the object after revolsing styles
-
-        #### Parameters
-        - `ref`: if True, returns a "reference" to the size `bool`(default: False)
-        """
-        self.size = Size(*self.size)
-        return self.size.ref() if ref else Size(self.size.copy())
+        x, y = self.pos
+        w, h = self.size
+        return [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
 
     def __str__(self):
         return f"<Object: {self.__class__.__name__}, ID: {self.id}>"
@@ -204,31 +128,22 @@ class Rect(Object):
     - `pos`: position of the rect `[x, y]`
     - `size`: size of the rect `[width, height]`
 
-    #### Optional Arguments (Keyword Arguments)
+    #### Styles
     - `color`: color of the rect `"white" or (R, G, B)`
     - `stroke`: stroke of the rect `int`
     - `margins`: margins of the rect `[top, right, bottom, left]`
     - `border_radius`: border radius of the rect `[top-left, top-right, bottom-right, bottom-left]`
     - `components` : components to add in the rect `[Component, ..]`
-    '''
-
-    def __init__(self, pos: Pos, size: Size, **props):
-        super().__init__(pos=pos, size=size, **props)
-
-        # top-left, top-right, bottom-right, bottom-left
-        self.border_radius = props.get("border_radius", [0, 0, 0, 0])
-        
-        if len(self.border_radius) == 1:
-            self.border_radius = [self.border_radius[0]] * 4
-            
-        elif len(self.border_radius) == 2:
-            self.border_radius = [self.border_radius[0]
-                                  * 2] * 2 + [self.border_radius[1] * 2] * 2
-            
+    '''         
 
     def draw(self):
-        pg.draw.rect(self.window.surface, self.color, [
-                     *self.get_pos(), *self.size], int(self.stroke), *self.border_radius)
+        pg.draw.rect(
+            self.window.surface, 
+            self.styles.color, 
+            (*self.pos, *self.size), 
+            self.styles.stroke, 
+            *self.styles.border_radius
+        )
 
 class Text(Object):
     r'''
@@ -237,39 +152,54 @@ class Text(Object):
     - `text`: text to be displayed
     - `pos`: position of the text `[x, y]`
     - `font_size`: font size of the text
-
-    #### Optional Arguments (Keyword Arguments)
     - `font` : font of the text `"Arial or "path/to/font.ttf"` or `ezsgame font` (default: `OpenSans`)
+    - `bold` : if True, the text will be bold `bool`    
+    - `italic` : if True, the text will be italic `bool`
+
+    #### Styles
     - `color`: color of the text `"white" or (R, G, B)`
     - `margins`: margins of the text `[top, right, bottom, left]`
     - `components` : components to add in the object `[Component, ..]`
-    - `bold` : if True, the text will be bold `bool`    
-    - `italic` : if True, the text will be italic `bool`
     '''
 
-    __slots__ = "font", "font_size", "text", "bold", "italic", "text_obj"
+    __slots__ = "font", "font_size", "text", "bold", "italic", "text_obj", "styles"
 
-    def __init__(self, text, pos, font_size, **props):
+    def __init__(
+        self, 
+        text: str, 
+        pos: Pos | Iterable[Measure], 
+        font_size: int, 
+        styles: Styles = Styles(),
+        font: FontFamily | str = Fonts.OpenSans,
+        parent: Object = get_window(),
+        components: Iterable[Component] = [],
+        italic: bool = False,
+        bold: bool = False,
+        **_styles: Dict[str, Any]
+    ):
         
-        self.font = props.get("font", Fonts.OpenSans)
+        self.font = font
         self.font_size = font_size
-        self.color = props.get("color", "white")
         self.text = text
-        self.bold = props.get("bold", False)
-        self.italic = props.get("italic", False)
+        self.bold = bold
+        self.italic = italic
+        
+        # need before supert init because load_font uses it
+        self.styles = styles 
+        self.styles.resolve(parent.size)
         
         self.text_obj = self.load_font()
 
-        if "pos" in props:
-            del props["pos"]
-        if "size" in props:
-            del props["size"]
-
-        super().__init__(pos=pos, size=[self.text_obj.get_width(), self.text_obj.get_height()], **props)
-
-    def load_font(self):
-        # load local font
+        super().__init__(
+            pos=pos, 
+            size=Size(self.text_obj.get_width(), self.text_obj.get_height()), 
+            components=components, 
+            parent=parent, 
+            styles=styles,
+            **_styles
+        )
         
+    def load_font(self):
         # is font is a ezsgame font
         if isinstance(self.font, FontFamily):
             font = self.font.get_font(self.font_size)
@@ -294,7 +224,7 @@ class Text(Object):
         else:
             raise ValueError("Invalid font: " + self.font)
         
-        return font.render(self.text, True, self.color)
+        return font.render(self.text, True, self.styles.color)
 
     def update(self, **atributes):
         for k,v in atributes.items():
@@ -309,10 +239,9 @@ class Text(Object):
 
 
     def draw(self):
-        self.text_obj = self.load_font()
-        self.window.surface.blit(self.text_obj, self.get_pos())
+        self.window.surface.blit(self.text_obj, self.pos)
 
-class Image(Rect):
+class Image(Object):
     r'''
     #### Image
     #### Parameters
@@ -320,24 +249,37 @@ class Image(Rect):
     - `size` : size of the image `[width, height]`
     - `image` : path to image file `str`
 
-    #### Optional Arguments (Keyword Arguments)
+    #### Optional Arguments
     - `scale` : scale the image to the size `bool`
-    - `margins`: margins of the image `[top, right, bottom, left]`
     - `components` : components to add in the object `[Component, ..]`
+    - `styles` : Styles
     '''
 
-    def __init__(self, pos, size, image, scale=True, **props):
-        super().__init__(pos, size, **props)
+    def __init__(
+        self, 
+        image: Path | str,
+        pos: Pos | Iterable[Measure],  
+        size: Size | Iterable[Measure],
+        scale: bool = True,
+        styles: Styles = Styles(),
+        parent: "Object" = get_window(),
+        components: Iterable[Component] = [],
+        **_styles: Dict[str, Any]
+    ):
+        self.image = image
+        self.scale = scale
+        
+        super().__init__(pos=pos, size=size, styles=styles, parent=parent, components=components, **_styles)
         try:
             self.image = pg.image.load(image)
         except:
-            raise ValueError("Image not found in current directory: ", image)
+            raise ValueError("Image not found:", image)
 
         if scale:
             self.image = pg.transform.scale(self.image, self.size)
 
     def draw(self):
-        self.window.surface.blit(self.image, self.get_pos())
+        self.window.surface.blit(self.image, self.pos)
 
     def rotate(self, angle):
         self.image = pg.transform.rotate(self.image, angle)
@@ -358,32 +300,46 @@ class Circle(Object):
     - `pos`: position of the circle `[x, y]`
     - `radius`: radius of the circle `number`
 
-    #### Optional Arguments (Keyword Arguments)
+    #### Styles
     - `color`: color of the circle `"white" or (R, G, B)`
     - `stroke`: stroke of the circle `int`
     - `margins`: margins of the circle `[top, right, bottom, left]`
     - `components` : components to add in the object `[Component, ..]`
     '''
+    __slots__ = ("radius", )
 
-    def __init__(self, pos : Pos, radius: float, **props):
-        if isinstance(radius, str):
-            if radius.endswith("%"):
-                radius = int(float(radius[:-1]) / 100 * get_window().size[0])
+    def __init__(
+        self, 
+        pos: Pos | Iterable[Measure],
+        radius: Measure,
+        styles: Styles = Styles(),
+        parent: "Object" = get_window(),
+        components: Iterable[Component] = [],
+        **_styles: Dict[str, Any]
+        
+    ):
+        self.radius = resolve_measure(radius)
 
-        super().__init__(pos=pos, size=[radius*2, radius*2],  **props)
-        self.radius = radius
+        super().__init__(pos=pos, size=Size(radius*2), styles=styles, parent=parent, components=components, **_styles)
 
     def draw(self):
-        pos = self.get_pos()
-        pg.draw.circle(self.window.surface, self.color,
-                       pos, self.radius, int(self.stroke))
+        pg.draw.circle(
+            self.window.surface,
+            self.styles.color,
+            self.pos, 
+            self.radius, 
+            self.styles.stroke
+        )
 
     def _get_collision_box(self):
-        pos = [self.pos[0] - self.size[0]/2, self.pos[1] - self.size[1] / 2]
-        return [pos, [pos[0] + self.size[0], pos[1]],
-                [pos[0], pos[1] + self.size[1]], [pos[0] +
-                                                  self.size[0], pos[1] + self.size[1]]
-                ]  # esquina superior izq, superior derecha, infeior izq, inferior derecha
+        center_x, center_y = self.pos
+        radius = self.size[0]/2
+        return (
+            (center_x - radius, center_y - radius), # top-left
+            (center_x + radius, center_y - radius), # top-right
+            (center_x - radius, center_y + radius), # bottom-left
+            (center_x + radius, center_y + radius)  # bottom-right
+        )
 
 class Ellipse(Object):
     r'''
@@ -391,20 +347,21 @@ class Ellipse(Object):
         #### Parameters
         - `pos`: position of the Ellipse `[x, y]`
         - `size`: size of the Ellipse `[width, height]`
+        - `components` : components to add in the object `[Component, ..]`
 
-        #### Optional Arguments (Keyword Arguments)
+        #### Styles
         - `color`: color of the Ellipse `"white" or (R, G, B)`
         - `stroke`: stroke of the Ellipse `int`
         - `margins`: margins of the Ellipse `[top, right, bottom, left]`
-        - `components` : components to add in the object `[Component, ..]`
         '''
 
-    def __init__(self, pos: Pos, size: Size, **props):
-        super().__init__(pos=pos, size=size, **props)
-
     def draw(self):
-        pg.draw.ellipse(self.window.surface, self.color, [
-                    *self.get_pos(), *self.size], int(self.stroke))
+        pg.draw.ellipse(
+            self.window.surface,
+            self.styles.color, 
+            (*self.pos, *self.size), 
+            self.styles.stroke
+        )
 
 class Group:
     r"""
@@ -564,12 +521,13 @@ class Line:
 	- `stroke`: stroke of the line `int`
 	
     """
+    __slots__ = ("start", "end", "width", "color", "window")
     
-    def __init__(self, start: Pos, end: Pos, width: int = 5, **props):
+    def __init__(self, start: Pos, end: Pos, width: int = 5, color: Color = "white"):
         self.start = start
         self.end = end
         self.width = width
-        self.color = props.get("color", "white")
+        self.color = resolve_color(color)
         self.window = get_window()
 
     def draw(self):
@@ -578,10 +536,4 @@ class Line:
 
     def _get_collision_box(self):
         # collision is checked at line end
-        return [self.end, self.end + [self.width, 0], self.end + [0, self.width], self.end + [self.width, self.width]]
-
-    def get_size(self):
-        return Size(self.width, self.width)
-
-    def get_pos(self):
-        return self.end
+        return (self.end, self.end + (self.width, 0), self.end + (0, self.width), self.end + (self.width, self.width))

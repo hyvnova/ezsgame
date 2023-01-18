@@ -1,12 +1,11 @@
-import imp
 from .window import *
 from .objects import *
 from .sounds import *
 from .funcs import *
 from .sprites import Sprite
 from .camera import *
-from .funcs import *
 from .iobjects import *
+
 from .event_handler import *
 from .time_handler import *
 

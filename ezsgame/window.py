@@ -1,10 +1,13 @@
+from typing import Iterable
 import pygame as pg, random, os
+
+from .styles.units import Measure
 from .objects import Image
 from .global_data import DATA, on_update
 
 from .types import Size, Pos
-from .colors import Gradient
-from .styles_resolver import resolve_color
+from .styles.colors import Gradient
+from .styles.styles_resolver import resolve_color
   
 # handlers
 from .event_handler import EventHandler
@@ -22,16 +25,24 @@ class Window:
         '''
         if not cls.is_created:
             Window.is_created = True
-            return object.__new__(Window)
+            
+            window = object.__new__(Window)
+            
+            DATA.window = window
+            
+            # globalize time and event handlers
+            DATA.TimeHandler = TimeHandler
+            DATA.EventHandler = EventHandler
+            return window
 
         else:
             return DATA.window
 
-    def __init__(self, size: list = [720, 420], title: str = "", icon: str = "", fps: int = 60,
+    def __init__(self, size: Size | Iterable[Measure] = Size(720, 420), title: str = "", icon: str = "", fps: int = 60,
                  show_fps: bool = False, vsync: bool = False, depth: int = 32, color="black", fullscreen: bool = False,
                  resizable: bool = False):
 
-        self.size = Size(*size)
+        self.size = size if isinstance(size, Size) else Size(*size)
         self.pos = Pos(0, 0)
         self.title = title
         self.icon = icon
@@ -42,7 +53,8 @@ class Window:
         self.fps = fps
         self.depth = depth
         self.show_fps = show_fps
-        self.delta_time = 0
+        
+        self.delta_time = lambda: self.clock.tick(self.fps) / 1000
         
         self.load_icon(icon)
 
@@ -114,50 +126,15 @@ class Window:
         '''
         pg.time.wait(time)
 
-    def __resolve_size(self, size: list):
-        if self.fullscreen:
-            self.__size = Size(size)
-            self.size = pg.display.list_modes()[0]
-            return
-
-        else:
-            # returns to size before fullscreen
-            try:
-                self.size = self.__size
-                return
-            except:
-                pass
-
-        if size == []:
-            raise Exception("You must specify a size for the Window")
-
-        elif len(size) == 1:
-            
-            if size[0] in ("max", "full", "100%"):
-                self.size = pg.display.list_modes()[0]
-            else:
-                raise Exception(
-                    "window size should \"max\" || \"full\" or list [width, height] ")
-
-        elif len(size) == 2:
-            if size[0] in ("max", "full", "100%"):
-                self.size[0] = pg.display.list_modes()[0][0]
-            elif size[1] in ("max", "full", "100%"):
-                self.size[1] = pg.display.list_modes()[0][1]
-            else:
-                self.size = Size(size[0], size[1])
-
     def __init(self):
         r'''
         #### Initializes the window, is called automatically
         '''
 
         pg.init()
-        self.__resolve_size(self.size)
 
         if self.resizable and self.fullscreen:
-            raise ValueError(
-                "You can't resize and fullscreen at the same time")
+            raise ValueError("You can't have resize and fullscreen at the same time")
 
         display_type = 0
         if self.fullscreen:
@@ -166,22 +143,14 @@ class Window:
         elif self.resizable:
             display_type = pg.RESIZABLE
 
-        self.surface = pg.display.set_mode(
-            self.size, display_type, self.depth, 0, self.vsync)
+        self.surface = pg.display.set_mode(self.size, display_type, self.depth, 0, self.vsync)
 
         pg.display.set_caption(self.title)
         if self.icon != "":
             pg.display.set_icon(pg.image.load(self.icon))
+            
         self.clock = pg.time.Clock()
-
-        self.size = Size(self.size)
-        
-        # globalize time and event handlers
-        DATA.TimeHandler = TimeHandler
-        DATA.EventHandler = EventHandler
-        
-        # set Window globaly
-        DATA.window = self
+    
         
     def update(self):
         r'''
@@ -193,11 +162,13 @@ class Window:
                 f"{self.title}  FPS : " + f"{int(self.clock.get_fps())}")
 
         pg.display.update()
-        self.delta_time = self.clock.tick(self.fps) / 1000
+        
+        self.clock.tick(self.fps)
 
         # call on update events
         for func in on_update():
             func()
+            
 
     def quit(self):
         r'''

@@ -1,11 +1,14 @@
-from typing import List
-from colour import Color
-from .funcs import center_of
+from typing import Iterable, List
+from ..funcs import center_of
 import re
-from .types import Size, Pos
+
+from ..types import Size, Pos
+from .units import Measure
+
+from .colors import resolve_color, Color
 
 
-def resolve_measure(measure:str, parent_size:float) -> float:
+def resolve_measure(measure: Measure, parent_length: float) -> float:
     if isinstance(measure, (int, float)):
         return measure
     
@@ -14,20 +17,20 @@ def resolve_measure(measure:str, parent_size:float) -> float:
     
     # if measure is a percentage    
     elif measure.endswith("%"):
-            return float(measure[:-1]) * parent_size / 100
+            return float(measure[:-1]) * parent_length / 100
     
     # if measure is aspect ratio of parent
     elif re.match("[0-9]+/[0-9]+", measure):
             ratio = measure.split("/")
             try:
-                measure = parent_size * int(ratio[0]) / int(ratio[1])
+                measure = parent_length * int(ratio[0]) / int(ratio[1])
                 
             except ZeroDivisionError as e:
                 raise ValueError("Invalid aspect ratio: ", measure + " (divided by zero)")
         
     return measure
 
-def resolve_position(child, parent, absolute: bool) -> Pos:
+def resolve_position(child, parent, absolute: bool) -> 'Pos':
     """
     #### Resolves child position
     
@@ -117,7 +120,7 @@ def resolve_position(child, parent, absolute: bool) -> Pos:
     
     return Pos(pos[0], pos[1])
 
-def resolve_size(child, parent) -> Size:
+def resolve_size(child, parent_size: Size) -> Size:
     """
     #### Resolves child size
     
@@ -130,7 +133,6 @@ def resolve_size(child, parent) -> Size:
     """
     
     size = child.size
-    parent_size = parent.size
     
     margin_x = child.margins[3] + child.margins[1]
     margin_y = child.margins[0] + child.margins[2]
@@ -154,7 +156,7 @@ def resolve_size(child, parent) -> Size:
        
     return Size(size[0], size[1])
        
-def resolve_margins(margins, parent_size:Size) -> List[float]:
+def resolve_margins(margins: Iterable[Measure], parent_size:Size) -> List[float]:
     if len(margins) == 1:
         margins = [margins[0], margins[0], margins[0], margins[0]]
         
@@ -167,17 +169,3 @@ def resolve_margins(margins, parent_size:Size) -> List[float]:
 
     return margins
 
-
-# COLOR --------------------------------------------------------------------------------------------------------------
-
-adapt_rgb = lambda rgb: tuple(map(lambda i: i*255, rgb))
-pure_rgb = lambda color: tuple(map(lambda i: i/255, color))
-
-def resolve_color(color) -> Color:  
-    if isinstance(color, str):
-        if color.startswith("#"):
-            return adapt_rgb(Color(color).rgb)
-        
-        return adapt_rgb(Color(color).get_rgb())
-    
-    return color
