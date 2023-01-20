@@ -9,7 +9,7 @@ from .styles.style import Styles
 from .futures.components import ComponentGroup, Component
 from .global_data import get_id, get_window
 from .styles.styles_resolver import resolve_measure, resolve_color, Color
-from .funcs import center
+from .funcs import center_at
 from .fonts import Fonts, FontFamily
 
 from .types import Pos, Size
@@ -32,13 +32,16 @@ class Object:
         pos: Pos | Iterable[Measure],
         size: Size | Iterable[Measure],
         styles: Styles = Styles(),
-        parent: "Object" = get_window(),
+        parent: "Object" = None,
         components: Iterable[Component] = [],
         **_styles: Dict[str, Any]
     ):
         """
         Base class for most object, handlers object default and required behavior
         """
+        if not parent:
+            parent = get_window()
+            
         self.id = get_id()
         self.parent = parent
 
@@ -171,12 +174,15 @@ class Text(Object):
         font_size: int, 
         styles: Styles = Styles(),
         font: FontFamily | str = Fonts.OpenSans,
-        parent: Object = get_window(),
+        parent: Object = None,
         components: Iterable[Component] = [],
         italic: bool = False,
         bold: bool = False,
         **_styles: Dict[str, Any]
     ):
+        
+        if not parent:
+            parent = get_window()
         
         self.font = font
         self.font_size = font_size
@@ -262,10 +268,13 @@ class Image(Object):
         size: Size | Iterable[Measure],
         scale: bool = True,
         styles: Styles = Styles(),
-        parent: "Object" = get_window(),
+        parent: "Object" = None,
         components: Iterable[Component] = [],
         **_styles: Dict[str, Any]
     ):
+        if not parent:
+            parent = get_window()
+        
         self.image = image
         self.scale = scale
         
@@ -313,11 +322,14 @@ class Circle(Object):
         pos: Pos | Iterable[Measure],
         radius: Measure,
         styles: Styles = Styles(),
-        parent: "Object" = get_window(),
+        parent: "Object" = None,
         components: Iterable[Component] = [],
         **_styles: Dict[str, Any]
         
     ):
+        if not parent:
+            parent = get_window()
+        
         self.radius = resolve_measure(radius)
 
         super().__init__(pos=pos, size=Size(radius*2), styles=styles, parent=parent, components=components, **_styles)
@@ -419,7 +431,7 @@ class Group:
             for obj in self.__objects.values():
                 if obj != self.__parent:
                 
-                    center(obj, self.__parent)
+                    center_at(obj, self.__parent)
                     obj.pos[1] = current_y
                 
                     current_y += obj.size[1] + margin
@@ -430,7 +442,7 @@ class Group:
                         # x axis
                         if obj.pos[0] + obj.size[0] > self.__parent.pos[0] + self.__parent.size[0]:
                             self.__parent.size[0] = obj.pos[0] + obj.size[0] + margin * 1.5
-                            center(obj, self.__parent)
+                            center_at(obj, self.__parent)
                             
                         # y axis
                         if obj.pos[1] + obj.size[1] > self.__parent.pos[1] + self.__parent.size[1]:

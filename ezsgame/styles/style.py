@@ -34,5 +34,5 @@ class Styles:
         self.margins = resolve_margins(self.margins, parent_size)
         
         # border radiues
-        self.border_radius = resolve_margins(self.border_radius)
+        self.border_radius = resolve_margins(self.border_radius, parent_size)
         

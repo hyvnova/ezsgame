@@ -1,3 +1,6 @@
+/deprecated
+/lib_tests
+
 /__pycache__
 /ezsgame/__pycache__
 /ezsgame/extra/__pycache__

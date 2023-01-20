@@ -1,6 +1,6 @@
 from typing import List
-from .global_data import get_id, get_window
-import pygame as pg, os, subprocess
+from .global_data import get_window
+import pygame as pg
 
 def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [0,0,0,0]):
     r'''
@@ -16,16 +16,10 @@ def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [
     obj_size = obj.get_size()
     obj_pos = obj.get_pos()
 
-    size = [obj_size[0] * size, obj_size[1] * size]
-    pos = [obj_pos[0] - (size[0] - obj_size[0]) / 2, obj_pos[1] - (size[1] - obj_size[1]) / 2]
+    size = (obj_size[0] * size, obj_size[1] * size)
+    pos = (obj_pos[0] - (size[0] - obj_size[0]) / 2, obj_pos[1] - (size[1] - obj_size[1]) / 2)
 
     pg.draw.rect(get_window().surface, color, [*pos, *size], stroke, *border_radius)
-
-def copy(obj, different=False):
-    new_obj = copy.copy(obj)
-    if different:
-        new_obj.id = get_id()
-    return obj
     
 def is_out(obj):
     r'''
@@ -40,24 +34,7 @@ def is_out(obj):
         return True, "top" if obj.pos[1] + obj.size[1] <= 0 else "bottom"     
     else:
         return False, None
-    
-def move(obj, x=0, y=0):
-    r'''
-    #### Adds x,y to the current object position. (Also inverts y )
-    - x : int, float or list -> value to add to x-axis
-    - y : int, float -> value to add to y-axis
-    '''     
-    if obj.behavior.get("pos", "dynamic") == "static":
-        return
-
-    try:
-        x,y = x[0], x[1]
-    except:
-        pass
-
-    obj.pos[0] += x
-    obj.pos[1] += y * -1
-    
+        
 def is_colliding(obj1, obj2, draw_collision_box=False):
     r'''
     #### returns True if the object is colliding with another object, False if not
@@ -76,61 +53,6 @@ def is_colliding(obj1, obj2, draw_collision_box=False):
                 
         
     return False
-
-
-def build(
-    file,
-    oneFile: bool = True,
-    based: bool = True,
-    icon: str = None,
-    output: str = os.path.join(os.getcwd(), "build")
-    ) :
-
-    
-    if not os.path.exists(output):
-        os.mkdir(output)
-        
-    args = [
-        "pyinstaller",
-        "--clean",
-        "--noconfirm",
-        ("--onedir", "--onefile")[oneFile],
-        ("--console", "--windowed")[based],
-        (*(f"--icon", icon), None)[icon is None],
-        
-        "--add-data", 
-        f"{os.getcwd()}\\ezsgame;ezsgame", # Folder
-        
-        "--add-data",
-        f"{os.getcwd()}\\ezsgame\\assets;icon.jpg", # File
-    
-        "--add-data",
-        f"{os.getcwd()};audio.mp3",
-
-        "--add-data",
-        f"{os.getcwd()};wakeup.png",
-        
-        f"{os.getcwd()}\\{file}", # File
-        
-    ]
-    
-    # Clear a None value in args
-    args = [x for x in args if x is not None]
-    subprocess.run(args, cwd=output)
-    
-
-def center(parent, obj, x_axis=True, y_axis=True):
-    r'''
-    #### Centers an object in the parent object
-    - parent : object -> parent object
-    - obj : object -> object to center
-    - x_axis : bool -> if True, center x-axis
-    - y_axis : bool -> if True, center y-axis
-    '''
-    if x_axis:
-        obj.pos[0] = parent.pos[0] + (parent.size[0] - obj.size[0]) / 2
-    if y_axis:
-        obj.pos[1] = parent.pos[1] + (parent.size[1] - obj.size[1]) / 2
         
         
 def div(axis : str, q : int, size : float = None) -> List[List[float]]:
@@ -175,7 +97,7 @@ def center_of(obj) -> List[float]:
     return [obj.pos[0] + obj.size[0]/2, obj.pos[1] + obj.size[1]/2]
 
 
-def center(obj, parent = None, x: bool = True, y: bool = True):
+def center_at(obj, parent = None, x: bool = True, y: bool = True):
     r'''
     #### Centers an object in the parent object
     - obj : object -> object to center
@@ -190,7 +112,6 @@ def center(obj, parent = None, x: bool = True, y: bool = True):
         obj.pos[0] = parent.pos[0] + (parent.size[0] - obj.size[0]) / 2
     if y:
         obj.pos[1] = parent.pos[1] + (parent.size[1] - obj.size[1]) / 2
-
 
 
 def is_hovering(obj):

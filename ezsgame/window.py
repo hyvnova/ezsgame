@@ -14,7 +14,7 @@ from .event_handler import EventHandler
 from .time_handler import TimeHandler
 
 class Window:
-    __slots__ = "size", "pos", "title", "icon", "depth", "vsync", "fullscreen", "resizable", "color", "surface", "clock", "show_fps", "delta_time", "fps", "events", "time"
+    __slots__ = ("size", "pos", "title", "icon", "depth", "vsync", "fullscreen", "resizable", "color", "surface", "clock", "show_fps", "delta_time", "fps")
     
     # check if an istance of Window is created
     is_created: bool = False
@@ -24,9 +24,9 @@ class Window:
         #### Creates a new Window instance if it doesn't exist
         '''
         if not cls.is_created:
-            Window.is_created = True
+            cls.is_created = True
             
-            window = object.__new__(Window)
+            window = object.__new__(cls)
             
             DATA.window = window
             
@@ -112,13 +112,6 @@ class Window:
         TimeHandler.check()
         EventHandler.check()
 
-    @staticmethod
-    def mouse_pos():
-        r'''
-        #### Returns the mouse position
-        '''
-        return pg.mouse.get_pos()
-
     def wait(self, time: int):
         r'''
         #### Waits for a certain amount of time
@@ -203,5 +196,4 @@ class Window:
         '''
         self.fullscreen = not self.fullscreen
         self.__init()
-
-get_mouse_pos = Window.mouse_pos
+        

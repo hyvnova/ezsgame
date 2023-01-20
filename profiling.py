@@ -1,5 +1,5 @@
 import cProfile
-import demo
+import LibTests.demo as demo
 import pstats
 
 
