@@ -12,5 +12,7 @@ v3.0
 # Fixed
 - Audio Mixer init
 - `Vector2.__repr__` method now gives correct representation
+- other minor bugs
 
 # Notes
+This update was mainly focused in improving optimization even it some sacrifaces were needed. In this case all of hte interactive objects had to be deprecated by the moment. Later on i'll try to re-make them in a more efficent way.
