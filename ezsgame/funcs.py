@@ -1,4 +1,6 @@
 from typing import List
+
+from ezsgame.types import Pos
 from .global_data import get_window
 import pygame as pg
 
@@ -89,15 +91,15 @@ def div(axis : str, q : int, size : float = None) -> List[List[float]]:
 		return divs
 
 # Positioning functions
-def center_of(obj) -> List[float]:
+def center_of(obj) -> Pos:
     r'''
     #### Returns the center postion of the object
-    - obj : object -> object
+    - obj : object
     '''
-    return [obj.pos[0] + obj.size[0]/2, obj.pos[1] + obj.size[1]/2]
+    return Pos(obj.pos[0] + obj.size[0]/2, obj.pos[1] + obj.size[1]/2)
 
 
-def center_at(obj, parent = None, x: bool = True, y: bool = True):
+def center_at(obj, parent, x: bool = True, y: bool = True):
     r'''
     #### Centers an object in the parent object
     - obj : object -> object to center
@@ -105,8 +107,6 @@ def center_at(obj, parent = None, x: bool = True, y: bool = True):
     - x -> if True, center x-axis
     - y -> if True, center y-axis
     '''
-    if not parent:
-        parent = obj.parent
     
     if x:
         obj.pos[0] = parent.pos[0] + (parent.size[0] - obj.size[0]) / 2

@@ -1,7 +1,6 @@
 import cProfile
-import LibTests.demo as demo
 import pstats
-
+import demo
 
 cProfile.run('demo.main()', 'profile.prof')
 p = pstats.Stats('profile.prof')

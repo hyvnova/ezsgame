@@ -147,7 +147,7 @@ class EventHandler:
                 def callback():
                     if is_event_listener:
                         # events that require be hovering
-                        if is_hovering and event.object.visible:
+                        if is_hovering and event.object.styles.visible:
                             event.callback()
 
                     # if is not event listener is base event, just call callback
@@ -222,8 +222,8 @@ class EventHandler:
         event, event_type = EventHandler._convert_to_pgevent(event)
         
         if name == "Default":
-            name = f"{event}.{object.id}.{len(EventHandler.events)}"
-
+            name = f"{event}.{object.id}.{len(EventHandler.events)}.{len(EventHandler.to_add)}"
+            
         EventHandler.to_add.append(
             Event(event_type, event, callback, object, name))
 

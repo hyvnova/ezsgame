@@ -14,7 +14,7 @@ from .event_handler import EventHandler
 from .time_handler import TimeHandler
 
 class Window:
-    __slots__ = ("size", "pos", "title", "icon", "depth", "vsync", "fullscreen", "resizable", "color", "surface", "clock", "show_fps", "delta_time", "fps")
+    __slots__ = ("size", "pos", "title", "icon", "depth", "vsync", "fullscreen", "resizable", "color", "surface", "clock", "show_fps", "fps")
     
     # check if an istance of Window is created
     is_created: bool = False
@@ -53,9 +53,7 @@ class Window:
         self.fps = fps
         self.depth = depth
         self.show_fps = show_fps
-        
-        self.delta_time = lambda: self.clock.tick(self.fps) / 1000
-        
+
         self.load_icon(icon)
 
         # init window
@@ -112,12 +110,37 @@ class Window:
         TimeHandler.check()
         EventHandler.check()
 
-    def wait(self, time: int):
-        r'''
-        #### Waits for a certain amount of time
-        - `time` : time to wait for, in milliseconds
-        '''
-        pg.time.wait(time)
+    def __resolve_size(self, size: Size):
+        if self.fullscreen:
+            self.__size = Size(size)
+            self.size = pg.display.list_modes()[0]
+            return
+
+        else:
+            # returns to size before fullscreen
+            try:
+                self.size = self.__size
+                return
+            except:
+                pass
+
+        if size == []:
+            raise Exception("You must specify a size for the screen")
+
+        elif len(size) == 1:
+            if size[0] in ("max", "full", "100%"):
+                self.size = pg.display.list_modes()[0]
+            else:
+                raise Exception(
+                    "Screen size should \"max\" || \"full\" or list [width, height] ")
+
+        elif len(size) == 2:
+            if size[0] in ("max", "full", "100%"):
+                self.size[0] = pg.display.list_modes()[0][0]
+            elif size[1] in ("max", "full", "100%"):
+                self.size[1] = pg.display.list_modes()[0][1]
+            else:
+                self.size = Size(size[0], size[1])
 
     def __init(self):
         r'''
@@ -125,6 +148,7 @@ class Window:
         '''
 
         pg.init()
+        self.__resolve_size(self.size)
 
         if self.resizable and self.fullscreen:
             raise ValueError("You can't have resize and fullscreen at the same time")
@@ -144,7 +168,6 @@ class Window:
             
         self.clock = pg.time.Clock()
     
-        
     def update(self):
         r'''
         #### Updates the Window
@@ -162,10 +185,9 @@ class Window:
         for func in on_update():
             func()
             
-
     def quit(self):
         r'''
-        #### Quits the game/App  (Closes/Ends the window)
+        #### Quits the App  (Ends the window)
         '''
         pg.quit()
         quit()

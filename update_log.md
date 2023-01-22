@@ -7,7 +7,6 @@ v3.0
 
 # Changes
 - Removed `basics` and `extras` import files
-- `Window.delta_time` now will be a function to save resources
 - Temporality removed  `IObjects` 
 
 # Fixed

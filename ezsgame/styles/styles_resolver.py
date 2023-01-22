@@ -30,97 +30,89 @@ def resolve_measure(measure: Measure, parent_length: float) -> float:
         
     return measure
 
-def resolve_position(child, parent, absolute: bool) -> 'Pos':
+def resolve_position(child, pos: Pos | Iterable[Measure], parent) -> Pos:
     """
     #### Resolves child position
     
     #### Parameters
     - `child`: child object
-    - `parent`: parent object
-    - `absolute`: if True, child position is absolute, otherwise child position is relative to parent position
+    - `parent`: parent object, object will be
     
     #### Returns
     - `Pos`: child position
     """
     
-    pos = child.pos
+    pos = Pos(
+        resolve_measure(pos[0], parent.size[0]),
+        resolve_measure(pos[1], parent.size[1])
+    )
     size = child.size
     
     parent_size = parent.size
     parent_center = center_of(parent)
 
-    margin_x = child.margins[3] + child.margins[1]
-    margin_y = child.margins[0] + child.margins[2]
+    margins = child.styles.margins
+
+    margin_x = margins[3] + margins[1]
+    margin_y = margins[0] + margins[2]
     
-    
-    if len(pos) == 1:
-        pos = Pos(pos[0], pos[0])
         
     # align position x
     if isinstance(pos[0], int) or isinstance(pos[0], float):
         pos[0] += margin_x
 
     elif isinstance(pos[0], str):
-        if pos[0].endswith("%"):
-            pos[0] = float(pos[0][:-1]) * parent_size.width / 100
 
-        else:
-            pos[0] = pos[0].lower()
+        pos[0] = pos[0].lower()
+        
+        if pos[0] not in ["left", "center", "right", "left-center", "right-center"]:
+                raise ValueError("Invalid x-axis position value", pos[0])
             
-            if pos[0] not in ["left", "center", "right", "left-center", "right-center"]:
-                    raise ValueError("Invalid x-axis position value", pos[0])
-                
-            if pos[0] == "center":
-                pos[0] = parent_size[0]/2 - size[0]/2
-                
-            elif pos[0] == "right":
-                pos[0] = parent_size[0] - size[0] - margin_x
-                
-            elif pos[0] == "right-center":
-                pos[0] = parent_size[0] - size[0] / 2 - parent_center[0]/2 - margin_x
-                
-            elif pos[0] == "left":
-                pos[0] = margin_x
-                
-            elif pos[0] == "left-center":
-                pos[0] = parent_center[0]/2 - size[0] / 2 + margin_x
+        if pos[0] == "center":
+            pos[0] = parent_size[0]/2 - size[0]/2
+            
+        elif pos[0] == "right":
+            pos[0] = parent_size[0] - size[0] - margin_x
+            
+        elif pos[0] == "right-center":
+            pos[0] = parent_size[0] - size[0] / 2 - parent_center[0]/2 - margin_x
+            
+        elif pos[0] == "left":
+            pos[0] = margin_x
+            
+        elif pos[0] == "left-center":
+            pos[0] = parent_center[0]/2 - size[0] / 2 + margin_x
         
      # align position y
     if isinstance(pos[1], int) or isinstance(pos[1], float):
         pos[1] += margin_y
     
     elif isinstance(pos[1], str):
-        if pos[1].endswith("%"):
-            pos[1] = float(pos[1][:-1]) * parent_size.height / 100
+
+        pos[1] = pos[1].lower()        
         
-        else:
-            pos[1] = pos[1].lower()        
+        if pos[1] not in ["top", "center", "bottom", "top-center", "bottom-center"]:
+            raise ValueError("Invalid y-axis position value", pos[1])
+        
+        if pos[1] == "center":
+            pos[1] = parent_size[1]/2 - size[1]/2
             
-            if pos[1] not in ["top", "center", "bottom", "top-center", "bottom-center"]:
-                raise ValueError("Invalid y-axis position value", pos[1])
+        elif pos[1] == "top":
+            pos[1] = margin_y
             
-            if pos[1] == "center":
-                pos[1] = parent_size[1]/2 - size[1]/2
-                
-            elif pos[1] == "top":
-                pos[1] = margin_y
-                
-            elif pos[1] == "top-center":
-                pos[1] = parent_center[1]/ 2 - size[1]/2  + margin_y 
-                
-            elif pos[1] == "bottom":
-                pos[1] = parent_size[1] - size[1] - margin_y
-                
-            elif pos[1] == "bottom-center":
-                pos[1] = parent_size[1] - size[1]/2 - parent_center[1]/2 - margin_y
+        elif pos[1] == "top-center":
+            pos[1] = parent_center[1]/ 2 - size[1]/2  + margin_y 
+            
+        elif pos[1] == "bottom":
+            pos[1] = parent_size[1] - size[1] - margin_y
+            
+        elif pos[1] == "bottom-center":
+            pos[1] = parent_size[1] - size[1]/2 - parent_center[1]/2 - margin_y
 
 
-    if not absolute:
-        return Pos(pos[0] + parent.pos[0], pos[1] + parent.pos[1])
+    return Pos(pos[0] + parent.pos[0], pos[1] + parent.pos[1])
     
-    return Pos(pos[0], pos[1])
-
-def resolve_size(child, parent_size: Size) -> Size:
+def resolve_size(child, size: Size | Iterable[Measure], parent_size: Size) -> Size:
     """
     #### Resolves child size
     
@@ -132,10 +124,15 @@ def resolve_size(child, parent_size: Size) -> Size:
     - `Size`: child size
     """
     
-    size = child.size
+    size = Size(
+        resolve_measure(size[0], parent_size[0]),
+        resolve_measure(size[1], parent_size[1])
+    )
     
-    margin_x = child.margins[3] + child.margins[1]
-    margin_y = child.margins[0] + child.margins[2]
+    margins = child.styles.margins
+
+    margin_x = margins[3] + margins[1]
+    margin_y = margins[0] + margins[2]
     
     if len(size) == 1:
         size = Size(size[0], size[0])

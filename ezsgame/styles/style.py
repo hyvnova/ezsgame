@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import  Iterable
+from typing import  Iterable, Tuple
 
 from ..types import Size
 
@@ -12,7 +12,7 @@ class Styles:
     """
     Structure of objects styles
     """
-    color: Color = "white"
+    color: Color | str | Tuple[int, int, int] = "white"
     
     margins: Iterable[Measure] = field(default_factory=lambda: [0])
     border_radius: Iterable[Measure] = field(default_factory=lambda: [0])
@@ -20,10 +20,8 @@ class Styles:
     stroke: int = 0
     
     # bools
-    absolute: bool = False
     visible: bool = True
     
-        
     
     def resolve(self, parent_size: Size):
         

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, Optional, Self
 import pygame as pg
 
 from ezsgame.styles.units import Measure
@@ -8,7 +8,7 @@ from .styles.style import Styles
 
 from .futures.components import ComponentGroup, Component
 from .global_data import get_id, get_window
-from .styles.styles_resolver import resolve_measure, resolve_color, Color
+from .styles.styles_resolver import resolve_measure, resolve_color, Color, resolve_position, resolve_size
 from .funcs import center_at
 from .fonts import Fonts, FontFamily
 
@@ -31,29 +31,29 @@ class Object:
         self, 
         pos: Pos | Iterable[Measure],
         size: Size | Iterable[Measure],
-        styles: Styles = Styles(),
-        parent: "Object" = None,
+        styles: Optional[Styles] = None,
+        parent: Optional["Object"] = None,
         components: Iterable[Component] = [],
         **_styles: Dict[str, Any]
     ):
         """
         Base class for most object, handlers object default and required behavior
         """
-        if not parent:
-            parent = get_window()
-            
+        self.window = get_window()
         self.id = get_id()
-        self.parent = parent
-
-        self.pos = pos if isinstance(pos, Pos) else Pos(*pos)
-        self.size = size if isinstance(size, Size) else Size(*size)
+        
+        self.parent = parent or self.window
+        
+        self.styles = styles or Styles(**_styles)
+        
+        # resolve styles 
+        self.styles.resolve(self.parent.size)
+        
+        self.size = resolve_size(self, size, self.parent.size)
+        self.pos = resolve_position(self, pos, self.parent)
 
         # defualt behavior - needs it own type and rework
         self.behavior = {"pos": "dynamic"}
-
-        self.styles = styles or Styles(**_styles)
-        
-        styles.resolve(self.parent.size)
 
         self.__on_draw = {}
 
@@ -63,7 +63,7 @@ class Object:
         # Calls __after_draw() before draw() to call on draw methods
         def _draw_manager(draw_func):
             def wrapper():
-                if self.visible:
+                if self.styles.visible:
                     draw_func() 
                                        
                 self.__after_draw()
@@ -123,6 +123,26 @@ class Object:
         '''
         for func in self.__on_draw.values():
             func()
+            
+            
+    
+    def center_at(self, parent = None, x: bool = True, y: bool = True) -> Self:
+        r'''
+        #### Centers an object in the parent object
+        - parent : object -> parent object
+        - x -> if True, center x-axis
+        - y -> if True, center y-axis
+        '''
+        
+        if not parent:
+            parent = self.parent
+        
+        if x:
+            self.pos[0] = parent.pos[0] + (parent.size[0] - self.size[0]) / 2
+        if y:
+            self.pos[1] = parent.pos[1] + (parent.size[1] - self.size[1]) / 2
+            
+        return self
 
 class Rect(Object):
     r'''
