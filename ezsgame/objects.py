@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Self
+from typing import Any, Dict, Iterable, List, Optional, Self, Set, Type
 import pygame as pg
 
 from ezsgame.styles.units import Measure
@@ -11,6 +11,7 @@ from .global_data import get_id, get_window
 from .styles.styles_resolver import resolve_measure, resolve_color, Color, resolve_position, resolve_size
 from .funcs import center_at
 from .fonts import Fonts, FontFamily
+from .reactivity import Reactive
 
 from .types import Pos, Size
 
@@ -41,11 +42,17 @@ class Object:
         """
         self.window = get_window()
         self.id = get_id()
+        self.children: Set[Object] = set()
         
-        self.parent = parent or self.window
+        if parent:
+            self.parent = parent
+            self.parent.add_child(self)
+            
+        else:
+            self.parent = self.window
+        
         
         self.styles = styles or Styles(**_styles)
-        
         # resolve styles 
         self.styles.resolve(self.parent.size)
         
@@ -58,7 +65,6 @@ class Object:
         self.__on_draw = {}
 
         self.components = ComponentGroup(self, *components)
-
 
         # Calls __after_draw() before draw() to call on draw methods
         def _draw_manager(draw_func):
@@ -73,20 +79,27 @@ class Object:
             self.draw = _draw_manager(self.draw)
         except:
             pass
+        
+        
+    def add_child(self, child: Type[Self]) -> None:
+        self.children.add(child)
 
-    def extends(self, *classes):
-        r"""
-        #### Extends the properties and methods of the given classes to the current object.
-        Note : this can only be done with classes with `extend()` method.
-        #### Parameters
-        - `classes`: classes to extend (*args)
+    def _update(self, updated_property_name: str) -> None:
         """
-        for cls in classes:
-            if hasattr(cls, "extend"):
-                self = cls.extend(self)
-            else:
-                raise TypeError("Cannot extend class {}".format(cls))
-        return self
+        This method is called when a Reactive property (binded to this object) is updated.
+        """
+        value: Reactive = getattr(self, updated_property_name)
+        value = value.get()
+        
+        if self.parent != self.window:
+            self.parent._child_update(self) 
+            
+            
+    def _child_update(self, child: Self) -> None:
+        """
+        Called when a child is updated.
+        """
+        return        
 
     def on_draw(self, func, name: str = "Default", pass_object=False):
         r"""
@@ -123,27 +136,8 @@ class Object:
         '''
         for func in self.__on_draw.values():
             func()
+               
             
-            
-    
-    def center_at(self, parent = None, x: bool = True, y: bool = True) -> Self:
-        r'''
-        #### Centers an object in the parent object
-        - parent : object -> parent object
-        - x -> if True, center x-axis
-        - y -> if True, center y-axis
-        '''
-        
-        if not parent:
-            parent = self.parent
-        
-        if x:
-            self.pos[0] = parent.pos[0] + (parent.size[0] - self.size[0]) / 2
-        if y:
-            self.pos[1] = parent.pos[1] + (parent.size[1] - self.size[1]) / 2
-            
-        return self
-
 class Rect(Object):
     r'''
     #### Rect
@@ -185,7 +179,7 @@ class Text(Object):
     - `components` : components to add in the object `[Component, ..]`
     '''
 
-    __slots__ = "font", "font_size", "text", "bold", "italic", "text_obj", "styles"
+    __slots__ = "font", "font_size", "text", "bold", "italic", "text_obj", "styles", "children"
 
     def __init__(
         self, 
@@ -204,9 +198,12 @@ class Text(Object):
         if not parent:
             parent = get_window()
         
+        self.children: Set[Object] = set()
+        
         self.font = font
-        self.font_size = font_size
-        self.text = text
+        self.font_size = Reactive(font_size)._mount(self, "font_size")
+        self.text = Reactive(text)._mount(self, "text")
+        
         self.bold = bold
         self.italic = italic
         
@@ -228,19 +225,19 @@ class Text(Object):
     def load_font(self):
         # is font is a ezsgame font
         if isinstance(self.font, FontFamily):
-            font = self.font.get_font(self.font_size)
+            font = self.font.get_font(self.font_size.get())
         
         # if font is a path | str
         elif isinstance(self.font, str):
             
             # if font in system fonts
             if font in pg.font.get_fonts():
-                font = pg.font.SysFont(font, self.font_size, self.bold, self.italic)
+                font = pg.font.SysFont(font, self.font_size.get(), self.bold, self.italic)
 
             # if font is a path
             elif font.endswith(".ttf"):
                 try:
-                    font = pg.font.Font(font, self.font_size)
+                    font = pg.font.Font(font, self.font_size.get())
                 except Exception as e:
                     raise ValueError(f"Error loading font: {e}")
                 
@@ -250,18 +247,15 @@ class Text(Object):
         else:
             raise ValueError("Invalid font: " + self.font)
         
-        return font.render(self.text, True, self.styles.color)
+        return font.render(self.text.get(), True, self.styles.color)
 
-    def update(self, **atributes):
-        for k,v in atributes.items():
-            if k in self.__slots__:
-                setattr(self, k, v)
-            else:
-                raise ValueError(f"Invalid atribute: {k}")
-        
-        self.text_obj = self.load_font()
+    def _update(self, updated_property_name: str):      
+          
+        if updated_property_name == "text":
+            self.text_obj = self.load_font()
+            self.size = Size(self.text_obj.get_width(), self.text_obj.get_height())
             
-        self.size = Size(self.text_obj.get_width(), self.text_obj.get_height())
+        super()._update(updated_property_name)
 
 
     def draw(self):
