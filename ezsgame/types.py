@@ -8,6 +8,8 @@ class Vector2:
         self.__call__(a, b)
 
     def __add__(a, b):
+        T = type(a)
+        
         if isinstance(b, Vector2):
             return Vector2(a._a + b._a, a._b + b._b)    
 
@@ -15,21 +17,25 @@ class Vector2:
             return Vector2(a._a + b, a._b + b)
         
         x, y = b
-        return Vector2(a._a + x, a._b + y)
+        return T(a._a + x, a._b + y)
 
     def __sub__(a, b):
+        T = type(a)
+        
         if isinstance(b, Vector2):
-            return Vector2(a._a - b._a, a._b - b._b) 
+            return T(a._a - b._a, a._b - b._b) 
 
         elif isinstance(b, (int, float)):
-            return Vector2(a._a - b, a._b - b)
+            return T(a._a - b, a._b - b)
         
     def __mul__(a, b):
+        T = type(a)
+        
         if isinstance(b, Vector2):
-            return a._a * b._a + a._b * b._b    
+            return T(a._a * b._a, a._b * b._b)  
 
         elif isinstance(b, (int, float)):
-            return Vector2(a._a * b, a._b * b)
+            return T(a._a * b, a._b * b)
     
     def __call__(self, a, b):
         

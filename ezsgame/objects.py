@@ -46,7 +46,9 @@ class Object:
         
         if parent:
             self.parent = parent
-            self.parent.add_child(self)
+            
+            if parent != self.window:
+                self.parent.add_child(self)
             
         else:
             self.parent = self.window
@@ -329,12 +331,11 @@ class Circle(Object):
     - `margins`: margins of the circle `[top, right, bottom, left]`
     - `components` : components to add in the object `[Component, ..]`
     '''
-    __slots__ = ("radius", )
 
     def __init__(
         self, 
         pos: Pos | Iterable[Measure],
-        radius: Measure,
+        radius: int,
         styles: Styles = Styles(),
         parent: "Object" = None,
         components: Iterable[Component] = [],
@@ -344,9 +345,9 @@ class Circle(Object):
         if not parent:
             parent = get_window()
         
-        self.radius = resolve_measure(radius)
+        self.radius = radius
 
-        super().__init__(pos=pos, size=Size(radius*2), styles=styles, parent=parent, components=components, **_styles)
+        super().__init__(pos=pos, size=Size(radius*2, radius*2), styles=styles, parent=parent, components=components, **_styles)
 
     def draw(self):
         pg.draw.circle(
