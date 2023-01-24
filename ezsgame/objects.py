@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Self, Set, Type
+from typing import Any, Dict, Iterable, Optional, Self, Set, Type
 import pygame as pg
 
 from ezsgame.styles.units import Measure
@@ -8,7 +8,7 @@ from .styles.style import Styles
 
 from .futures.components import ComponentGroup, Component
 from .global_data import get_id, get_window
-from .styles.styles_resolver import resolve_measure, resolve_color, Color, resolve_position, resolve_size
+from .styles.styles_resolver import resolve_color, Color, resolve_position, resolve_size
 from .funcs import center_at
 from .fonts import Fonts, FontFamily
 from .reactivity import Reactive

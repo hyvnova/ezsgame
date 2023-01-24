@@ -1,4 +1,8 @@
-v3.1
+v3.2
 
 # New
-Implementation of Reactivty
+- utilities methods as `clamp`, `lerp` and others
+
+# Fixes
+Controller
+

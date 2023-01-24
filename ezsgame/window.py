@@ -1,10 +1,10 @@
 from typing import Iterable
 import pygame as pg, random, os
 
-from .styles.units import Measure
 from .objects import Image
-from .global_data import DATA, on_update
 
+from .styles.units import Measure
+from .global_data import DATA, on_update
 from .types import Size, Pos
 from .styles.colors import Gradient
 from .styles.styles_resolver import resolve_color
@@ -64,6 +64,8 @@ class Window:
         return "<Window>"
 
     # -----------------------------------------------------------------------------
+    def get_delta_time(self) -> int:
+        return self.clock.get_time() / 1000
 
     def load_icon(self, icon: str):
         r'''
@@ -180,7 +182,7 @@ class Window:
         pg.display.update()
         
         self.clock.tick(self.fps)
-
+        
         # call on update events
         for func in on_update():
             func()

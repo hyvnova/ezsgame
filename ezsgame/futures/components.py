@@ -1,4 +1,4 @@
-from ...global_data import DATA
+from ..global_data import DATA
 
 EventHandler = DATA.EventHandler
 

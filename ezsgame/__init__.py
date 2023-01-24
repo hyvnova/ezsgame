@@ -10,6 +10,7 @@ from .sounds import *
 from .funcs import *
 from .mouse import *
 from .types import *
+from .utils import *
 
 # Extras
 from .sprites import Sprite

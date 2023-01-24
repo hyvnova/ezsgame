@@ -1,4 +1,5 @@
-from ...global_data import get_id, get_window
+from ..event_handler import on_key, remove_event
+from ..global_data import get_id, get_window
 
 class Controller:
     r'''
@@ -20,7 +21,7 @@ class Controller:
     
         '''
     
-    def __init__(self, keys=["a","d","w","s"], speed=[-25,25,25,-25], use_delta_time=True, auto_complete_speed=True):
+    def __init__(self, keys=["a","d","w","s"], speed=[-25,25,-25,25], use_delta_time=True, auto_complete_speed=True):
         self.id = get_id()
         self._evnames = []
         
@@ -54,17 +55,17 @@ class Controller:
         evname = f"Contoller.keydown.{self.id}.{index}"
         self._evnames.append(evname)
         
-        @self.window.on_key(type="down", keys=[self.keys[index]], name=evname)
+        @on_key(type="down", keys=[self.keys[index]], name=evname)
         def keydown():
             if self.use_delta_time:
-                self.speed[index] = self._speeds[index] * self.window.delta_time
+                self.speed[index] = self._speeds[index] * self.window.get_delta_time()
             else:
                 self.speed[index] = self._speeds[index]
 
         evname = f"Contoller.keyup.{self.id}.{index}"
         self._evnames.append(evname)
         
-        @self.window.on_key(type="up", keys=[self.keys[index]], name=evname)
+        @on_key(type="up", keys=[self.keys[index]], name=evname)
         def keyup():
             self.speed[index] = 0
         
@@ -122,7 +123,7 @@ class Controller:
     def __del__(self):
         if self.__dict__.get("_evnames", None):
             for evname in self._evnames:
-                self.window.remove_event(evname)
+                remove_event(evname)
             
         del self
               
