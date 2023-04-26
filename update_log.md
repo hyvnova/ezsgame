@@ -1,8 +1,8 @@
-v3.2
-
+v0.5
 # New
-- utilities methods as `clamp`, `lerp` and others
+- World: A world object to controll a "view" of the world 
+- AnimetedSprite and AnimetedSpriteRef objects
 
 # Fixes
-Controller
-
+- Vector2: Floor division now works as expected
+- Sprites: Optimized for multiple sprites on the same image and Animated sprites are now supported
