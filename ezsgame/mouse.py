@@ -1,8 +1,11 @@
 from typing import Tuple
 import pygame as pg
 
-def get_mouse_pos() -> Tuple[int, int]:
+from ezsgame.types import Pos
+
+
+def get_mouse_pos() -> Pos:
     r'''
     #### Returns the mouse position
     '''
-    return pg.mouse.get_pos()
+    return Pos(pg.mouse.get_pos())

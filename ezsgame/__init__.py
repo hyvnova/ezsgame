@@ -12,8 +12,12 @@ from .mouse import *
 from .types import *
 from .utils import *
 
+from .styles.colors import *
+from .styles.style import *
+
 # Extras
-from .sprites import Sprite
+from .graphics.sprites import Sprite
 from . import camera
 
-
+# From pygame
+from pygame import draw

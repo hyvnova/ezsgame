@@ -63,7 +63,7 @@ class TimeHandler:
             
             if current_time - interval.last_call >= interval.time:
                 interval.callback()
-                interval.last_call = time.time()
+                interval.last_call = pg.time.get_ticks()
 
 # time decorators  ------------------------------------------------------------
 def add_interval(call_time: int, name: str = "Default") -> Callable:

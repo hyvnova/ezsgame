@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Self, Set, Type
+from typing import Any, Callable, Dict, Iterable, Optional, Self, Set, Tuple, Type, Union
 import pygame as pg
 
 from ezsgame.styles.units import Measure
@@ -13,7 +13,7 @@ from .funcs import center_at
 from .fonts import Fonts, FontFamily
 from .reactivity import Reactive
 
-from .types import Pos, Size
+from .types import Number, Pos, Size
 
 # Initialize vars ---------------------------------------------------------
 pg.font.init()
@@ -26,7 +26,7 @@ class Object:
     should not be instantiated.
     """
 
-    __slots__ = ("pos", "size", "window", "id", "components", "behavior", "__on_draw", "parent")
+    __slots__ = ("pos", "size", "window", "id", "components", "behavior", "__on_draw", "parent", "children", "styles")
 
     def __init__(
         self, 
@@ -61,14 +61,15 @@ class Object:
         self.size = resolve_size(self, size, self.parent.size)
         self.pos = resolve_position(self, pos, self.parent)
 
+
         # defualt behavior - needs it own type and rework
         self.behavior = {"pos": "dynamic"}
 
-        self.__on_draw = {}
+        self.__on_draw: Dict[str, Callable] = {}
 
         self.components = ComponentGroup(self, *components)
 
-        # Calls __after_draw() before draw() to call on draw methods
+        # Calls __after_draw() after  draw() to call after-draw methods
         def _draw_manager(draw_func):
             def wrapper():
                 if self.styles.visible:
@@ -81,8 +82,7 @@ class Object:
             self.draw = _draw_manager(self.draw)
         except:
             pass
-        
-        
+
     def add_child(self, child: Type[Self]) -> None:
         self.children.add(child)
 
@@ -139,7 +139,66 @@ class Object:
         for func in self.__on_draw.values():
             func()
                
+    def center_at(self, object: Type[Self] = None) -> Self:
+        r'''
+        #### Centers the object at another object
+        #### Parameters
+        - `object`: object to center at
+        '''
+        object = object or self.parent
+        center_at(self, object)
+        return self
             
+    
+    @property
+    def center(self) -> Pos:
+        r'''
+        #### Returns the center of the object
+        '''
+        return self.pos + self.size / 2
+    
+    @center.setter
+    def center(self, value: Pos) -> None:
+        r'''
+        #### Sets the center of the object
+        #### Parameters
+        - `value`: center position
+        '''
+        self.pos = value - self.size / 2
+
+    @property
+    def width(self) -> Number:
+        return self.x
+
+    @width.setter
+    def width(self, value):
+        self.x = value
+
+    @property
+    def height(self) -> Number:
+        return self.y
+
+    @height.setter
+    def height(self, value):
+        self.y = value
+
+    @property
+    def x(self) -> Number:
+        return self.pos[0]
+
+    @x.setter
+    def x(self, value):
+        self.pos[0] = value
+
+    @property
+    def y(self) -> Number:
+        return self.pos[1]
+
+    @y.setter
+    def y(self, value):
+        self.pos[1] = value    
+
+
 class Rect(Object):
     r'''
     #### Rect
@@ -181,7 +240,7 @@ class Text(Object):
     - `components` : components to add in the object `[Component, ..]`
     '''
 
-    __slots__ = "font", "font_size", "text", "bold", "italic", "text_obj", "styles", "children"
+    __slots__ = ("font", "font_size", "text", "bold", "italic", "text_obj", "styles", "children")
 
     def __init__(
         self, 
@@ -431,6 +490,19 @@ class Group:
             self.__objects[obj.id] = obj
         
         self.__objects.update(named_objects)
+
+    def add_as(self, key: Union[int, float, bool, str, Tuple], object: Object):
+        """
+        Adds a object to the group with a custom key.
+        Make sure the key is a valid dictionary key.        
+        """
+        self.__objects[key] = object
+
+    def get(self, name: Union[int, float, bool, str, Tuple], default: Any = None) -> Object | None:
+        """
+        Gets a object from the group by it's name if it exists, otherwise `default` will be returned.
+        """
+        return self.__objects.get(name, default)
     
     def remove(self, name: str):
         self.__objects.pop(name)
@@ -488,8 +560,11 @@ class Group:
         d = {k: v for k, v in self.items() if func(v)}
         return d
 
+
     # getters        
     def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.__objects[list(self.__objects.keys())[key]]
         return self.__objects[key]
 
     def __getattr__(self, name):
