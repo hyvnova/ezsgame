@@ -11,7 +11,11 @@ class DATA:
     TimeHandler = object
 
 #shortcuts to DATA
-get_window = lambda: DATA.window
+def get_window():
+    """
+    #### Returns the window object
+    """
+    return DATA.window
 
 def on_update(key=None,val=None):
     r"""

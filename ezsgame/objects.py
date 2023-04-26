@@ -15,6 +15,8 @@ from .reactivity import Reactive
 
 from .types import Number, Pos, Size
 
+from .world import World
+
 # Initialize vars ---------------------------------------------------------
 pg.font.init()
 
@@ -60,6 +62,9 @@ class Object:
         
         self.size = resolve_size(self, size, self.parent.size)
         self.pos = resolve_position(self, pos, self.parent)
+
+        # Adapt position to world
+        self.pos += World.pos
 
 
         # defualt behavior - needs it own type and rework

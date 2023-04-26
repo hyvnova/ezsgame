@@ -1,13 +1,12 @@
 from typing import Iterable
 import pygame as pg, random, os
-
 from .objects import Image
-
 from .styles.units import Measure
 from .global_data import DATA, on_update
 from .types import ProfilingOptions, Size, Pos
 from .styles.colors import Gradient
 from .styles.styles_resolver import resolve_color
+from .world import World
 
 # handlers
 from .event_handler import EventHandler
@@ -48,18 +47,22 @@ class Window:
         """
         if not cls.is_created:
             cls.is_created = True
-
-            window = object.__new__(cls)
-
-            DATA.window = window
-
-            # globalize time and event handlers
-            DATA.TimeHandler = TimeHandler
-            DATA.EventHandler = EventHandler
-            return window
-
+            return object.__new__(cls)
         else:
             return DATA.window
+
+    def _post_init(self):
+        """
+        #### Post init
+        Creates global objects that need the window instance to be created beforehand.
+        """
+        # globalize time and event handlers
+        DATA.TimeHandler = TimeHandler
+        DATA.EventHandler = EventHandler
+        DATA.window = self
+
+        # set world size
+        World.size = self.size
 
     def __init__(
         self,
@@ -94,8 +97,11 @@ class Window:
         if self.profiling:
             self.profiling.profile.enable()
 
-        # init window
-        self.__init()
+        # init window and surface
+        self._init() 
+
+        # Post init
+        self._post_init()
 
     def __str__(self):
         return "<Window>"
@@ -150,7 +156,7 @@ class Window:
         TimeHandler.check()
         EventHandler.check()
 
-    def __resolve_size(self, size: Size):
+    def _resolve_size(self, size: Size):
         if self.fullscreen:
             self.__size = Size(size)
             self.size = pg.display.list_modes()[0]
@@ -183,13 +189,13 @@ class Window:
             else:
                 self.size = Size(size[0], size[1])
 
-    def __init(self):
+    def _init(self):
         r"""
         #### Initializes the window, is called automatically
         """
 
         pg.init()
-        self.__resolve_size(self.size)
+        self._resolve_size(self.size)
 
         if self.resizable and self.fullscreen:
             raise ValueError("You can't have resize and fullscreen at the same time")
@@ -307,4 +313,4 @@ class Window:
         #### Toggles the fullscreen mode
         """
         self.fullscreen = not self.fullscreen
-        self.__init()
+        self._init()

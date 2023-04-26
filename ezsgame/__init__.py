@@ -1,4 +1,3 @@
-
 #  Main
 from .window import *
 from .objects import *

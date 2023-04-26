@@ -40,13 +40,13 @@ class Vector2:
         return math.sqrt(self.x**2 + self.y**2)
 
     def __add__(a, b):
-        T = type(a)
+        T = a.__class__
         
         if isinstance(b, Vector2):
-            return Vector2(a.x + b.x, a.y + b.y)    
+            return T(a.x + b.x, a.y + b.y)    
 
         elif isinstance(b, (int, float)):
-            return Vector2(a.x + b, a.y + b)
+            return T(a.x + b, a.y + b)
         
         x, y = b
         return T(a.x + x, a.y + y)
@@ -68,7 +68,7 @@ class Vector2:
         return self
         
     def __sub__(a, b):
-        T = type(a)
+        T = a.__class__
         
         if isinstance(b, Vector2):
             return T(a.x - b.x, a.y - b.y) 
@@ -97,7 +97,7 @@ class Vector2:
         return self
 
     def __mul__(a, b):
-        T = type(a)
+        T = a.__class__
         
         if isinstance(b, Vector2):
             return T(a.x * b.x, a.y * b.y)  
@@ -126,7 +126,7 @@ class Vector2:
 
     
     def __truediv__(a, b) -> "Vector2":
-        T = type(a)
+        T = a.__class__
         
         if isinstance(b, Vector2):
             return T(a.x / b.x, a.y / b.y)  
@@ -151,7 +151,7 @@ class Vector2:
         return self
     
     def __floordiv__(a, b):
-        T = type(a)
+        T = a.__class__
         
         if isinstance(b, Vector2):
             return T(a.x // b.x, a.y // b.y)  
@@ -176,7 +176,7 @@ class Vector2:
         return self
     
     def __mod__(a, b):
-        T = type(a)
+        T = a.__class__
         
         if isinstance(b, Vector2):
             return T(a.x % b.x, a.y % b.y)  
@@ -202,7 +202,7 @@ class Vector2:
     
 
     def __pow__(a, b):
-        T = type(a)
+        T = a.__class__
         
         if isinstance(b, Vector2):
             return T(a.x ** b.x, a.y ** b.y)  
@@ -227,21 +227,20 @@ class Vector2:
         return self
 
     def __neg__(self):
-        return Vector2(-self.x, -self.y)
+        return self.__class__(-self.x, -self.y)
     
     def __pos__(self):
-        return Vector2(+self.x, +self.y)
+        return self.__class__(+self.x, +self.y)
     
     def __abs__(self):
-        return Vector2(abs(self.x), abs(self.y))
+        return self.__class__(abs(self.x), abs(self.y))
     
     def __call__(self, a, b):
-            
-        if isinstance(a, list) or isinstance(a, tuple) or isinstance(a, Vector2):
-            self.x = a[0]
-            self.y = a[1]
+        # if a is iterable 
+        if hasattr(a, "__iter__"):
+            a, b = a
 
-        elif a and (not b):
+        if a and (b == None):
             self.x = a
             self.y = a
 
@@ -277,8 +276,8 @@ class Vector2:
     def __len__(self):
         return 2
 
-    def copy(self) -> 'Vector2':
-        return Vector2(self.x, self.y)
+    def copy(self) -> Type[Self]:
+        return self.__class__(self.x, self.y)
 
     def ref(self):
         return self
