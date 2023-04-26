@@ -415,3 +415,4 @@ def remove_event(name: str):
     - `name` : name of the event
     '''
     EventHandler.remove_event(name)
+

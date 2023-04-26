@@ -13,7 +13,6 @@ from .styles.styles_resolver import resolve_color
 from .event_handler import EventHandler
 from .time_handler import TimeHandler
 
-import cProfile
 from pstats import SortKey, Stats
 
 class Window:

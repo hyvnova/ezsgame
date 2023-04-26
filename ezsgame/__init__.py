@@ -21,3 +21,9 @@ from . import camera
 
 # From pygame
 from pygame import draw
+
+
+# Furures
+from .futures.components import *
+from .futures.controller import Controller
+from .futures.hot_reload import *
