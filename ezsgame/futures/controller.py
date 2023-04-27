@@ -1,5 +1,5 @@
 from ..event_handler import on_key, remove_event
-from ..global_data import get_id, get_window
+from ..global_data import get_window
 
 class Controller:
     r'''
@@ -22,7 +22,6 @@ class Controller:
         '''
     
     def __init__(self, keys=["a","d","w","s"], speed=[-25,25,-25,25], use_delta_time=True, auto_complete_speed=True):
-        self.id = get_id()
         self._evnames = []
         
         self.window = get_window()
@@ -52,7 +51,7 @@ class Controller:
             self._add_events(i)
         
     def _add_events(self, index):
-        evname = f"Contoller.keydown.{self.id}.{index}"
+        evname = f"Contoller.keydown.{id(self)}.{index}"
         self._evnames.append(evname)
         
         @on_key(type="down", keys=[self.keys[index]], name=evname)
@@ -62,7 +61,7 @@ class Controller:
             else:
                 self.speed[index] = self._speeds[index]
 
-        evname = f"Contoller.keyup.{self.id}.{index}"
+        evname = f"Contoller.keyup.{id(self)}.{index}"
         self._evnames.append(evname)
         
         @on_key(type="up", keys=[self.keys[index]], name=evname)

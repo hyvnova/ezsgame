@@ -1,7 +1,21 @@
-from typing import List, Callable
+from typing import Dict, Iterable, List, Callable
 import pygame as pg
 from .global_data import DATA, on_update
 from .objects import Object
+
+
+def to_pgkey(key: str) -> int:
+    '''
+    #### Converts a key to a pygame key 
+    Example : `a` -> `pg.K_a`
+    '''
+    if key.lower() == "enter":
+        key = "RETURN"
+
+    elif len(key) > 1:
+        key = key.upper()
+
+    return eval("pg.K_" + key)
 
 class Event:
     __slot__ = "event_type", "event_name", "callback", "object", "name"
@@ -58,19 +72,23 @@ class EventList(list):
 
 
 class EventHandler:
-    r'''
+    '''
     - Manages events on the program 
     '''
     
     events = EventList()
     to_remove: List[str] = []
     to_add: List[Event] = []
+    pressed_keys: pg.key.ScancodeWrapper = None
 
     __ezsgame_events = ("update",)
 
     def check():
         # gets widnow events
         events = pg.event.get()
+
+        # log pressed keys
+        EventHandler.pressed_keys = pg.key.get_pressed()
 
         # removes events
         for name in EventHandler.to_remove:
@@ -210,7 +228,7 @@ class EventHandler:
                     callback()
 
     def add_event(event: str, object: Object, callback, name: str = "Default"):
-        r'''
+        '''
         #### Adds a event listener to a object
         - `event` : event to be added 
                 - Events : `click`, `hover`, `unhover`, `unclick`.
@@ -222,7 +240,7 @@ class EventHandler:
         event, event_type = EventHandler._convert_to_pgevent(event)
         
         if name == "Default":
-            name = f"{event}.{object.id}.{len(EventHandler.events)}.{len(EventHandler.to_add)}"
+            name = f"{event}.{id(object)}.{len(EventHandler.events)}.{len(EventHandler.to_add)}"
             
         EventHandler.to_add.append(
             Event(event_type, event, callback, object, name))
@@ -235,7 +253,7 @@ class EventHandler:
         EventHandler.to_remove.append(name)
 
     def is_hovering(object: Object) -> bool:
-        r'''
+        '''
         #### Checks if the mouse is hovering over the object
         - `object` : object to check if the mouse is hovering over it
         '''
@@ -249,7 +267,7 @@ class EventHandler:
         return False
 
     def on_event(event: str, callback, name: str = "Default"):
-        r'''
+        '''
         #### Adds a `Base Event` to the event list, Calls function when event is triggered. 
         - `event`: event to be added 
                 - Events : `quit`, `mousemotion`, `mousedown`, `mouseup`, `keydown`, `keyup`, `mousewheel`, `update`
@@ -271,7 +289,7 @@ class EventHandler:
             Event(event_type, event, callback, None, name))
 
     def on_key(type: str, keys: list, callback, name: str = "Default"):
-        r'''
+        '''
         #### Calls function when key event is triggered.
         -  `type`: type of `Event` to be added
                         - Events : `down` (when key is down), `up` (when key released)
@@ -290,13 +308,7 @@ class EventHandler:
             raise ValueError("Invalid type: ", type)
 
         for key in keys:
-            if key.lower() == "enter":
-                key = "RETURN"
-
-            elif len(key) > 1:
-                key = key.upper()
-
-            k = eval("pg.K_" + key)
+            k = to_pgkey(key)
 
             name = f"{key}_{type}_{len(EventHandler.events)}" if name == "Default" else name
 
@@ -304,7 +316,7 @@ class EventHandler:
                 Event(event_type, k, callback, None, name, key=k))
 
     def custom_event(callback, object=None, name: str = "Default"):
-        r'''
+        '''
         #### Creates a custom event. *[Decorator]*
         - `callback` : function to be called with event parameters
         - `object` : object to check if is hovering, if you need `is_hovering` (Optional)
@@ -349,15 +361,16 @@ class EventHandler:
 
 
 # event decorators ------------------------------------------------------------
-def on_key(type: str, keys: list, name: str = "Default") -> Callable:
-    r'''
+
+def on_key(type: str, keys: Iterable | str, name: str = "Default") -> Callable:
+    '''
     #### Calls the function when the key event is triggered
     - `type` : type of the event. `up` or `down`
             - Event types : `up` (when the key is released), `down` (when the key is pressed)
     - `keys` : key/keys to listen to
     - `name` : name of the event (Optional) 
     '''
-    if not isinstance(keys, list):
+    if not hasattr(keys, "__iter__") or isinstance(keys, str):
         keys = [keys]
 
     def wrapper(func):
@@ -367,7 +380,7 @@ def on_key(type: str, keys: list, name: str = "Default") -> Callable:
     return wrapper
 
 def add_event(event: str, object: Object, name: str = "Default") -> Callable:
-    r'''
+    '''
     #### Adds an event listener to an object
     - `event` : event to listen to
     - `object` : object that will be "listening"
@@ -381,7 +394,7 @@ def add_event(event: str, object: Object, name: str = "Default") -> Callable:
     return wrapper
 
 def on_event(event: str, name: str = "Default") -> Callable:
-    r'''
+    '''
     #### Calls funcion when the event is triggered, (Base Event)
     - `event` : event to listen to
             - Events : `quit`, `mousemotion`, `mousedown`, `mouseup`, `keydown`, `keyup`, `mousewheel`
@@ -398,7 +411,7 @@ def on_event(event: str, name: str = "Default") -> Callable:
     return wrapper
 
 def custom_event(object=None, name: str = "Default") -> Callable:
-    r'''
+    '''
     #### Adds a function as custom event
     - `object` : object to check if is hovering, if you need `is_hovering` (Optional)
     - `name` : name of the event (Optional)
@@ -410,9 +423,22 @@ def custom_event(object=None, name: str = "Default") -> Callable:
     return wrapper
 
 def remove_event(name: str):
-    r'''
+    '''
     #### Removes an event from the event handler
     - `name` : name of the event
     '''
     EventHandler.remove_event(name)
 
+
+def is_down(key: str) -> bool:
+    '''
+    #### Returns if the key being is pressed
+    - `key` : key to check
+    '''
+    return pg.key.get_pressed()[to_pgkey(key)]
+
+def went_down(key: str) -> bool:
+    '''
+    #### Returns `True` if the key was pressed during this frame
+    '''
+    return EventHandler.pressed_keys[to_pgkey(key)]

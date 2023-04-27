@@ -14,15 +14,12 @@ from .types import *
 from .utils import *
 from .graphics import *
 
-
 from .styles.colors import *
 from .styles.style import *
 
 # Extras
 from . import camera
-
-# From pygame
-from pygame import draw
+from .scenes import *
 
 
 # Furures

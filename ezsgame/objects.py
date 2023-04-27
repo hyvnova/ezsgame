@@ -7,7 +7,7 @@ from ezsgame.styles.units import Measure
 from .styles.style import Styles
 
 from .futures.components import ComponentGroup, Component
-from .global_data import get_id, get_window
+from .global_data import get_window
 from .styles.styles_resolver import resolve_color, Color, resolve_position, resolve_size
 from .funcs import center_at
 from .fonts import Fonts, FontFamily
@@ -28,7 +28,7 @@ class Object:
     should not be instantiated.
     """
 
-    __slots__ = ("pos", "size", "window", "id", "components", "behavior", "__on_draw", "parent", "children", "styles")
+    __slots__ = ("pos", "size", "window", "components", "behavior", "__on_draw", "parent", "children", "styles")
 
     def __init__(
         self, 
@@ -43,7 +43,6 @@ class Object:
         Base class for most object, handlers object default and required behavior
         """
         self.window = get_window()
-        self.id = get_id()
         self.children: Set[Object] = set()
         
         if parent:
@@ -135,7 +134,7 @@ class Object:
         return [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
 
     def __str__(self):
-        return f"<Object: {self.__class__.__name__}, ID: {self.id}>"
+        return f"<Object: {self.__class__.__name__}, ID: {id(self)}>"
 
     def __after_draw(self):
         r'''
@@ -467,7 +466,7 @@ class Group:
 
     #### Notes
     - named objects can be accessed by: `group["name"]`
-    - no named objects can be accessed by: `group[object.id]`
+    - no named objects can be accessed by: `group[id(object)]`
 
     """
     
@@ -492,7 +491,7 @@ class Group:
         
     def add(self, *objects, **named_objects):
         for obj in objects:
-            self.__objects[obj.id] = obj
+            self.__objects[id(obj)] = obj
         
         self.__objects.update(named_objects)
 
@@ -573,7 +572,7 @@ class Group:
         return self.__objects[key]
 
     def __getattr__(self, name):
-        return self.__objects[name]
+        return self.__objects.get(name, None) or self.__dict__[name]
     
     def values(self, no_parent=False):
         if no_parent and self.__parent:
@@ -593,6 +592,12 @@ class Group:
     
         return self.__objects.keys()
     
+
+    def __del__(self):
+        for obj in self.__objects.values():
+            del obj
+        
+
     # delete item
     def __delitem__(self, key):
         self.__objects.pop(key)

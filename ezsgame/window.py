@@ -16,6 +16,9 @@ from .time_handler import TimeHandler
 
 from pstats import SortKey, Stats
 
+
+pg.init()
+
 class Window:
     """
     #### Window
@@ -109,6 +112,16 @@ class Window:
         return "<Window>"
 
     # -----------------------------------------------------------------------------
+    def resize(self, size: Size):
+        r"""
+        #### Resizes the window
+        - `size` : new size
+        """
+        self.size = size
+        self._resolve_size(size)
+        pg.display.set_mode(self.size, pg.RESIZABLE)
+        return self
+    
     def get_delta_time(self) -> int:
         return self.clock.get_time() / 1000
 
@@ -196,7 +209,6 @@ class Window:
         #### Initializes the window, is called automatically
         """
 
-        pg.init()
         self._resolve_size(self.size)
 
         if self.resizable and self.fullscreen:
@@ -319,13 +331,12 @@ class Window:
 
 
     # Scenes
-    def run_scenes(self, scenes: SceneManager):
+    def run_scenes(self, scene_manager: SceneManager):
         # Main loop
         while True:
             self.check_events()
-            self.fill()
 
-            scenes.update()
-            scenes.draw()
+            scene_manager.update()
+            scene_manager.draw()
     
             self.update()

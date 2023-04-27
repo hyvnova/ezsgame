@@ -1,12 +1,11 @@
-# Version dev-0.5.1
+# Version dev-0.5.2
 
 # New
-- `Window.run_scenes` method
+- `Scene`'s now have a `on_switch` and `on_switch_out` methods
+- `SceneManager` now has a `lazy_init` option
 
 # Fixes
-- `Vector2`: 1 paramter creation error
-- `AnimatedSprite` & `Sprite` -> `pos` and `size` resolve on init
+- `Group` > `__getitem__` method only searching for objects inside the group, now it searches for properties of the own group too 
 
 # Changes
-- `Sprite` now can't transpile into `AnimatedSprite` automatically (due to class instanciation errors)
-- `Module`'s can't be `Scene`'s anymore (due to declaration errors with `Window`)
+- `id`'s don't exist anymore, now `id(obj)` is used instead 

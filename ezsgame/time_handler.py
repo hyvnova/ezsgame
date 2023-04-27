@@ -1,5 +1,4 @@
 from typing import Callable, List
-import time
 import pygame as pg
 
 class Interval:

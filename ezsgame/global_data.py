@@ -1,9 +1,3 @@
-from uuid import uuid4
-
-def get_id() -> str:
-    id = int(uuid4())
-    return str(id)
-    
 class DATA:
     on_update = {}
     window = object

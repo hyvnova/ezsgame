@@ -154,8 +154,8 @@ class ComponentTemplate:
 
             # this funcions creates all needed vars for activation/desactivation at __init__
             def load_activation(self):
-                self.__activation_event_name = f"{self.__class__.__name__} on click activation {self.object.id}"
-                self.__desactivation_event_name = f"{self.__class__.__name__} on click desactivation {self.object.id}"
+                self.__activation_event_name = f"{self.__class__.__name__} on click activation {id(self.object)}"
+                self.__desactivation_event_name = f"{self.__class__.__name__} on click desactivation {id(self.object)}"
                 self.__activated = False
 
                 # adds activation event

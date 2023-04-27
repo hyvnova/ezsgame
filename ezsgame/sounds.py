@@ -1,13 +1,11 @@
 from typing import Optional
 import pygame as pg
-from .global_data import get_id
 
 class Mixer:
     def __init__(self):
         if pg.mixer.get_init() is None:
             pg.mixer.init()
     
-        self.id = get_id()
         self.sounds = []
         
     def __str__(self):
@@ -51,7 +49,6 @@ class Sound:
         
         self.sound.set_volume(0.5)
         self.volume = 0.5
-        self._id = get_id()
         
         self.mixer = mixer or Sound.defualt_mixer
         
@@ -82,10 +79,10 @@ class Sound:
         self.sound.fadein(time)
         
     def __str__(self):
-        return f"<Object: Sound, ID: {self._id}>"
+        return f"<Object: Sound>"
 
     def __repr__(self):
-        return f"<Object: Sound, ID: {self._id}>"
+        return f"<Object: Sound>"
     
     def __del__(self):
         if self in self.mixer.sounds:
