@@ -30,7 +30,7 @@ def resolve_measure(measure: Measure, parent_length: float) -> float:
         
     return measure
 
-def resolve_position(child, pos: Pos | Iterable[Measure], parent) -> Pos:
+def resolve_position(child, pos: Pos | Iterable[Measure], parent, partial: bool = False) -> Pos:
     """
     #### Resolves child position
     
@@ -51,7 +51,7 @@ def resolve_position(child, pos: Pos | Iterable[Measure], parent) -> Pos:
     parent_size = parent.size
     parent_center = center_of(parent)
 
-    margins = child.styles.margins
+    margins = child.styles.margins if not partial else [0, 0, 0, 0]
 
     margin_x = margins[3] + margins[1]
     margin_y = margins[0] + margins[2]
@@ -110,9 +110,9 @@ def resolve_position(child, pos: Pos | Iterable[Measure], parent) -> Pos:
             pos[1] = parent_size[1] - size[1]/2 - parent_center[1]/2 - margin_y
 
 
-    return Pos(pos[0] + parent.pos[0], pos[1] + parent.pos[1])
+    return pos + parent.pos
     
-def resolve_size(child, size: Size | Iterable[Measure], parent_size: Size) -> Size:
+def resolve_size(child, size: Size | Iterable[Measure], parent_size: Size, partial: bool = False) -> Size:
     """
     #### Resolves child size
     
@@ -128,7 +128,10 @@ def resolve_size(child, size: Size | Iterable[Measure], parent_size: Size) -> Si
         resolve_measure(size[0], parent_size[0]),
         resolve_measure(size[1], parent_size[1])
     )
-    
+
+    if partial:
+        return size
+
     margins = child.styles.margins
 
     margin_x = margins[3] + margins[1]
@@ -151,7 +154,7 @@ def resolve_size(child, size: Size | Iterable[Measure], parent_size: Size) -> Si
     elif isinstance(size[1], str):
         size[1] = resolve_measure(size[1], parent_size.height)
        
-    return Size(size[0], size[1])
+    return size
        
 def resolve_margins(margins: Iterable[Measure], parent_size:Size) -> List[float]:
     if len(margins) == 1:

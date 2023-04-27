@@ -1,5 +1,7 @@
 from typing import Iterable
 import pygame as pg, random, os
+
+from ezsgame.scenes import SceneManager
 from .objects import Image
 from .styles.units import Measure
 from .global_data import DATA, on_update
@@ -314,3 +316,16 @@ class Window:
         """
         self.fullscreen = not self.fullscreen
         self._init()
+
+
+    # Scenes
+    def run_scenes(self, scenes: SceneManager):
+        # Main loop
+        while True:
+            self.check_events()
+            self.fill()
+
+            scenes.update()
+            scenes.draw()
+    
+            self.update()

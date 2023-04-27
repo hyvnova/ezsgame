@@ -1,8 +1,12 @@
-v0.5
+# Version dev-0.5.1
+
 # New
-- World: A world object to controll a "view" of the world 
-- AnimetedSprite and AnimetedSpriteRef objects
+- `Window.run_scenes` method
 
 # Fixes
-- Vector2: Floor division now works as expected
-- Sprites: Optimized for multiple sprites on the same image and Animated sprites are now supported
+- `Vector2`: 1 paramter creation error
+- `AnimatedSprite` & `Sprite` -> `pos` and `size` resolve on init
+
+# Changes
+- `Sprite` now can't transpile into `AnimatedSprite` automatically (due to class instanciation errors)
+- `Module`'s can't be `Scene`'s anymore (due to declaration errors with `Window`)

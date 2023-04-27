@@ -2,15 +2,15 @@ from ast import Tuple
 from typing import Callable, Iterable, List, Dict
 from path import Path
 import pygame
-from ezsgame.styles.units import Measure
+from ..styles.styles_resolver import resolve_measure, resolve_position, resolve_size
+from ..styles.units import Measure
 from ezsgame.types import Pos, Size
-from ..objects import Object
 from ..global_data import get_window
 
 pgSpriteClass = pygame.sprite.Sprite
 
 
-class Sprite(pgSpriteClass, Object):
+class Sprite(pgSpriteClass):
     def __new__(
         cls,
         sprite: Path | str,
@@ -21,13 +21,7 @@ class Sprite(pgSpriteClass, Object):
     ):
         # if is animated
         if Path(sprite).ext == ".gif":
-            return AnimatedSprite.__new__(
-                AnimatedSprite,
-                sprite=sprite,
-                pos=pos,
-                size=size,
-                scale=scale,
-            )
+            raise TypeError("Use the AnimatedSprite class for animated sprites instead.")
 
         return object.__new__(Sprite)
 
@@ -40,7 +34,12 @@ class Sprite(pgSpriteClass, Object):
         static: bool = False,
     ):
         pgSpriteClass.__init__(self)
-        Object.__init__(self, pos=pos, size=size)
+
+        self.window = get_window()
+
+        # resolve pos and size
+        self.size = resolve_size(self, size, self.window.size, True)
+        self.pos = resolve_position(self, pos, self.window, True)
 
         self.sprite = sprite
         self.image = pygame.image.load(sprite)
@@ -71,7 +70,7 @@ class Sprite(pgSpriteClass, Object):
 from PIL import Image, ImageSequence
 
 
-class AnimatedSprite(Sprite):
+class AnimatedSprite(pgSpriteClass):
     _cached_frames: Dict[str, List[pygame.Surface]] = {} # {path: [frames]} used to cache frames/resources for animated sprites
     _cached_sprites: Dict[str, Tuple] = {} # {path: (size, frame_rate, scale, draw_method)} used to cache sprites that do the same but are in different locations
     
@@ -83,11 +82,11 @@ class AnimatedSprite(Sprite):
         frame_rate: int = 5,
         scale: bool = True,
     ):
-        if cls._cached_sprites.get(sprite, [None])[:-1] == (size, frame_rate, scale):
+        if AnimatedSprite._cached_sprites.get(sprite, [None])[:-1] == (size, frame_rate, scale):
             # Return a AnimatedSpriteRef object that references the cached sprite
-            return AnimatedSpriteRef.__new__(AnimatedSpriteRef, cls._cached_sprites[sprite][-1])
+            return AnimatedSpriteRef.__new__(AnimatedSpriteRef, AnimatedSprite._cached_sprites[sprite][-1])
             
-        return object.__new__(cls)
+        return object.__new__(AnimatedSprite)
 
     def __init__(
         self,
@@ -97,9 +96,13 @@ class AnimatedSprite(Sprite):
         frame_rate: int = -1, # -1 = auto
         scale: bool = True,
     ):
-        super().__init__(sprite, pos, size, scale)
+        pgSpriteClass.__init__(self)
 
         self.window = get_window()
+
+        # resolve pos and size
+        self.size = resolve_size(self, size, self.window.size, True)
+        self.pos = resolve_position(self, pos, self.window, True)
 
         self.current_frame = 0
         self.last_update_time = 0
@@ -124,12 +127,12 @@ class AnimatedSprite(Sprite):
         # set sprite image and rect
         self.image = self.frames[self.current_frame]
         self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = pos
+        self.rect.x, self.rect.y = self.pos
 
         # set scale
         if scale:
-            self.image = pygame.transform.scale(self.image, size)
-            self.rect.size = size
+            self.image = pygame.transform.scale(self.image, self.size)
+            self.rect.size = self.size
 
         # cache sprite
         self._cached_sprites[sprite] = (size, frame_rate, scale, self.draw)

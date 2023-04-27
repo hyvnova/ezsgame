@@ -9,9 +9,6 @@ from typing import FrozenSet
 class Scene(ABC):
     """
     Abstract class for scenes
-    - Note: A module can be a scene if it has the following method and properties:
-        - `name` (Property, str)
-        - `draw` (Method)
     """
 
     def __init__(
@@ -20,6 +17,8 @@ class Scene(ABC):
         self.name: str = name
         self.shadow_update: bool = shadow_update
         self.shadow_draw: bool = shadow_draw
+
+        self.init()
 
     @abstractmethod
     def init(self) -> None:
@@ -47,32 +46,34 @@ class Scene(ABC):
         Exit the scene
         (Happens after main loop)
         """
+        pass
 
     @abstractmethod
     def switch_to(self) -> None:
         """
         Switch to this scene
         """
-
+        pass
 
 class SceneManager:
     """
     Class for managing scenes
     """
 
-    def __init__(self, *scenes: Scene):
+    def __init__(self, *scenes: Scene, main_scene: str = "main"):
         self.scenes: dict = {scene.name: scene for scene in scenes}
-        self.current_scene: Scene = None
+        self.current_scene: Scene = self.scenes[main_scene]
 
         # Reference to scenes that have shadow_update
         self.has_shadow_update: FrozenSet[str] = frozenset(
-            [scene.name for scene in scenes if scene.shadow_update]
+            [scene.name for scene in scenes if getattr(scene, "shadow_update", False)]
         )
 
         # Reference to scenes that have shadow_draw
         self.has_shadow_draw: FrozenSet[str] = frozenset(
-            [scene.name for scene in scenes if scene.shadow_draw]
+            [scene.name for scene in scenes if getattr(scene, "shadow_draw", False)]
         )
+
 
     def switch_to(self, scene_name: str) -> None:
         """

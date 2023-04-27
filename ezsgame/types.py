@@ -39,6 +39,12 @@ class Vector2:
         """
         return math.sqrt(self.x**2 + self.y**2)
 
+    def to_tuple(self) -> tuple[Number, Number]:
+        """
+        #### Return the vector as a tuple
+        """
+        return (self.x, self.y)
+
     def __add__(a, b):
         T = a.__class__
         
@@ -237,10 +243,10 @@ class Vector2:
     
     def __call__(self, a, b):
         # if a is iterable 
-        if hasattr(a, "__iter__"):
+        if hasattr(a, "__iter__") and not isinstance(a, str):
             a, b = a
 
-        if a and (b == None):
+        if a != None and (b == None):
             self.x = a
             self.y = a
 
