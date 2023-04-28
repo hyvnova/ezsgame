@@ -23,6 +23,6 @@ from .scenes import *
 
 
 # Furures
-from .futures.components import *
+from .components import *
 from .futures.controller import Controller
 from .futures.hot_reload import *

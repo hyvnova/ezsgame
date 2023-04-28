@@ -1,7 +1,7 @@
 from typing import Iterable
 import pygame as pg, random, os
 
-from ezsgame.scenes import SceneManager
+from .scenes import SceneManager
 from .objects import Image
 from .styles.units import Measure
 from .global_data import DATA, on_update
@@ -168,6 +168,8 @@ class Window:
         r"""
         #### Checks and Manage the events, should be called in the main loop
         """
+        
+        # run the checks in different threads to improve performance
         TimeHandler.check()
         EventHandler.check()
 

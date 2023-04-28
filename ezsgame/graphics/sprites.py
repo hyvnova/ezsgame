@@ -2,10 +2,12 @@ from ast import Tuple
 from typing import Callable, Iterable, List, Dict
 from path import Path
 import pygame
-from ..styles.styles_resolver import resolve_measure, resolve_position, resolve_size
+from ..styles.styles_resolver import resolve_position, resolve_size
 from ..styles.units import Measure
 from ezsgame.types import Pos, Size
 from ..global_data import get_window
+from PIL import Image, ImageSequence
+
 
 pgSpriteClass = pygame.sprite.Sprite
 
@@ -65,9 +67,6 @@ class Sprite(pgSpriteClass):
     def draw(self):
         self._update()
         self.window.surface.blit(self.image, self.rect)
-
-
-from PIL import Image, ImageSequence
 
 
 class AnimatedSprite(pgSpriteClass):
