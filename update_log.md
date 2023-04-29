@@ -1,4 +1,4 @@
-# Version dev-0.6
+# Version 0.6
 
 ## New
 - Added `TimeUnit` and `Milisecond` classes for time management
