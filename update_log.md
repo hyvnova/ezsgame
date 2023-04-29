@@ -1,11 +1,13 @@
-# Version dev-0.5.2
+# Version dev-0.6
 
-# New
-- `Scene`'s now have a `on_switch` and `on_switch_out` methods
-- `SceneManager` now has a `lazy_init` option
+## New
+- Added `TimeUnit` and `Milisecond` classes for time management
 
-# Fixes
-- `Group` > `__getitem__` method only searching for objects inside the group, now it searches for properties of the own group too 
+## Fixes
 
-# Changes
-- `id`'s don't exist anymore, now `id(obj)` is used instead 
+## Changes
+- Refactored project structure
+- components { 
+    Removed `ComponentTemplate`
+    `Component` class is now abstract
+}

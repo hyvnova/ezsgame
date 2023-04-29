@@ -2,7 +2,7 @@ from typing import Iterable
 import pygame as pg, random, os
 
 from .scenes import SceneManager
-from .objects import Image
+from .graphics import Image
 from .styles.units import Measure
 from .global_data import DATA, on_update
 from .types import ProfilingOptions, Size, Pos
@@ -40,7 +40,6 @@ class Window:
         "show_fps",
         "fps",
         "profiling",
-        "pr"
     )
 
     # check if an istance of Window is created

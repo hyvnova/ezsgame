@@ -79,9 +79,6 @@ class Object:
         except:
             pass
 
-
-        # Draw wrapper; 
-
     def add_child(self, child: Type[Self]) -> None:
         self.children.add(child)
 

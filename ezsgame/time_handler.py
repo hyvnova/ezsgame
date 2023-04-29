@@ -1,5 +1,23 @@
 from typing import Callable, List
 import pygame as pg
+from enum import Enum
+    
+class TimeUnit(Enum):
+    milliseconds = 1
+    seconds = 1000
+    minutes = 60000
+    hours = 3600000
+    days = 86400000
+
+# Condence the time units into one class 
+class Milliseconds:
+    def __init__(self, time: float):
+        self.time = time
+
+    @classmethod
+    def from_unit(cls, unit: TimeUnit, time: float):
+        return cls(time * unit.value)
+
 
 class Interval:
     __slots__ = "time", "callback", "name", "last_call"
@@ -65,14 +83,18 @@ class TimeHandler:
                 interval.last_call = pg.time.get_ticks()
 
 # time decorators  ------------------------------------------------------------
-def add_interval(call_time: int, name: str = "Default") -> Callable:
+def add_interval(time: Milliseconds | int, name: str = "Default") -> Callable:
     r'''    
     - Adds an `interval` to the time handler, calls the function every `time` milliseconds
-    - `time` : time in milliseconds
+    - `time` : amount of time in milliseconds that the event will be called after
     - `name` : name of the interval (Optional)
     '''
+
+    if isinstance(time, Milliseconds):
+        time = time.time
+
     def wrapper(func):
-        TimeHandler.add(call_time, func, name)
+        TimeHandler.add(time, func, name)
         return func
 
     return wrapper

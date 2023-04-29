@@ -10,7 +10,6 @@ from ..styles.units import Measure
 
 from ..types import Pos, Size
 
-
 class Rect(Object):
     r"""
     #### Rect

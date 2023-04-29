@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from enum import Enum
 from .global_data import DATA
 
@@ -121,7 +122,7 @@ class ComponentGroup:
             self.__current_index += 1
             return self.components.values()[self.__current_index - 1]
 
-class Component:
+class Component(ABC):
     def __init__(self):
         self.name = self.__class__.__name__
 
@@ -134,115 +135,24 @@ class Component:
     def __remove(self):
         del self
 
-# custom components creation ---------------------------------------------------
-from enum import Enum
+    @abstractmethod
+    def init(self, obj):
+        pass
 
+    @abstractmethod
+    def call(self, obj):
+        pass
 
-class ActivationMethods(Enum):
-    ON_CLICK = "on_click"
-    ON_KEYDOWN = "on_keydown"
+    @abstractmethod
+    def activate(self, obj):
+        pass
 
+    @abstractmethod
+    def deactivate(self, obj):
+        pass
 
-from enum import Enum
+    @abstractmethod
+    def remove(self, obj):
+        pass
 
-class ActivationMethod(Enum):
-    ON_CLICK = "on_click"
-    ON_KEYDOWN = "on_keydown"
     
-    
-class ComponentTemplate:
-    def __init__(self, activation_method: ActivationMethod = None):
-        if not activation_method:
-            raise ValueError("An activation method must be specified")
-        if activation_method not in ActivationMethod:
-            raise ValueError("Invalid activation method specified")
-        
-        self.activation_method = activation_method
-        self.init_func = None
-        self.call_func = None
-        self.activate_func = None
-        self.deactivate_func = None
-        self.remove_func = None
-        
-    def init(self, func):
-        self.init_func = func
-        return func
-        
-    def call(self, func):
-        self.call_func = func
-        return func
-        
-    def activate(self, func):
-        self.activate_func = func
-        return func
-        
-    def deactivate(self, func):
-        self.deactivate_func = func
-        return func
-        
-    def remove(self, func):
-        self.remove_func = func
-        return func
-        
-    def create_component(self, obj, **kwargs):
-        if not self.init_func:
-            raise ValueError("An init function must be specified")
-        
-        component = Component()
-        component.__kwargs = kwargs
-        component.object = obj
-        component.window = obj.window
-        
-        for key, value in kwargs.items():
-            setattr(component, key, value)
-        
-        self.init_func(component)
-        
-        if self.activation_method == ActivationMethod.ON_CLICK:
-            component.__activation_event_name = f"{component.__class__.__name__} on click activation {id(component.object)}"
-            component.__desactivation_event_name = f"{component.__class__.__name__} on click desactivation {id(component.object)}"
-            component.__activated = False
-            
-            def activate():
-                if component.__activated == False:
-                    component.__activated = True
-                    
-                    # removes activate event
-                    component.window.events.remove_event(component.__activation_event_name)
-                    
-                    # adds desactivate event
-                    component.window.events.on_event("mousedown", component.__desactivate, component.__desactivation_event_name)
-                    
-                    # calls "real" activation
-                    self.activate_func(component)
-                    
-            def desactivate():
-                if component.__activated:
-                    component.__activated = False
-                    
-                    # removes desactivate event
-                    component.window.events.remove_event(component.__desactivation_event_name)
-                    
-                    # calls "real" desactivation
-                    self.deactivate_func(component)
-                    
-                    # adds activate event
-                    component.window.events.add_event(event="click", object=component.object, callback=component.__activate, name=component.__activation_event_name)
-            
-            component.__activate = activate
-            component.__desactivate = desactivate
-            component.__remove = self.remove_func or (lambda: None)
-            
-            component.window.events.add_event(event="click", object=component.object, callback=component.__activate, name=component.__activation_event_name)
-            
-        else:
-            component.__activate = self.activate_func or (lambda: None)
-            component.__desactivate = self.deactivate_func or (lambda: None)
-            component.__remove = self.remove_func or (lambda: None)
-        
-        if self.call_func:
-            self.call_func(component, obj)
-        else:
-            component.__init__(**kwargs)
-            
-        return component
