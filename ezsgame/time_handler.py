@@ -1,109 +1,110 @@
 from typing import Callable, List
 import pygame as pg
-from enum import Enum
-    
-class TimeUnit(Enum):
-    milliseconds = 1
-    seconds = 1000
-    minutes = 60000
-    hours = 3600000
-    days = 86400000
-
-# Condence the time units into one class 
-class Milliseconds:
-    def __init__(self, time: float):
-        self.time = time
-
-    @classmethod
-    def from_unit(cls, unit: TimeUnit, time: float):
-        return cls(time * unit.value)
 
 
 class Interval:
-    __slots__ = "time", "callback", "name", "last_call"
-    
-    def __init__(self, time: float, callback: Callable, last_call: float, name: str = "Default"):
+    __slots__ = "time", "callback", "name", "last_call", "repeat"
+
+    def __init__(
+        self, time: float, callback: Callable, last_call: float, name, repeat: int
+    ):
         self.time = time
         self.callback = callback
         self.name = name
         self.last_call = last_call
+        self.repeat = repeat
+
 
 class TimeHandler:
-    r'''
+    r"""
     - Handles the time events
-    '''
+    """
 
     intervals: List[Interval] = []
     to_remove: List[str] = []
     to_add: List[Interval] = []
 
-    def add(call_time: int, callback, name: str = "Default"):
-        r'''
+    def add(call_time: int, callback, name: str = "Default", repeat: int = -1):
+        r"""
         #### Adds a `interval` that will be called every `time` milliseconds
-        - `name` : name of the event 
+        - `name` : name of the event
         - `time` : amount of time in milliseconds that the event will be called after
-        - `callback` : function to be called when the event is triggered 
-        '''
+        - `callback` : function to be called when the event is triggered
+        - `repeat` : number of times the interval will last (-1 for infinite)
+        """
 
-        name = f"{len(TimeHandler.intervals)}.{call_time}" if name == "Default" else name
+        name = (
+            f"{len(TimeHandler.intervals)}.{call_time}" if name == "Default" else name
+        )
 
-        TimeHandler.to_add.append(Interval(call_time, callback, 0, name)) 
+        # check for valid repeat
+        if repeat <= 0 and not repeat == -1:
+            raise ValueError(
+                f"At TimeHandler.add (Adding a interval): Argument `repeat` must be either -1 (infinite) or bigger than 0, got: {repeat}.\n For degubbing: TimeHandler.add({call_time=}, {callback=}, {name=}, {repeat=})"
+            )
+
+        TimeHandler.to_add.append(Interval(call_time, callback, 0, name, repeat))
 
     def remove(name: str):
-        r'''
+        r"""
         #### Removes an `interval` from the event list so it won't be called anymore
-        - `name` : name of the event to be removed 
-        '''
+        - `name` : name of the event to be removed
+        """
         TimeHandler.to_remove.append(name)
 
     def check():
-        r'''
+        r"""
         #### Manages the time events
-        '''
+        """
         # removing intervals
-        for name in TimeHandler.to_remove:
-
-            if name in TimeHandler.intervals:
-                del TimeHandler.intervals[name]
+        for target_name in TimeHandler.to_remove:
+            for index, interval in enumerate(TimeHandler.intervals):
+                if interval.name == target_name:
+                    del TimeHandler.intervals[index]
+                    break
 
         TimeHandler.to_remove.clear()
 
         # adding intervals
         TimeHandler.intervals.extend(TimeHandler.to_add)
-       
         TimeHandler.to_add.clear()
 
         # Checking  Intervals
-        
         current_time = pg.time.get_ticks()
         for interval in TimeHandler.intervals:
-            
             if current_time - interval.last_call >= interval.time:
                 interval.callback()
                 interval.last_call = pg.time.get_ticks()
 
-# time decorators  ------------------------------------------------------------
-def add_interval(time: Milliseconds | int, name: str = "Default") -> Callable:
-    r'''    
-    - Adds an `interval` to the time handler, calls the function every `time` milliseconds
-    - `time` : amount of time in milliseconds that the event will be called after
-    - `name` : name of the interval (Optional)
-    '''
+                # check interval repeats
+                if (
+                    interval.repeat > 0
+                ):  # this conditional avoids modifying infinite intervals
+                    interval.repeat -= 1
+                    
+                    # if interval doesnt have to repeat any more, then delete it
+                    if interval.repeat == 0:
+                        TimeHandler.to_remove.append(interval.name)
 
-    if isinstance(time, Milliseconds):
-        time = time.time
+
+# time decorators  ------------------------------------------------------------
+def add_interval(time: int, name: str = "Default", repeat: int = -1) -> Callable:
+    r"""
+    - Adds an `interval` to the time handler, calls the function every `time`
+    - `time` : amount of time in milliseconds
+    - `name` : name of the interval (Optional)
+    """
 
     def wrapper(func):
-        TimeHandler.add(time, func, name)
+        TimeHandler.add(time, func, name, repeat)
         return func
 
     return wrapper
 
+
 def remove_interval(name: str) -> None:
-    r'''
+    r"""
     #### Removes an `interval` from the time handler
     - `name` : name of the interval
-    '''
+    """
     TimeHandler.remove(name)
-
-

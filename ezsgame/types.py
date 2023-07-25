@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Self, Type, TypeAlias
 import math
 from numpy import sort
+from sympy import false
 
 
 Number: TypeAlias = float | int
@@ -357,6 +358,12 @@ from pstats import SortKey
 
 @dataclass
 class ProfilingOptions:
+    """
+    Profiling condiguration options.
+    - `profile` : profiler to use (default: `cProfile.Profile()`)
+    - `sort` : profiling results sorting (default: `SortKey.COMULATIVE`)
+    - `limit` : number of records to show at the end of profiling
+    """
     profile: cProfile.Profile = cProfile.Profile()
     sort : SortKey = SortKey.CUMULATIVE
     limit : int = 10

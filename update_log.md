@@ -1,13 +1,9 @@
-# Version dev-0.6
+# Version 0.5.1
 
 ## New
-- Added `TimeUnit` and `Milisecond` classes for time management
+- `repeat` parameter when adding intervals 
 
 ## Fixes
+- TimeHandler.remove now DO removes the intervals
 
 ## Changes
-- Refactored project structure
-- components { 
-    Removed `ComponentTemplate`
-    `Component` class is now abstract
-}
