@@ -42,7 +42,7 @@ def increase_count():
     current_value[0] += 1
 
     # We also need to update the text in the counter
-    counter_text.update(text=f"Count is {current_value[0]}")
+    counter_text.text.set(f"Count is {current_value[0]}")
 
 
 decrease_button = Rect(
@@ -58,7 +58,7 @@ def decrease_count():
     current_value[0] -= 1
 
     # We also need to update the text in the counter
-    counter_text.update(text=f"Count is {current_value[0]}")
+    counter_text.text.set(f"Count is {current_value[0]}")
 
 
 # Group everthing so you don't have to call draw method one-by-one
