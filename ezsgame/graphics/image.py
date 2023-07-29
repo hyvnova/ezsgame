@@ -1,6 +1,6 @@
 from pathlib import Path
 from ..components import Component
-from ..global_data import get_window
+from ..world import get_window
 from ..objects.object import Object
 from typing import Any, Dict, Iterable
 from ..styles.style import Styles

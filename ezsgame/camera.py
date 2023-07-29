@@ -1,6 +1,6 @@
 import pygame
 from abc import ABC, abstractmethod
-from .global_data import get_window
+from .world import get_window
 
 Vector2 = pygame.math.Vector2
 

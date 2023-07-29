@@ -18,7 +18,8 @@ class Styles:
     border_radius: Iterable[Measure] = field(default_factory=lambda: [0])
     
     stroke: int = 0
-    
+    z_index: int = 0
+
     # bools
     visible: bool = True
     

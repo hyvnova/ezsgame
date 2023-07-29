@@ -5,7 +5,7 @@ import pygame
 from ..styles.styles_resolver import resolve_position, resolve_size
 from ..styles.units import Measure
 from ezsgame.types import Pos, Size
-from ..global_data import get_window
+from ..world import get_window
 from PIL import Image, ImageSequence
 
 

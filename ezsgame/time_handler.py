@@ -26,12 +26,15 @@ class TimeHandler:
 
     def add(call_time: int, callback, name: str = "Default", repeat: int = -1):
         r"""
-        #### Adds a `interval` that will be called every `time` milliseconds
+        #### Adds a `interval` that will be called every `time` seconds
         - `name` : name of the event
-        - `time` : amount of time in milliseconds that the event will be called after
+        - `time` : amount of time in seconds that the event will be called after
         - `callback` : function to be called when the event is triggered
         - `repeat` : number of times the interval will last (-1 for infinite)
-        """
+        """ 
+
+        # convert time to milliseconds
+        call_time *= 1000
 
         name = (
             f"{len(TimeHandler.intervals)}.{call_time}" if name == "Default" else name
@@ -91,7 +94,7 @@ class TimeHandler:
 def add_interval(time: int, name: str = "Default", repeat: int = -1) -> Callable:
     r"""
     - Adds an `interval` to the time handler, calls the function every `time`
-    - `time` : amount of time in milliseconds
+    - `time` : amount of time in seconds that the event will be called after
     - `name` : name of the interval (Optional)
     """
 

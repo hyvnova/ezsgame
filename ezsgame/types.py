@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import Self, Type, TypeAlias
 import math
-from numpy import sort
-from sympy import false
 
 
 Number: TypeAlias = float | int

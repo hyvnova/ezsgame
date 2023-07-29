@@ -1,7 +1,7 @@
 from typing import List
 
 from ezsgame.types import Pos
-from .global_data import get_window
+from .world import get_window
 import pygame as pg
 
 def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [0,0,0,0]):

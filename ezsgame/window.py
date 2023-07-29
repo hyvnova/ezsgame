@@ -1,10 +1,9 @@
-from typing import Iterable
+from typing import Callable, Iterable
 import pygame as pg, random, os
 
 from .scenes import SceneManager
 from .graphics import Image
 from .styles.units import Measure
-from .global_data import DATA, on_update
 from .types import ProfilingOptions, Size, Pos
 from .styles.colors import Gradient
 from .styles.styles_resolver import resolve_color
@@ -53,7 +52,7 @@ class Window:
             cls.is_created = True
             return object.__new__(cls)
         else:
-            return DATA.window
+            return World.window
 
     def _post_init(self):
         """
@@ -61,9 +60,9 @@ class Window:
         Creates global objects that need the window instance to be created beforehand.
         """
         # globalize time and event handlers
-        DATA.TimeHandler = TimeHandler
-        DATA.EventHandler = EventHandler
-        DATA.window = self
+        World.TimeHandler = TimeHandler
+        World.EventHandler = EventHandler
+        World.window = self
 
         # set world size
         World.size = self.size
@@ -281,9 +280,16 @@ class Window:
 
         self.clock.tick(self.fps)
 
+        # Add objects that were added during the update
+        if len(World.objects_to_add) > 0:
+            World.objects.update(World.objects_to_add)
+            World.objects_to_add.clear()
+
+            # sort objects by z-index
+            World.objects = sorted(World.objects, key=lambda obj: obj.styles.z_index)
+
         # call on update events
-        for func in on_update():
-            func()
+        World.on_update.trigger()
 
     def quit(self):
         r"""
@@ -341,3 +347,26 @@ class Window:
             scene_manager.draw()
     
             self.update()
+
+
+
+    # Shortcut: Running, avoid the having to write boilerplate code as "screen.check_events() screen.update()"
+    def run(self, func: Callable, auto_draw: bool = True):
+        r"""
+        #### Runs a function as the main loop
+        - `func` : function to be runned
+        - `auto_draw` : if True, all objects will be drawn automatically, ordered by declaration order. Will be called after `func`  (Optional)
+
+        Note: `check_events()` and `update()` are called automatically and the start and end of the function respectively
+        """
+        while True:
+            self.check_events()
+            func()
+
+            if auto_draw:
+                for obj in World.objects:
+                    obj.draw()
+
+            self.update()
+
+

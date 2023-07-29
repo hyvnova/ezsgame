@@ -1,18 +1,17 @@
-from typing import Any, Callable, Dict, Iterable, Optional, Self, Set, Type
-import pygame as pg
+from typing import Any, Callable, Dict, Iterable, Optional, Self, Set, Type, TypedDict
 
 from ezsgame.styles.units import Measure
+from ezsgame.utils import Signal
 
 from ..styles.style import Styles
 
 from ..components import ComponentGroup, Component
-from ..global_data import get_window
+from ..world import World, get_window
 from ..styles.styles_resolver import resolve_position, resolve_size
 from ..funcs import center_at
 from ..reactivity import Reactive
 
 from ..types import Number, Pos, Size
-from ..world import World
 
 class Object:
     r"""
@@ -54,24 +53,22 @@ class Object:
         self.size = resolve_size(self, size, self.parent.size)
         self.pos = resolve_position(self, pos, self.parent)
 
-        # Adapt position to world
-        self.pos += World.pos
-
 
         # defualt behavior - needs it own type and rework
         self.behavior = {"pos": "dynamic"}
 
-        self.__on_draw: Dict[str, Callable] = {}
+        self.on_draw = Signal()
 
-        self.components = ComponentGroup(self, *components)
+        self.components = ComponentGroup(self)
+        self.components.add(*components) 
 
-        # Calls __after_draw() after  draw() to call after-draw methods
+        # Modify draw method to ensure that the object is drawn only if it is visible and trigger on_draw signal
         def _draw_manager(draw_func):
             def wrapper():
                 if self.styles.visible:
                     draw_func() 
                                        
-                self.__after_draw()
+                self.on_draw.trigger()
                 
             return wrapper
         try:
@@ -79,8 +76,8 @@ class Object:
         except:
             pass
 
-    def add_child(self, child: Type[Self]) -> None:
-        self.children.add(child)
+        # Register object in DATA
+        World.objects_to_add.add(self)
 
     def _update(self, updated_property_name: str) -> None:
         """
@@ -99,27 +96,6 @@ class Object:
         """
         pass        
 
-    def on_draw(self, func, name: str = "Default", pass_object=False):
-        r"""
-        #### Adds a function to be called after the object is drawn
-        #### Parameters
-        - `func`: function to be called
-        - `name`: name of the function (default: `function name`)
-        - `pass_object`: if True, the function will be called with the object as the first parameter
-
-        """
-        name = name if name else func.__name__
-        self.__on_draw[name] = lambda: func(self) if pass_object else func
-
-    def remove_on_draw(self, name: str):
-        r"""
-        #### Removes a function from being called after the object is drawn
-        #### Parameters
-        - `name`: name of the function
-        """
-        if name in self.__on_draw:
-            del self.__on_draw[name]
-
     def _get_collision_box(self):
         x, y = self.pos
         w, h = self.size
@@ -128,12 +104,6 @@ class Object:
     def __str__(self):
         return f"<Object: {self.__class__.__name__}, ID: {id(self)}>"
 
-    def __after_draw(self):
-        r'''
-        manages Object draw method and calls `on_draw` functions
-        '''
-        for func in self.__on_draw.values():
-            func()
                
     def center_at(self, object: Type[Self] = None) -> Self:
         r'''

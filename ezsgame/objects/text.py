@@ -1,7 +1,9 @@
 from typing import Any, Dict, Iterable, Set
 import pygame as pg
+
+from ..utils import Signal
 from ..components import Component
-from ..global_data import get_window
+from ..world import get_window
 from ..objects.object import Object
 from ..reactivity import Reactive
 from ..styles.style import Styles
@@ -39,6 +41,7 @@ class Text(Object):
         "text_obj",
         "styles",
         "children",
+        "on_draw"
     )
 
     def __init__(
@@ -59,6 +62,8 @@ class Text(Object):
 
         self.children: Set[Object] = set()
 
+        self.on_draw: Signal = Signal()
+
         self.font = font
         self.font_size = Reactive(font_size)._mount(self, "font_size")
         self.text = Reactive(text)._mount(self, "text")
@@ -71,6 +76,7 @@ class Text(Object):
         self.styles.resolve(parent.size)
 
         self.text_obj = self.load_font()
+
 
         super().__init__(
             pos=pos,

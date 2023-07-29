@@ -1,7 +1,7 @@
 from typing import Any, Dict, Iterable
 
 from discord import Component
-from ..global_data import get_window
+from ..world import get_window
 from ..objects.object import Object
 import pygame as pg
 from ..styles.colors import resolve_color, Color

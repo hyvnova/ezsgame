@@ -5,7 +5,7 @@ Module for scenes manipulation and creation
 from abc import ABC, abstractmethod
 from typing import FrozenSet
 
-from .global_data import get_window
+from .world import get_window
 
 class Scene(ABC):
     """

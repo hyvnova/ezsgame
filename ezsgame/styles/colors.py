@@ -4,7 +4,7 @@ import random
 from ezsgame.types import Size
 import pygame as pg
 from typing import List, Tuple
-from ..global_data import get_window
+from ..world import get_window
 from ..funcs import div
 
 

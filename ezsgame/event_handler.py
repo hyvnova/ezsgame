@@ -1,6 +1,6 @@
-from typing import Dict, Iterable, List, Callable
+from typing import Iterable, List, Callable
 import pygame as pg
-from .global_data import DATA, on_update
+from .world import World
 from .objects import Object
 
 
@@ -100,9 +100,9 @@ class EventHandler:
 
             # if is ezsgame event
             else:
-                # removes event from DATA so it won't be called anymore
-                if name in DATA.on_update:
-                    del DATA.on_update[name]
+                # removes event from on_update signal listeners so they won't be called anymore
+                if name in World.on_update.listeners.values():
+                    World.on_update.remove(name)
 
         EventHandler.to_remove.clear()
 
@@ -116,7 +116,7 @@ class EventHandler:
 
                 # on update event
                 if event.event_name == "update":
-                    on_update(event.name, event.callback)
+                    World.on_update.add(event.name, event.callback)
 
             # if is a event
             else:
@@ -133,7 +133,7 @@ class EventHandler:
                 for event in EventHandler.events.get_by_type(pg.QUIT):
                     event.callback()
 
-                DATA.window.quit()
+                World.window.quit()
 
             # Manages custom events
             for event in EventHandler.events.get_by_type("custom"):

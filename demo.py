@@ -1,36 +1,32 @@
 from ezsgame import *
 
-window = Window(Size(800, 600), title="Just a square")
 
-square = Rect(
+window = Window()
+
+from components import * # loaded after window to avoid window not being initialized
+
+
+box = Rect(
     Pos("center"),
-    Size(100, 100),
+    Size(50),
+    components=[
+        Controllable(), 
+        HealthBar(Health(), True, True)
+    ],
+    color="red",
 )
 
-timer = Text("0", Pos("center", "center"), font_size=26, color="white")
+def on_hit(other: Object):
+    # knockback effect
+    box.pos += (box.pos - other.pos).normalize() * sum(other.size) * 0.5
 
-controller = Controller()
+# listen to the hit signal
+health_comp: Health = box.components[Health]
+health_comp.on_hit.add("box_hit", on_hit)
 
-
-# update timer
-@add_interval(1000, repeat=3)
-def update_timer():
-    timer.text.set(str(int(timer.text.get()) + 1))
-
-
-# quit after 10 seconds (used for profiling)
-@add_interval(10 * 1000)
-def quit_window():
-    window.quit()
+box2 = Rect(Pos(100, 100), Size(50), color="blue")
 
 
-while True:
-    window.check_events()
-    window.fill()
-
-    square.pos += controller.get_speed("simple")
-
-    # square.draw()
-    timer.draw()
-
-    window.update()
+@window.run
+def draw():
+    window.fill("black")
