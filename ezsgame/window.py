@@ -18,12 +18,14 @@ from pstats import SortKey, Stats
 
 pg.init()
 
+
 class Window:
     """
     #### Window
-    
+
     - Profiling: If a `ProfilingOptions` is passed to the `profiling` parameter, the profiling will be enabled.
     """
+
     __slots__ = (
         "size",
         "pos",
@@ -101,7 +103,7 @@ class Window:
             self.profiling.profile.enable()
 
         # init window and surface
-        self._init() 
+        self._init()
 
         # Post init
         self._post_init()
@@ -119,7 +121,7 @@ class Window:
         self._resolve_size(size)
         pg.display.set_mode(self.size, pg.RESIZABLE)
         return self
-    
+
     def get_delta_time(self) -> int:
         return self.clock.get_time() / 1000
 
@@ -166,7 +168,7 @@ class Window:
         r"""
         #### Checks and Manage the events, should be called in the main loop
         """
-        
+
         # run the checks in different threads to improve performance
         TimeHandler.check()
         EventHandler.check()
@@ -231,12 +233,11 @@ class Window:
 
         self.clock = pg.time.Clock()
 
-
-    # Property shortcuts 
+    # Property shortcuts
     @property
     def x(self) -> Measure:
         return self.pos.x
-    
+
     @x.setter
     def x(self, value: Measure) -> None:
         self.pos.x = value
@@ -244,7 +245,7 @@ class Window:
     @property
     def y(self) -> Measure:
         return self.pos.y
-    
+
     @y.setter
     def y(self, value: Measure) -> None:
         self.pos.y = value
@@ -252,7 +253,7 @@ class Window:
     @property
     def width(self) -> Measure:
         return self.size.width
-    
+
     @width.setter
     def width(self, value: Measure) -> None:
         self.size.width = value
@@ -260,11 +261,10 @@ class Window:
     @property
     def height(self) -> Measure:
         return self.size.height
-    
+
     @height.setter
     def height(self, value: Measure) -> None:
         self.size.height = value
-
 
     def update(self):
         r"""
@@ -336,7 +336,6 @@ class Window:
         self.fullscreen = not self.fullscreen
         self._init()
 
-
     # Scenes
     def run_scenes(self, scene_manager: SceneManager):
         # Main loop
@@ -345,10 +344,8 @@ class Window:
 
             scene_manager.update()
             scene_manager.draw()
-    
+
             self.update()
-
-
 
     # Shortcut: Running, avoid the having to write boilerplate code as "screen.check_events() screen.update()"
     def run(self, func: Callable, auto_draw: bool = True):
@@ -368,5 +365,3 @@ class Window:
                     obj.draw()
 
             self.update()
-
-

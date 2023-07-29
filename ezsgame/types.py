@@ -3,8 +3,72 @@ from typing import Callable, Dict, Self, Type, TypeAlias
 import math
 
 
-Number: TypeAlias = float | int
+# Signal --------------------------------------------
+class Signal:
+    """
+    Creates the necesary implementation to add, remove and trigger signals.
+    Signals are basicly a function that calls other functions when it is triggered.
 
+    #### Example:
+    ```python
+    class Health(Component):
+
+        def init(self):
+            self.health = 100
+
+            # Signal that will be triggered when the object is hit
+            self.on_hit: TriggerSignal = TriggerSignal()
+
+        def activate(self):
+            \"\"\"
+            Use `HitBox` object `on_collision` signal to add a trigger to the hitbox.
+            `health_hitbox_collision` is the name of the trigger, used to remove the trigger if necessary.
+            `self.hit` is the function that will be called when the `on_collision` signal is triggered.
+            \"\"\"
+            self.object.components[HitBox].on_collision.add("health_hitbox_collision", self.hit) 
+
+        def deactivate(self):
+            # remove the trigger from the hitbox
+            self.object.components[HitBox].on_collision.remove("health_hitbox_collision")
+
+        def hit(self, other):
+            self.health -= 10
+            self.on_hit.trigger(other) # calls all the functions that are listening to this signal
+
+    ```
+    """
+
+    def __init__(self):
+        self.listeners: Dict[str, Callable] = {}
+
+    def trigger(self, *args, **kwargs):
+        """
+        #### Calls all the functions that are listening to this signal with the given arguments
+        """
+        for func in self.listeners.values():
+            func(*args, **kwargs)
+
+    def add(self, name: str, func: Callable):
+        """
+        #### Adds a function to the signal listeners
+        """
+
+        # check if the name is already in use
+        if name in self.listeners:
+            raise ValueError(f"Name \"{name}\" is already in use in this signal")
+        
+        self.listeners[name] = func
+
+    def remove(self, name: str):
+        """
+        #### Removes a function from the signal listeners
+        """
+        self.listeners.pop(name)
+
+
+# Pos, Size > Vector2 ------------------------------
+
+Number: TypeAlias = float | int
 
 class Vector2:
     """
@@ -350,7 +414,9 @@ class Pos (Vector2):
     def __repr__(self):
         return f"Pos({self.x}, {self.y})"
 
-# Profiling options
+
+
+# Profiling options ------------------------------
 import cProfile
 from pstats import SortKey
 
@@ -368,63 +434,3 @@ class ProfilingOptions:
     file : str = "profile.prof"
 
 
-class Signal:
-    """
-    Creates the necesary implementation to add, remove and trigger signals.
-    Signals are basicly a function that calls other functions when it is triggered.
-
-    #### Example:
-    ```python
-    class Health(Component):
-
-        def init(self):
-            self.health = 100
-
-            # Signal that will be triggered when the object is hit
-            self.on_hit: TriggerSignal = TriggerSignal()
-
-        def activate(self):
-            \"\"\"
-            Use `HitBox` object `on_collision` signal to add a trigger to the hitbox.
-            `health_hitbox_collision` is the name of the trigger, used to remove the trigger if necessary.
-            `self.hit` is the function that will be called when the `on_collision` signal is triggered.
-            \"\"\"
-            self.object.components[HitBox].on_collision.add("health_hitbox_collision", self.hit) 
-
-        def deactivate(self):
-            # remove the trigger from the hitbox
-            self.object.components[HitBox].on_collision.remove("health_hitbox_collision")
-
-        def hit(self, other):
-            self.health -= 10
-            self.on_hit.trigger(other) # calls all the functions that are listening to this signal
-
-    ```
-    """
-
-    def __init__(self):
-        self.listeners: Dict[str, Callable] = {}
-
-    def trigger(self, *args, **kwargs):
-        """
-        #### Calls all the functions that are listening to this signal with the given arguments
-        """
-        for func in self.listeners.values():
-            func(*args, **kwargs)
-
-    def add(self, name: str, func: Callable):
-        """
-        #### Adds a function to the signal listeners
-        """
-
-        # check if the name is already in use
-        if name in self.listeners:
-            raise ValueError(f"Name \"{name}\" is already in use in this signal")
-        
-        self.listeners[name] = func
-
-    def remove(self, name: str):
-        """
-        #### Removes a function from the signal listeners
-        """
-        self.listeners.pop(name)

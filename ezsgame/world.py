@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Set
 from .types import Pos, Size, Signal
 
@@ -8,18 +9,20 @@ class World:
     The `pos` and `size` defined the "view" of the world, objects outside of the view won't be drawn.
     """
 
-    pos = Pos(0, 0)
-    size = Size(0, 0)  # will be set on window post init
+
+    # will be set on window post init
     window = object
-
-    objects: Set = set()
-    objects_to_add: Set = set()
-
-    on_update: Signal = Signal()
-
+    pos = Pos(0, 0)
+    size = Size(0, 0)  
+    
     EventHandler = object
     TimeHandler = object
 
+    objects: Set = set()
+    objects_to_add: Set = set() # avoids iteration errors (adding objects during iteration)
+
+    on_update: Signal = Signal()
+    
     @classmethod
     def is_inside(cls, obj) -> bool:
         """
@@ -31,6 +34,8 @@ class World:
         )
 
 
+# Utility for getting the window object easily
+@lru_cache()
 def get_window():
     """
     #### Returns the window object

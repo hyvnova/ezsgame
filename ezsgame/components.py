@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type, TypedDict
+from typing import Any, Dict, Type
 
 
 class Component(ABC):
