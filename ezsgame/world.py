@@ -1,6 +1,5 @@
 from typing import Set
-from .types import Pos, Size
-from .utils import Signal
+from .types import Pos, Size, Signal
 
 
 class World:

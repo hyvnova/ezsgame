@@ -6,6 +6,7 @@
 - Shortcut to reduce boilerplate code `window.run` decorator
 - `World` now has a `objects` attribute that contains all the objects in the world
 - `utils` moved to new `utilities` module which also includes `timer` utility
+- `Signal` is now part of `types` module
 
 ## Fixes
 

@@ -1,14 +1,13 @@
 from typing import Any, Dict, Iterable, Set
 import pygame as pg
 
-from ..utils import Signal
 from ..components import Component
 from ..world import get_window
 from ..objects.object import Object
 from ..reactivity import Reactive
 from ..styles.style import Styles
 from ..styles.units import Measure
-from ..types import Pos, Size
+from ..types import Pos, Size, Signal
 from ..fonts import Fonts, FontFamily
 
 

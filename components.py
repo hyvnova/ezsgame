@@ -2,9 +2,6 @@ from ezsgame import *
 import time
 
 
-window = Window()
-
-
 # Creating a component
 class HitBox(Component):
     def __init__(self) -> None:

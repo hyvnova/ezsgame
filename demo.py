@@ -1,9 +1,7 @@
 from ezsgame import *
-
+from components import * 
 
 window = Window()
-
-from components import * # loaded after window to avoid window not being initialized
 
 
 box = Rect(

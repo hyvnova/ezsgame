@@ -4,7 +4,7 @@ from .objects import *
 from .event_handler import *
 from .time_handler import *
 
-from .world import get_window
+from .world import *
 
 # Resources
 from .sounds import *
@@ -13,7 +13,6 @@ from .mouse import *
 from .types import *
 
 from .utilities import *
-from .utils import *
 
 from .graphics import *
 
