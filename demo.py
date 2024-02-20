@@ -1,29 +1,28 @@
 from ezsgame import *
 from components import *
+from pygame import draw
+
+
+
 
 window = Window()
 
 
-box = Rect(
-    Pos("center"),
-    Size(50),
-    components=[Controllable(), HealthBar(Health(), True, True)],
-    color="red",
-)
+rect = Rect(
+    Pos(x="left", y="center"),
+    Size(width=50, height=50),
+    color="red"
+) 
 
+@on_key("down", "right")
+def on_right_down():
+    rect.x += 10
 
-def on_hit(other: Object):
-    # knockback effect
-    box.pos += (box.pos - other.pos).normalize() * sum(other.size) * 0.5
+while True:
+    window.check_events()
 
-
-# listen to the hit signal
-health_comp: Health = box.components[Health]
-health_comp.on_hit.add("box_hit", on_hit)
-
-box2 = Rect(Pos(100, 100), Size(50), color="blue") # just a dummy object
-
-
-@window.run
-def draw():
     window.fill("black")
+    rect.draw()
+
+    # Display the window
+    window.update()

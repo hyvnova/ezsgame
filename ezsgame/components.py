@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type
+from typing import Any, Dict, Type, TypeVar
 
 
 class Component(ABC):
@@ -54,6 +54,7 @@ class Component(ABC):
         self.deactivate()
         del self
 
+ComponentType = TypeVar('ComponentType', bound=Component)
 
 class ComponentGroup:
     """
@@ -116,7 +117,7 @@ class ComponentGroup:
             self.add(component)
             return True
 
-    def __getitem__(self, other: Type[Component]) -> Component:
+    def __getitem__(self, other: Type[ComponentType]) -> ComponentType:
         other = other.__name__
 
         if other in self.components:

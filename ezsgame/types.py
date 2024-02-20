@@ -65,6 +65,26 @@ class Signal:
         """
         self.listeners.pop(name)
 
+    # Add through decorator
+    def __call__(self, name: str):
+        """
+        #### Decorator to add a function to the signal listeners
+        ### Parameters
+        `name`: signal listener name
+
+        #### Example:
+        ```python
+        @some_signal("some_name")
+        def some_function():
+            pass
+        
+        # is the same as
+        some_signal.add("some_name", some_function)
+        """
+        def wrapper(func):
+            self.add(name, func)
+            return func
+        return wrapper
 
 # Pos, Size > Vector2 ------------------------------
 
