@@ -1,14 +1,13 @@
 from typing import Any, Dict, Iterable
 
-from discord import Component
 from ..world import get_window
 from ..objects.object import Object
 import pygame as pg
 from ..styles.colors import resolve_color, Color
 from ..styles.style import Styles
 from ..styles.units import Measure
-
 from ..types import Pos, Size
+from ..components import Component
 
 class Rect(Object):
     r"""
