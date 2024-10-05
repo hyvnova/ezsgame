@@ -1,4 +1,5 @@
 from typing import Optional
+from unittest.mock import DEFAULT
 import pygame as pg
 
 class Mixer:
@@ -38,19 +39,18 @@ class Mixer:
         for sound in self.sounds:
             del sound
   
+DEFAULT_MIXER = Mixer()
+
 class Sound:
-    defualt_mixer = Mixer()
-    
-    def __init__(self, file, mixer: Optional[Mixer]):
+    def __init__(self, file, mixer: Mixer | None = None):
         try:
             self.sound = pg.mixer.Sound(file)
         except Exception as e:
             raise Exception(f"Could not load sound file <{file}>. \n Error: {e}")
         
         self.sound.set_volume(0.5)
-        self.volume = 0.5
         
-        self.mixer = mixer or Sound.defualt_mixer
+        self.mixer = mixer or DEFAULT_MIXER
         
         self.mixer._load_sound(self)
         self.length = self.sound.get_length()

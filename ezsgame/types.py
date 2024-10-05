@@ -383,6 +383,10 @@ class Vector2:
     def set(self, a, b):
         self.x = a
         self.y = b
+
+
+    def __hash__(self):
+        return hash((self.x, self.y))
     
 class Size (Vector2):
     r"""
@@ -417,7 +421,7 @@ class Size (Vector2):
     def __repr__(self):
         return f"Size({self.width}, {self.height})"
 
-class Pos (Vector2):
+class Pos(Vector2):
     r"""
     #### Position
     #### Parameters
@@ -425,7 +429,7 @@ class Pos (Vector2):
     - `y`: y position `number`
     """
 
-    def __init__(self, x: Number, y: Number = None):
+    def __init__(self, x: Number | str, y: Number | str  | None = None):
         super().__init__(x, y)
 
     def __str__(self):
@@ -433,7 +437,7 @@ class Pos (Vector2):
 
     def __repr__(self):
         return f"Pos({self.x}, {self.y})"
-
+    
 
 
 # Profiling options ------------------------------

@@ -1,3 +1,4 @@
+import random
 from typing import Iterable, List, Callable
 import pygame as pg
 from .world import World
@@ -402,7 +403,7 @@ def on_event(event: str, name: str = "Default") -> Callable:
     '''
 
     if name == "Default":
-        name = f"base_event.{event}.{len(EventHandler.events)}" if name == "Default" else name
+        name = f"base_event.{event}.{len(EventHandler.events)}.{random.uniform(1, 10)}" if name == "Default" else name
 
     def wrapper(func):
         EventHandler.on_event(event, func, name)

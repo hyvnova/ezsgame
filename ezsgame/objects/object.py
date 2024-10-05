@@ -36,7 +36,7 @@ class Object:
         styles: Optional[Styles] = None,
         parent: Optional["Object"] = None,
         components: Iterable[Component] = [],
-        **_styles: Dict[str, Any],
+        **_styles
     ):
         """
         Base class for most object, handlers object default and required behavior
@@ -167,3 +167,10 @@ class Object:
     @y.setter
     def y(self, value):
         self.pos[1] = value
+
+
+    def add_child(self, child: Self) -> None:
+        """
+        Adds a child to the object
+        """
+        self.children.add(child)

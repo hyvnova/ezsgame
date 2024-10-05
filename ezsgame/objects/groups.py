@@ -43,6 +43,11 @@ class Group:
 
     def add(self, *objects, **named_objects):
         for obj in objects:
+            # if object is a generator
+            if hasattr(obj, "__iter__") and not isinstance(obj, str):
+                self.add(*obj)
+                continue
+
             self._objects[id(obj)] = obj
 
         self._objects.update(named_objects)
@@ -62,8 +67,15 @@ class Group:
         """
         return self._objects.get(name, default)
 
-    def remove(self, name: str):
-        self._objects.pop(name)
+    def remove(self, name: str | Object):
+        if not isinstance(name, str):
+            name = id(name)
+
+        if name in self._objects:
+            self._objects.pop(name)
+
+    def pop(self):
+        return self._objects.popitem()
 
     def align_objects(self, auto_size=True):
         # aligns objects in the group

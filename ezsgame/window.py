@@ -286,7 +286,7 @@ class Window:
             World.objects_to_add.clear()
 
             # sort objects by z-index
-            World.objects = sorted(World.objects, key=lambda obj: obj.styles.z_index)
+            World.objects = set(sorted(World.objects, key=lambda obj: obj.styles.z_index))
 
         # call on update events
         World.on_update.trigger()

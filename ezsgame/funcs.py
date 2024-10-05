@@ -15,8 +15,8 @@ def outline(obj, color="red", stroke:int=1, size:int=1.5, border_radius:list = [
     #### Note: Automaticly draws the outline when declared
     '''
     
-    obj_size = obj.get_size()
-    obj_pos = obj.get_pos()
+    obj_size = obj.size
+    obj_pos = obj.pos
 
     size = (obj_size[0] * size, obj_size[1] * size)
     pos = (obj_pos[0] - (size[0] - obj_size[0]) / 2, obj_pos[1] - (size[1] - obj_size[1]) / 2)
@@ -37,7 +37,7 @@ def is_out(obj):
     else:
         return False, None
         
-def is_colliding(obj1, obj2, draw_collision_box=False):
+def is_colliding(obj1, obj2, draw_collision_box=False, scale=1):
     r'''
     #### returns True if the object is colliding with another object, False if not
     - obj1 : object -> first object
@@ -45,6 +45,9 @@ def is_colliding(obj1, obj2, draw_collision_box=False):
     - draw_collision_box : bool -> if True, draw collision box
     '''
     
+    obj2_size = obj2.size.copy()
+    obj2.size *= scale
+
     if draw_collision_box:
         outline(obj1, size=1.1, stroke=2)
         outline(obj2, size=1.1, stroke=2)
@@ -52,8 +55,8 @@ def is_colliding(obj1, obj2, draw_collision_box=False):
     for i in obj1._get_collision_box():    
         if (i[0] >= obj2.pos[0] and i[0] <= obj2.pos[0]+obj2.size[0]) and (i[1] >= obj2.pos[1] and i[1] <= obj2.pos[1] + obj2.size[1]):
             return True
-                
         
+    obj2.size = obj2_size
     return False
         
         
