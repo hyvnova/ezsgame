@@ -27,6 +27,7 @@ class Window:
     """
 
     __slots__ = (
+        "__size",
         "size",
         "pos",
         "title",
@@ -176,7 +177,7 @@ class Window:
     def _resolve_size(self, size: Size):
         if self.fullscreen:
             self.__size = Size(size)
-            self.size = pg.display.list_modes()[0]
+            self.size = Size(pg.display.list_modes()[0])
             return
 
         else:
@@ -187,7 +188,7 @@ class Window:
             except:
                 pass
 
-        if size == []:
+        if not size:
             raise Exception("You must specify a size for the screen")
 
         elif len(size) == 1:
@@ -195,7 +196,7 @@ class Window:
                 self.size = pg.display.list_modes()[0]
             else:
                 raise Exception(
-                    'Screen size should "max" || "full" or list [width, height] '
+                    'Screen size should "max" || "full" or Size(width, height)'
                 )
 
         elif len(size) == 2:

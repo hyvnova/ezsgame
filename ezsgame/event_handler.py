@@ -306,7 +306,7 @@ class EventHandler:
         event_type = types.get(type, None)
 
         if not event_type:
-            raise ValueError("Invalid type: ", type)
+            raise ValueError("Invalid type: \nValid types are: \"up\", \"down\"", type)
 
         for key in keys:
             k = to_pgkey(key)

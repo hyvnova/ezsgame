@@ -39,25 +39,36 @@ def is_out(obj):
         
 def is_colliding(obj1, obj2, draw_collision_box=False, scale=1):
     r'''
-    #### returns True if the object is colliding with another object, False if not
-    - obj1 : object -> first object
-    - obj2 : object -> second object
-    - draw_collision_box : bool -> if True, draw collision box
+    #### returns True if obj1 is colliding with obj2, False otherwise
+    - obj1 : object -> first object with attributes 'pos' (position) and 'size' (width, height)
+    - obj2 : object -> second object with attributes 'pos' (position) and 'size' (width, height)
+    - draw_collision_box : bool -> if True, draw collision boxes for both objects
+    - scale : float -> scale factor to adjust the size of obj2 for collision detection
     '''
     
-    obj2_size = obj2.size.copy()
-    obj2.size *= scale
+    obj2_size = obj2.size.copy()  # Store the original size of obj2
+    obj2.size *= scale  # Apply scaling to obj2's size
 
+    # Draw collision boxes if requested
     if draw_collision_box:
         outline(obj1, size=1.1, stroke=2)
         outline(obj2, size=1.1, stroke=2)
 
-    for i in obj1._get_collision_box():    
-        if (i[0] >= obj2.pos[0] and i[0] <= obj2.pos[0]+obj2.size[0]) and (i[1] >= obj2.pos[1] and i[1] <= obj2.pos[1] + obj2.size[1]):
-            return True
-        
-    obj2.size = obj2_size
+    # Get positions and sizes for both objects
+    x1, y1 = obj1.pos
+    w1, h1 = obj1.size
+    x2, y2 = obj2.pos
+    w2, h2 = obj2.size
+
+    # Check for collision by comparing the bounding boxes of obj1 and obj2
+    if (x1 < x2 + w2 and x1 + w1 > x2 and  # Check horizontal overlap
+        y1 < y2 + h2 and y1 + h1 > y2):    # Check vertical overlap
+        obj2.size = obj2_size  # Restore original size before returning
+        return True
+
+    obj2.size = obj2_size  # Restore original size if no collision
     return False
+
         
         
 def div(axis : str, q : int, size : float = None) -> List[List[float]]:

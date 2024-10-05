@@ -1,156 +1,135 @@
-from agent import Agent
 from ezsgame import *
 from components import *
 
-
-window = Window(title="AI Agent pathfinding")
-
-"""
-UI
-0 -> Select Agent
-1 -> Select Goal
-2 -> Select Obstacle
-"""
-SELECTED: int | None = None
-Agents = Group()
-Obstacles = Group()
-Goals = Group()
-
-def select(index: int):
-    global SELECTED
-
-    if index == SELECTED:
-        SELECTED = None
-        return
-
-    SELECTED = index
-
-def create_callback(index: int):
-    return lambda: select(index)
+window = Window(title="2v2")
 
 
-UI = Group(
-    (Rect(
-        Pos(x_position, "bottom"),
-        Size(90, 30),
-        color="white",
-        stroke=2,
-        border_radius=[5],
-        margins=[5],
-        components=[
-            Label(
-                text=label,
-                color="white",
-                font_size=20,
-            ),
-            Selectable(
-                on_select=create_callback(i),
-            ),
-        ],
-    )
-    for i, x_position, label in zip(
-        range(3),  # Select options  0, 1, 2
-        ("left-center", "center", "right-center"),  # x position
-        ("Agent", "Goal", "Obstacle"),  # Labels
-    )),
+# Barreras
+barrier_pos = [
+    Pos(70, "center"),       # Pos inicial P1
+    Pos(90, "top-center")    # Pos inicial P2 
+]
 
-    playground=Rect(
-        Pos("center", "5%"),
-        Size("90%", "70%"),
-        color="white",
-        stroke=1,
-        border_radius=[5],
-        margins=[10, 0],
-    ),
-)
+# Projectiles
+proj_pos = [
+    Pos("right", "center"),  # P1
+    Pos("right-center", "top") # P2
+]
+
+# ! No renombren las funciones :)
+
+def p1_barrier(y: float, h: int, acceleration: int) -> int:
+    if y < 0 + h*2: return DOWN
+    if y + h >= window.size.y - h*2: return UP
+    return DOWN
+
+def p2_barrier(y: float, h: int, acceleration: int) -> int:
+    if y < 0 + h*2: return DOWN
+    if y + h >= window.size.y - h*2: return UP
+    return UP
+
+    
+def p1_proj(x: float, w: int, acceleration: int) -> int:
+    return UP # Rapido
+    
+def p2_proj(x: float, w: int, acceleration: int) -> int:
+    return DOWN if acceleration < 0 else UP # Lento
 
 
-@add_event("click", UI.playground)
-def on_click():
-    global SELECTED
 
-    if SELECTED is None:
-        return
+# No tocar de aqui en adelante.  ---------------------------------------------------------------------------------------------------
+BAR_TOP_SPEED = 8
+PROJECTILE_TOP_SPEED = 12
 
-    pos = get_mouse_pos()
-    print(f"Clicked at {pos} with SELECTED {SELECTED}")
+UP = 1
+DOWN = 2
+KEEP = 3
 
-    # Spawn Agent
-    if SELECTED == 0:
-        Agents.add(
-            Agent(
-                pos,
-                Goals,
-                Obstacles,
-                Agents
-            )
-        )
+nexo = Rect(Pos(10, "center"), Size(50))
 
-    # Spawn Goal
-    if SELECTED == 1:
-        Goals.add(
-            Rect( 
-                pos,
-                Size(20),
-                color="green",
-                stroke=4,
-                border_radius=[0],
-            )
-        )
+barriers = [Rect(pos, Size(20, 60), color="blue") for pos in barrier_pos] 
+barrier_accelerations = [1 for _ in barriers]
+barrier_movement = [p1_barrier, p2_barrier]
 
-    # Spawn Obstacle
-    if SELECTED == 2:
-        Obstacles.add(
-            Rect(
-                pos,
-                Size(20),
-                color="red",
-                stroke=4,
-                border_radius=[5],
-            )
-        )
+projectiles = [Rect(pos, Size(25), color="red") for pos in proj_pos] 
+proj_accelerations = [1 for _ in projectiles]
+proj_movement = [p1_proj, p2_proj]
 
-@add_event("rightclick", UI.playground)
-def on_right_click():
-    global SELECTED
+def move_barrier(barrier: Rect, movement: Callable[[float, int, int], int], acc: int) -> int:
+    acc_val = movement(barrier.pos.y, barrier.size.y, acc)
 
-    if SELECTED is None:
-        return
+    if not (1 <= acc_val <= 3):
+        return 3
 
-    pos = get_mouse_pos()
-    print(f"Right Clicked at {pos} with SELECTED {SELECTED}")
+    if acc_val == UP:
+        acc -= 1
+        
+    if acc_val == DOWN:
+        acc += 1
+        
+    if acc > BAR_TOP_SPEED:
+        acc = BAR_TOP_SPEED
+    if acc < -BAR_TOP_SPEED:
+        acc = 1
+        
+    barrier.pos.y += acc
+    return acc
 
-    # Remove last agent
-    if SELECTED == 0:
-        if Agents:
-            Agents.pop()    
+def move_proj(proj: Rect, movement: Callable[[float, int, int], int], acc: int) -> int:
+    acc_val = movement(proj.pos.x, proj.size.x, acc)
 
-    # Remove last goal
-    if SELECTED == 1:
-        if Goals:
-            Goals.pop()
+    if not (1 <= acc_val <= 3):
+        return 3
 
-    # Remove last obstacle
-    if SELECTED == 2:
-        if Obstacles:
-            Obstacles.pop()
+    if acc_val == UP:
+        acc -= 1
+        
+    if acc_val == DOWN:
+        acc += 1
+        
+    if acc > PROJECTILE_TOP_SPEED:
+        acc = PROJECTILE_TOP_SPEED
+    if acc < -PROJECTILE_TOP_SPEED:
+        acc = 1
+        
+    proj.pos.x += acc
+    return acc
 
-
-def remove_goals():
-    """
-    Remove goals being visited by the agent
-    """
+stop = True
+@on_key("down", "space", "pause")
+def pause():
+    global stop
+    stop = not stop
 
 while True:
     window.check_events()
     window.fill("black")
 
-    # Updates
-    remove_goals()
+    # logic
+    if not stop:
+        for i, barrier in enumerate(barriers):
+            barrier_accelerations[i] = move_barrier(barrier, barrier_movement[i], barrier_accelerations[i])
+        
+        for i, proj in enumerate(projectiles):
+            proj_accelerations[i] = move_proj(proj, proj_movement[i], proj_accelerations[i])
+            proj.y += -2 if proj.y  > nexo.y else 2
 
-    UI.draw()
-    Agents.draw()
-    Goals.draw()
-    Obstacles.draw()
+    # collision detection
+    for proj in projectiles:
+        if is_colliding(nexo, proj):
+            stop = True
+            nexo.styles.color = "red"
+        
+        for barrier in barriers:
+            if is_colliding(barrier, proj): 
+                barrier.y = -9999
+                proj.x = -9999
+    
+    # drawing
+    nexo.draw()
+    for barrier in barriers:
+        barrier.draw()
+    for proj in projectiles:
+        proj.draw()
 
     window.update()
