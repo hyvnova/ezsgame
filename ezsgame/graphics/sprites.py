@@ -1,7 +1,10 @@
 from ast import Tuple
 from typing import Callable, Iterable, List, Dict
-from path import Path
+from pathlib import Path
 import pygame
+
+from ezsgame.asset_handler import find_asset
+from ezsgame.objects.object import Object
 from ..styles.styles_resolver import resolve_position, resolve_size
 from ..styles.units import Measure
 from ezsgame.types import Pos, Size
@@ -12,7 +15,7 @@ from PIL import Image, ImageSequence
 pgSpriteClass = pygame.sprite.Sprite
 
 
-class Sprite(pgSpriteClass):
+class Sprite(pgSpriteClass, Object):
     def __new__(
         cls,
         sprite: Path | str,
@@ -22,7 +25,7 @@ class Sprite(pgSpriteClass):
         static: bool = False,
     ):
         # if is animated
-        if Path(sprite).ext == ".gif":
+        if Path(sprite).suffix == ".gif":
             raise TypeError("Use the AnimatedSprite class for animated sprites instead.")
 
         return object.__new__(Sprite)
@@ -36,24 +39,19 @@ class Sprite(pgSpriteClass):
         static: bool = False,
     ):
         pgSpriteClass.__init__(self)
+        Object.__init__(self, pos, size)
 
-        self.window = get_window()
-
-        # resolve pos and size
-        self.size = resolve_size(self, size, self.window.size, True)
-        self.pos = resolve_position(self, pos, self.window, True)
-
-        self.sprite = sprite
-        self.image = pygame.image.load(sprite)
+        self.sprite = find_asset(sprite)
+        self.image = pygame.image.load(self.sprite)
 
         if scale:
             self.image = pygame.transform.scale(self.image, size)
 
         self.rect = self.image.get_rect()
-        self.rect.topleft = pos
-        self.rect.size = size
-        self.start_pos = pos
-        self.start_size = size
+        self.rect.topleft = self.pos.as_tuple()
+        self.rect.size = self.size.as_tuple()
+        self.start_pos = self.pos
+        self.start_size = self.size
 
         if static:
             self.draw = lambda: self.window.surface.blit(self.image, self.rect)
@@ -61,8 +59,8 @@ class Sprite(pgSpriteClass):
     def _update(self):
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = self.image.get_rect()
-        self.rect.topleft = self.pos
-        self.rect.size = self.size
+        self.rect.topleft = self.pos.as_tuple()
+        self.rect.size = self.size.as_tuple()
 
     def draw(self):
         self._update()

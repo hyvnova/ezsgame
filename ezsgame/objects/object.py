@@ -1,5 +1,6 @@
 from typing import Any, Dict, Iterable, Optional, Self, Set, Type
 
+
 from ..styles.style import Styles, Measure
 
 from ..components import ComponentGroup, Component
@@ -174,3 +175,11 @@ class Object:
         Adds a child to the object
         """
         self.children.add(child)
+
+
+    def add_to(self, group) -> Type[Self]:
+        """
+        Adds the object to a group
+        """
+        group.add(self)
+        return self

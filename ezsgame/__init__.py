@@ -4,6 +4,7 @@ from .objects import *
 from .event_handler import *
 from .time_handler import *
 from .world import *
+from .asset_handler import *
 
 # Secondary Resources
 from .sounds import *

@@ -1,8 +1,11 @@
+from ezsgame.components import Component
+from ezsgame.utilities.event_manager import EventManager
 from ..event_handler import on_key, remove_event
-from ..world import get_window
+from ..world import World, get_window
+from ezsgame import world
 
 
-class Controller:
+class Controller(Component):
     r"""
     #### Controller
     A controller is a class that can be used to control a component throught keyboard.
@@ -22,6 +25,8 @@ class Controller:
 
     """
 
+    __name__ = "Controller"
+
     def __init__(
         self,
         keys=["a", "d", "w", "s"],
@@ -29,11 +34,13 @@ class Controller:
         use_delta_time=True,
         auto_complete_speed=True,
     ):
-        self._evnames = []
 
         self.window = get_window()
         self.keys = keys
         self.use_delta_time = use_delta_time
+        self.event_mananger = EventManager(
+            update=f"Controller.update.{id(self)}"
+        )
 
         # auto speed complete
         if auto_complete_speed and len(speed) < len(keys):
@@ -58,32 +65,42 @@ class Controller:
         for i in range(len(keys)):
             self._add_events(i)
 
-    def _add_events(self, index):
-        evname = f"Contoller.keydown.{id(self)}.{index}"
-        self._evnames.append(evname)
 
-        @on_key(type="down", keys=[self.keys[index]], name=evname)
+    def mount(self, object):
+        self.object = object
+        self.add_update_position_event()
+
+
+    def _add_events(self, index):
+        self.event_mananger.add(f"keydown.{index}", f"Controller.keydown.{id(self)}.{index}")
+        self.event_mananger.add(f"keyup.{index}", f"Controller.keyup.{id(self)}.{index}")
+            
+        @on_key(type="down", keys=[self.keys[index]], name=self.event_mananger[f"keydown.{index}"])
         def keydown():
             if self.use_delta_time:
                 self.speed[index] = self._speeds[index] * self.window.get_delta_time()
             else:
                 self.speed[index] = self._speeds[index]
 
-        evname = f"Contoller.keyup.{id(self)}.{index}"
-        self._evnames.append(evname)
-
-        @on_key(type="up", keys=[self.keys[index]], name=evname)
+        @on_key(type="up", keys=[self.keys[index]], name=self.event_mananger[f"keyup.{index}"])
         def keyup():
             self.speed[index] = 0
+
+
+    def add_update_position_event(self):
+        @World.on_update(self.event_mananger["update"])
+        def update_position():
+            self.object.pos += self.get_speed("simple")
+
 
     def get_speed(self, type="all"):
         r"""
         Returns the speed of the controller.
-        @param type: "all", "simple", "average"
-        @type all: returns a list of all speeds -> [n...]
-        @type simple: returns sum of all speeds from 0-half as x and sum of all speeds from half to end as y -> [x,y]
-        @type average: return average of all speeds -> float
-        @type any: return first speed that is not 0, if all are 0, return 0 -> int
+        `type`: "all", "simple", "average"
+        all -> returns a list of all speeds -> [n...]
+        simple -> returns sum of all speeds from 0-half as x and sum of all speeds from half to end as y -> [x,y]
+        average -> return average of all speeds -> float
+        any -> return first speed that is not 0, if all are 0, return 0 -> int
         """
 
         if type == "average":
@@ -127,16 +144,16 @@ class Controller:
         self.__speeds = self._speeds
         self.stop()
         self._speeds = [0] * len(self._speeds)
+        self.event_mananger.disable("update")
 
     def enable(self):
         try:
             self._speeds = self.__speeds
         except:
             return
+        
+        self.add_update_position_event()
 
     def __del__(self):
-        if self.__dict__.get("_evnames", None):
-            for evname in self._evnames:
-                remove_event(evname)
-
+        del self.event_mananger
         del self

@@ -24,10 +24,10 @@ class Label(Component):
             parent=self.object,
         )
 
-    def activate(self):
+    def enable(self):
         self.object.on_draw.add(self._signal_name, self.draw)
 
-    def deactivate(self):
+    def disable(self):
         self.object.on_draw.remove(self._signal_name)
 
     def remove(self):
@@ -66,7 +66,7 @@ class Selectable(Component):
         self.object = object
         self.original_color = object.styles.color
 
-    def activate(self) -> None:
+    def enable(self) -> None:
         @add_event("hover", self.object, name=self._hover_signal_name)
         def hover():
             if self.is_hovered:
@@ -93,6 +93,6 @@ class Selectable(Component):
             self.select_sound.play()
             self.on_select()
 
-    def deactivate(self) -> None:
+    def disable(self) -> None:
         remove_event(self._hover_signal_name)
         remove_event(self._click_signal_name)

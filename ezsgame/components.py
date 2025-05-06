@@ -9,8 +9,8 @@ class Component(ABC):
     ###  Methods:
     - `__init__` : Called when the component is created (Used for initialization and getting arguments) Note: `__init__` is called before `mount` so it doen't have access to a `self.object` yet
     - `mount(object)` : Called after the component is mounted to an object
-    - `activate` : Called when the component is activated
-    - `deactivate` : Called when the component is deactivated
+    - `enable` : Called when the component is activated
+    - `disable` : Called when the component is deactivated
     - `remove` : Called when the component is removed
     """
 
@@ -35,13 +35,13 @@ class Component(ABC):
         )
 
     @abstractmethod
-    def activate(self) -> None:
+    def enable(self) -> None:
         raise NotImplementedError(
             f"Component <{self.__name__}> must implement `activate` (Component activation)"
         )
 
     @abstractmethod
-    def deactivate(self) -> None:
+    def disable(self) -> None:
         raise NotImplementedError(
             f"Component <{self.__name__}> must implement `deactivate` (Component deactivation)"
         )
@@ -51,7 +51,7 @@ class Component(ABC):
         You should not call this method, it is called by the component group when removing the component.
         Makes sure the component is deleted and removed properly
         """
-        self.deactivate()
+        self.disable()
         del self
 
 ComponentType = TypeVar('ComponentType', bound=Component)
@@ -94,7 +94,7 @@ class ComponentGroup:
             comp = self.components.get(component, None)
 
             if comp:
-                comp.remove()
+                comp.disable()
                 del self.components[component]
 
     def add(self, *components: Component, force: bool = False):
@@ -104,7 +104,7 @@ class ComponentGroup:
             if comp and (comp_name not in self.components or force):
                 self.components[comp_name] = comp
                 comp.mount(self.object)
-                comp.activate()
+                comp.enable()
 
     def __contains__(self, component: Type[Component]):
         return component.__name__ in self.components.keys()

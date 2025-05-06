@@ -352,7 +352,7 @@ class Window:
     def run(self, func: Callable, auto_draw: bool = True):
         r"""
         #### Runs a function as the main loop
-        - `func` : function to be runned
+        - `func` : A function that runs in each frame (after checking events)
         - `auto_draw` : if True, all objects will be drawn automatically, ordered by declaration order. Will be called after `func`  (Optional)
 
         Note: `check_events()` and `update()` are called automatically and the start and end of the function respectively

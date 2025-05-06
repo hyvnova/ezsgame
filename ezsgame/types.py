@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Dict, Self, Type, TypeAlias
+from typing import Callable, Dict, Self, Tuple, Type, TypeAlias
 import math
 
 
@@ -387,6 +387,10 @@ class Vector2:
 
     def __hash__(self):
         return hash((self.x, self.y))
+    
+
+    def as_tuple(self) -> Tuple[int, int]:
+        return (self.x, self.y)
     
 class Size (Vector2):
     r"""
