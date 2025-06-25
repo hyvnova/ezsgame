@@ -1,5 +1,5 @@
 from ast import Tuple
-from typing import Callable, Iterable, List, Dict
+from typing import Callable, Iterable, List, Dict, Tuple
 from pathlib import Path
 import pygame
 
@@ -17,6 +17,7 @@ pgSpriteClass = pygame.sprite.Sprite
 
 class Sprite(pgSpriteClass, Object):
     """Static image that can be positioned and drawn like any other Object."""
+    _scale_cache: Dict[Tuple[str, Tuple[int, int]], pygame.Surface] = {}
     def __new__(
         cls,
         sprite: Path | str,
@@ -46,24 +47,39 @@ class Sprite(pgSpriteClass, Object):
         Object.__init__(self, pos, size)
 
         self.sprite = find_asset(sprite)
-        self.image = pygame.image.load(self.sprite)
+        self._orig_image = pygame.image.load(self.sprite)
+        self.scale = scale
 
         if scale:
-            self.image = pygame.transform.scale(self.image, size)
+            key = (self.sprite, self.size.as_tuple())
+            self.image = Sprite._scale_cache.get(key)
+            if self.image is None:
+                self.image = pygame.transform.scale(self._orig_image, self.size)
+                Sprite._scale_cache[key] = self.image
+        else:
+            self.image = self._orig_image
 
         self.rect = self.image.get_rect()
         self.rect.topleft = self.pos.as_tuple()
         self.rect.size = self.size.as_tuple()
         self.start_pos = self.pos
         self.start_size = self.size
+        self._last_size = self.size
 
         if static:
             self.draw = lambda: self.window.surface.blit(self.image, self.rect)
 
     def _update(self):
-        """Resize image and update the rect to match current state."""
+        """Resize image when needed and update rect coordinates."""
 
-        self.image = pygame.transform.scale(self.image, self.size)
+        if self.scale and self.size != self._last_size:
+            key = (self.sprite, self.size.as_tuple())
+            self.image = Sprite._scale_cache.get(key)
+            if self.image is None:
+                self.image = pygame.transform.scale(self._orig_image, self.size)
+                Sprite._scale_cache[key] = self.image
+            self._last_size = self.size
+
         self.rect = self.image.get_rect()
         self.rect.topleft = self.pos.as_tuple()
         self.rect.size = self.size.as_tuple()
