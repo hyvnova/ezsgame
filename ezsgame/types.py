@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Dict, Self, Tuple, Type, TypeAlias
+from typing import Callable, Dict, Self, Tuple, Type, TypeAlias, override
 import math
 
 
@@ -63,7 +63,8 @@ class Signal:
         """
         #### Removes a function from the signal listeners
         """
-        self.listeners.pop(name)
+        if name in self.listeners:
+            self.listeners.pop(name)
 
     # Add through decorator
     def __call__(self, name: str):
@@ -400,7 +401,7 @@ class Size (Vector2):
     - `height`: height `int` or `[width, height]`
     """
 
-    def __init__(self, width: Number, height: Number = None):
+    def __init__(self, width: Number | str, height: Number | str = None):
         super().__init__(width, height)
 
     @property
@@ -419,11 +420,13 @@ class Size (Vector2):
     def height(self, value):
         self.y = value
 
-    def __str__(self):
-        return f"(width: {self.width}, height: {self.height})"
-    
+    @override       
     def __repr__(self):
         return f"Size({self.width}, {self.height})"
+
+    @override
+    def __str__(self):
+        return self.__repr__()
 
 class Pos(Vector2):
     r"""
@@ -436,11 +439,13 @@ class Pos(Vector2):
     def __init__(self, x: Number | str, y: Number | str  | None = None):
         super().__init__(x, y)
 
-    def __str__(self):
-        return f"(x: {self.x}, y: {self.y})"
-
+    @override
     def __repr__(self):
         return f"Pos({self.x}, {self.y})"
+
+    @override
+    def __str__(self):
+        return self.__repr__()
     
 
 

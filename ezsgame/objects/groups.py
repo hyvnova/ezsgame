@@ -1,9 +1,11 @@
 from typing import Any, Tuple, Union
+
+from ezsgame.world import World
 from ..funcs import center_at
 
 from ..objects.object import Object
 from ..types import Pos
-
+from ..styles.style import Styles
 
 class Group:
     r"""
@@ -22,7 +24,7 @@ class Group:
 
     """
 
-    def __init__(self, *objects, **named_objects):
+    def __init__(self, styles: Styles = Styles(), *objects, **named_objects):
         self._objects = {}
 
         parent = named_objects.get("parent", None)
@@ -145,7 +147,13 @@ class Group:
         return self._objects[key]
 
     def __getattr__(self, name):
-        return self._objects.get(name, None) or self.__dict__[name]
+        if self._objects.get(name):
+            return self._objects[name]
+        
+        try:
+            return self.__dict__[name]
+        except KeyError:
+            raise AttributeError(name)
 
     def values(self, no_parent=False):
         if no_parent and self._parent:
@@ -191,3 +199,18 @@ class Group:
 
     def __len__(self):
         return len(self._objects)
+
+
+    def on_world_add(self):
+        """
+        Called when the group is added to the world
+        """
+        for obj in self._objects.values():
+            World.objects_to_add.add(obj)
+
+    def on_world_remove(self):
+        """
+        Called when the group is removed from the world
+        """
+        for obj in self._objects.values():
+            World.objects_to_remove.add(obj)

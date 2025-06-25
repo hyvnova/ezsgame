@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, Dict, Self, Type, TypeVar, override
 
 
 class Component(ABC):
@@ -19,11 +19,11 @@ class Component(ABC):
         instance.__name__ = cls.__name__
         return instance
 
-    def __str__(self):
-        return f"<Component : {self.__name__}>"
-
     def __repr__(self):
-        return self.__str__()
+        return f"Component()"
+
+    def __str__(self):
+        return self.__repr__()
 
     @abstractmethod
     def mount(self, object) -> None:
@@ -54,6 +54,7 @@ class Component(ABC):
         self.disable()
         del self
 
+
 ComponentType = TypeVar('ComponentType', bound=Component)
 
 class ComponentGroup:
@@ -69,12 +70,13 @@ class ComponentGroup:
         self.clear()
         del self
 
-    def __str__(self):
-        t = ", ".join([*map(str, self.components.values())])
-        return f"<Component Group : [{t}] >"
-
+    @override
     def __repr__(self):
-        return self.__str__()
+        return f"ComponentGroup({self.object}).add({[*self.components.values()]})"
+
+    @override
+    def __str__(self):
+        return self.__repr__()
 
     def get(self, component: Type[Component], default: Any = None) -> Component:
         """
@@ -97,14 +99,16 @@ class ComponentGroup:
                 comp.disable()
                 del self.components[component]
 
-    def add(self, *components: Component, force: bool = False):
-        for comp in components:
+    def add(self, *components: Component, force: bool = False) -> Self:
+        for comp in components: 
             comp_name = comp.__name__
 
             if comp and (comp_name not in self.components or force):
                 self.components[comp_name] = comp
                 comp.mount(self.object)
                 comp.enable()
+
+        return self
 
     def __contains__(self, component: Type[Component]):
         return component.__name__ in self.components.keys()

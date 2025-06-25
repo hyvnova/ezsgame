@@ -29,11 +29,10 @@ class EventManager:
 
     def remove(self, alias: str):
         """
-        Removes the event with the given alias, from both EventManager and EventHandler. 
+        Removes the event with the given alias, from both EventManager and EventHandler.
         """
         remove_event(self.events[alias])
         del self.events[alias]
-
 
     def disable(self, alias: str):
         """
@@ -48,10 +47,10 @@ class EventManager:
         Enables the event with the given alias.
         This adds the event back to EventHandler and removes it from the disabled dict.
         """
-        if alias not in self.disabled: return
+        if alias not in self.disabled:
+            return
         EventHandler.to_add.append(self.disabled[alias])
         del self.disabled[alias]
-
 
     def toggle(self, alias: str):
         """

@@ -17,17 +17,16 @@ def resolve_measure(measure: Measure, parent_length: float) -> float:
     
     # if measure is a percentage    
     elif measure.endswith("%"):
-            return float(measure[:-1]) * parent_length / 100
+        return float(measure[:-1]) * parent_length / 100
     
     # if measure is aspect ratio of parent
     elif re.match("[0-9]+/[0-9]+", measure):
-            ratio = measure.split("/")
-            try:
-                measure = parent_length * int(ratio[0]) / int(ratio[1])
-                
-            except ZeroDivisionError as e:
-                raise ValueError("Invalid aspect ratio: ", measure + " (divided by zero)")
-        
+        ratio = measure.split("/")
+        try:
+            measure = parent_length * int(ratio[0]) / int(ratio[1])
+        except ZeroDivisionError as e:
+            raise ValueError("Invalid aspect ratio: ", measure + " (divided by zero)")
+    
     return measure
 
 def resolve_position(child, pos: Pos | Iterable[Measure], parent, partial: bool = False) -> Pos:

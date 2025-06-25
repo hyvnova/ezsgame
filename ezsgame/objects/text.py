@@ -123,3 +123,7 @@ class Text(Object):
 
     def draw(self):
         self.window.surface.blit(self.text_obj, self.pos)
+
+
+    def __len__(self):
+        return len(self.text.get())

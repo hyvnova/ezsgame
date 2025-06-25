@@ -1,150 +1,67 @@
+from client import LADY_AI, Client, get_character_prompt
+from components import DetectNear, DialogueBox
 from ezsgame import *
-from components import *
+import map
 
-window = Window(title="2v2")
-
-
-# Barreras
-barrier_pos = [
-    Pos(70, "center"),  # Pos inicial P1
-    Pos(90, "top-center"),  # Pos inicial P2
-]
-
-# Projectiles
-proj_pos = [Pos("right", "center"), Pos("right-center", "top")]  # P1  # P2
-
-# ! No renombren las funciones :)
+# Initialize the game window
+window = Window(title="Toss The Crown", size=Size(1280, 720), show_fps=True, fps=60)
+map.load()
+# map.edit()
 
 
-def p1_barrier(y: float, h: int, acceleration: int) -> int:
-    if y < 0 + h * 2:
-        return DOWN
-    if y + h >= window.size.y - h * 2:
-        return UP
-    return DOWN
+def on_near(obj):
+    # Interaction with the lady
+    if obj.tags.get("name", "") == "lady":
 
+        @Input().get_text()
+        def on_input(text):
+            text = text.strip()
+            if not text:
+                return
 
-def p2_barrier(y: float, h: int, acceleration: int) -> int:
-    if y < 0 + h * 2:
-        return DOWN
-    if y + h >= window.size.y - h * 2:
-        return UP
-    return UP
+            print("User: ", text)
+            # dialogue, thought = LADY_AI.send_message("user", text)
+            # print("Lady: ", dialogue)
+            # print("Thought: ", thought)
 
+            World.search_single(tags={"name": "lady"}).components[DialogueBox].push(["Line 1", "Line 2", "Line 3"])
 
-def p1_proj(x: float, w: int, acceleration: int) -> int:
-    return UP  # Rapido
+player = Rect(
+    Pos("center", "center"),
+    Size(50, 50),
+    color="white",
 
+    components=[
+        Controller(),
+        DetectNear(on_near)
+    ],
 
-def p2_proj(x: float, w: int, acceleration: int) -> int:
-    return DOWN if acceleration < 0 else UP  # Lento
+    tags={"name": "player"},
+    z_index=1.1
+)
 
-
-# No tocar de aqui en adelante.  ---------------------------------------------------------------------------------------------------
-BAR_TOP_SPEED = 8
-PROJECTILE_TOP_SPEED = 12
-
-UP = 1
-DOWN = 2
-KEEP = 3
-
-nexo = Rect(Pos(10, "center"), Size(50))
-
-barriers = [Rect(pos, Size(20, 60), color="blue") for pos in barrier_pos]
-barrier_accelerations = [1 for _ in barriers]
-barrier_movement = [p1_barrier, p2_barrier]
-
-projectiles = [Rect(pos, Size(25), color="red") for pos in proj_pos]
-proj_accelerations = [1 for _ in projectiles]
-proj_movement = [p1_proj, p2_proj]
-
-
-def move_barrier(
-    barrier: Rect, movement: Callable[[float, int, int], int], acc: int
-) -> int:
-    acc_val = movement(barrier.pos.y, barrier.size.y, acc)
-
-    if not (1 <= acc_val <= 3):
-        return 3
-
-    if acc_val == UP:
-        acc -= 1
-
-    if acc_val == DOWN:
-        acc += 1
-
-    if acc > BAR_TOP_SPEED:
-        acc = BAR_TOP_SPEED
-    if acc < -BAR_TOP_SPEED:
-        acc = 1
-
-    barrier.pos.y += acc
-    return acc
-
-
-def move_proj(proj: Rect, movement: Callable[[float, int, int], int], acc: int) -> int:
-    acc_val = movement(proj.pos.x, proj.size.x, acc)
-
-    if not (1 <= acc_val <= 3):
-        return 3
-
-    if acc_val == UP:
-        acc -= 1
-
-    if acc_val == DOWN:
-        acc += 1
-
-    if acc > PROJECTILE_TOP_SPEED:
-        acc = PROJECTILE_TOP_SPEED
-    if acc < -PROJECTILE_TOP_SPEED:
-        acc = 1
-
-    proj.pos.x += acc
-    return acc
-
-
-stop = True
-
-
-@on_key("down", "space", "pause")
-def pause():
-    global stop
-    stop = not stop
+lady = Rect(
+    player.pos + Pos(100, 100),
+    Size(50, 50),
+    color="red",
+    components=[
+        DialogueBox(
+            text="Hello, traveler! What brings you to this land?",
+            font_size=20,
+            color="white",
+            pace=3
+        )
+    ],
+    tags={"name": "lady"}
+)
 
 
 while True:
     window.check_events()
     window.fill("black")
 
-    # logic
-    if not stop:
-        for i, barrier in enumerate(barriers):
-            barrier_accelerations[i] = move_barrier(
-                barrier, barrier_movement[i], barrier_accelerations[i]
-            )
 
-        for i, proj in enumerate(projectiles):
-            proj_accelerations[i] = move_proj(
-                proj, proj_movement[i], proj_accelerations[i]
-            )
-            proj.y += -2 if proj.y > nexo.y else 2
-
-    # collision detection
-    for proj in projectiles:
-        if is_colliding(nexo, proj):
-            stop = True
-            nexo.styles.color = "red"
-
-        for barrier in barriers:
-            if is_colliding(barrier, proj):
-                barrier.y = -9999
-                proj.x = -9999
-
-    # drawing
-    nexo.draw()
-    for barrier in barriers:
-        barrier.draw()
-    for proj in projectiles:
-        proj.draw()
+    for obj in World.objects:
+        obj.draw()
 
     window.update()

@@ -1,4 +1,4 @@
-from typing import Callable, Iterable
+from typing import Callable, Iterable, override
 import pygame as pg, random, os
 
 from .scenes import SceneManager
@@ -109,8 +109,12 @@ class Window:
         # Post init
         self._post_init()
 
+    @override
+    def __repr__(self) -> str:
+        return "World.window"
+
     def __str__(self):
-        return "<Window>"
+        return self.__repr__()
 
     # -----------------------------------------------------------------------------
     def resize(self, size: Size):
@@ -281,13 +285,7 @@ class Window:
 
         self.clock.tick(self.fps)
 
-        # Add objects that were added during the update
-        if len(World.objects_to_add) > 0:
-            World.objects.update(World.objects_to_add)
-            World.objects_to_add.clear()
-
-            # sort objects by z-index
-            World.objects = set(sorted(World.objects, key=lambda obj: obj.styles.z_index))
+        World.update()
 
         # call on update events
         World.on_update.trigger()

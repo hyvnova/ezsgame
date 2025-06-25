@@ -1,3 +1,4 @@
+from typing import override
 from ezsgame.components import Component
 from ezsgame.utilities.event_manager import EventManager
 from ..event_handler import on_key, remove_event
@@ -65,6 +66,13 @@ class Controller(Component):
         for i in range(len(keys)):
             self._add_events(i)
 
+
+    @override
+    def __repr__(self):
+        return f"Controller({self.keys}, {self.speed}, {self.use_delta_time}, {self.auto_complete_speed})"
+
+    def __str__(self):
+        return self.__repr__()
 
     def mount(self, object):
         self.object = object

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, Optional, Self, Set, Type
+from typing import Any, Dict, Iterable, Optional, Self, Set, Type, override
 
 
 from ..styles.style import Styles, Measure
@@ -28,6 +28,8 @@ class Object:
         "parent",
         "children",
         "styles",
+        "tags",
+        "add_to_world"
     )
 
     def __init__(
@@ -37,6 +39,8 @@ class Object:
         styles: Optional[Styles] = None,
         parent: Optional["Object"] = None,
         components: Iterable[Component] = [],
+        tags: dict = {}, # Custom data for the object
+        add_to_world: bool = True, # Whether to register the object in World.objects
         **_styles
     ):
         """
@@ -44,12 +48,16 @@ class Object:
         """
         self.window = get_window()
         self.children: Set[Object] = set()
+        self.tags = tags
+        self.add_to_world = add_to_world
 
         if parent:
             self.parent = parent
 
             if parent != self.window:
                 self.parent.add_child(self)
+                self.add_to_world = parent.add_to_world 
+                self.styles.z_index = parent.styles.z_index + 1
 
         else:
             self.parent = self.window
@@ -85,7 +93,16 @@ class Object:
             pass
 
         # Register object in DATA
-        World.objects_to_add.add(self)
+        if self.add_to_world:
+            World.objects_to_add.add(self)
+
+
+    def draw(self) -> None:
+        """
+        #### Draws the object
+        This method should be overridden in subclasses.
+        """
+        raise NotImplementedError("The draw method should be implemented in the subclass.")
 
     def _update(self, updated_property_name: str) -> None:
         """
@@ -104,12 +121,13 @@ class Object:
         pass
 
     def _get_collision_box(self):
-        x, y = self.pos
-        w, h = self.size
-        return [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
 
-    def __str__(self):
-        return f"<Object: {self.__class__.__name__}, ID: {id(self)}>"
+        # resolve the position and size of the object
+        pos = resolve_position(self, self.pos, self.parent)
+        size = resolve_size(self, self.size, self.parent.size)
+        x, y = pos
+        w, h = size
+        return [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
 
     def center_at(self, object: Type[Self] = None) -> Self:
         r"""
@@ -183,3 +201,12 @@ class Object:
         """
         group.add(self)
         return self
+
+
+    @override
+    def __repr__(self) -> str:
+        return f"Object(pos={self.pos}, size={self.size}, styles={self.styles}, behavior={self.behavior}, parent={self.parent}, children={self.children})"
+
+    @override
+    def __str__(self) -> str:
+        return self.__repr__()

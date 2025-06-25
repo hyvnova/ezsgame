@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, override
 
 from ..world import get_window
 from ..objects.object import Object
@@ -33,6 +33,14 @@ class Rect(Object):
             *self.styles.border_radius
         )
 
+
+    @override
+    def __repr__(self) -> str:
+        return f"Rect(pos={self.pos}, size={self.size}, styles={self.styles}, behavior={self.behavior}, parent={self.parent}, children={self.children})"
+
+    @override
+    def __str__(self) -> str:
+        return self.__repr__()
 
 class Circle(Object):
     r"""

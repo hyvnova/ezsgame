@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Self, Set
+from typing import Any, Callable, Self
 
 
 class Reactive:
@@ -29,7 +29,6 @@ class Reactive:
 
     def get(self) -> Any:
         return self._value
-    
 
     # Arithmetic magic method that change the value
     def __iadd__(self, other):

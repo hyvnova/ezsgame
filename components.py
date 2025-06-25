@@ -1,4 +1,5 @@
 from ezsgame import *
+from concurrent.futures import ThreadPoolExecutor
 
 class Label(Component):
     """
@@ -96,3 +97,128 @@ class Selectable(Component):
     def disable(self) -> None:
         remove_event(self._hover_signal_name)
         remove_event(self._click_signal_name)
+
+
+class DetectNear(Component):
+    """
+    When an object enter near the collision of this object, it will call the callback
+    """
+
+    def __init__(self, callback: Callable[[Object], None]) -> None:
+        self.callback = callback
+        self._event_name = f"detect_near_{id(self)}"
+
+    def mount(self, object: Object):
+        self.object = object
+
+    def enable(self):
+        # Set up
+        @on_event("update", self._event_name)
+        def check_for_collision():
+            for obj in World.objects:
+                if obj != self.object and is_colliding(self.object, obj):
+                    self.callback(obj)
+
+    def disable(self):
+        remove_event(self._event_name)
+
+    def remove(self):
+        self.disable()
+
+
+class DialogueBox(Component):
+    """
+    A dialogue box component that displays text in a box
+    """
+
+    def __init__(self, text: str | None = None, font_size: int = 20, color: str = "white", pace: int = 1) -> None: 
+        self.enabled = True 
+
+        self.lines = text.split("\n") if text else []
+        self.current_line = 0
+
+        self.font_size = font_size
+        self.color = color
+        # Lines per second
+        self.pace = pace
+
+        self._signal_name = f"dialogue_box_draw_{id(self)}"
+        self._interval_event_name = f"dialogue_box_update_{id(self)}"
+
+        self._time_since_last_line = 0
+
+        # dummy object to hold the text
+        self.text_obj = Text("", Pos(0, 0), 0)
+
+    def __repr__(self):
+        return f"DialogueBox(lines={self.lines}, current_line={self.current_line}, font_size={self.font_size}, color={self.color}, pace={self.pace})"
+
+    def __str__(self):
+        return self.__repr__()
+
+    def push(self, lines: list[str]):
+        """
+        Set the text of the dialogue box and reset the state
+        """
+        self.lines = lines
+        self.current_line = 0
+        self._time_since_last_line = 0
+
+        if not self.enabled:
+            print("Enabling DialogueBox")
+            self.enable()
+
+
+    def reset(self):
+        """
+        Reset the dialogue box to its initial state
+        """
+        self.lines = []
+        self.current_line = 0
+
+        if self.enabled:
+            self.disable()
+
+    def update_text(self):
+        print("Current line:", self.lines[self.current_line] if self.lines else "No lines")
+        self.text_obj = Text(
+            self.lines[self.current_line] if self.lines else "",
+            # Below the object
+            self.object.pos + Pos(0, self.object.size.y + 20),
+            self.font_size,
+            color=self.color,
+            parent=self.object,
+            z_index=2
+        )
+
+    def mount(self, object: Object):
+        self.object = object
+
+    def enable(self):
+        # If there are no lines, do not enable the dialogue box
+        if not self.lines:
+            self.disable()
+            return
+    
+        self.enabled = True
+
+        self.update_text()
+        World.add(self.text_obj)
+
+        self.current_line -= 1 # So first line also get's time
+        @add_interval(self.pace, self._interval_event_name)
+        def every_pace():
+            self.current_line += 1
+            if self.current_line >= len(self.lines):
+                self.reset()
+                self.disable()
+                return
+
+            self.update_text()
+
+    def disable(self):
+        self.enabled = False
+        World.remove(self.text_obj)
+
+    def remove(self):
+        self.disable()
