@@ -180,16 +180,30 @@ class DialogueBox(Component):
             self.disable()
 
     def update_text(self):
-        print("Current line:", self.lines[self.current_line] if self.lines else "No lines")
-        self.text_obj = Text(
-            self.lines[self.current_line] if self.lines else "",
-            # Below the object
-            self.object.pos + Pos(0, self.object.size.y + 20),
-            self.font_size,
-            color=self.color,
-            parent=self.object,
-            z_index=2
+        print(
+            "Current line:",
+            self.lines[self.current_line] if self.lines else "No lines",
         )
+
+        # Update existing text object if it exists instead of creating a new one
+        if self.text_obj in World.objects:
+            self.text_obj.text = (
+                self.lines[self.current_line] if self.lines else ""
+            )
+            self.text_obj.pos = (
+                self.object.pos + Pos(0, self.object.size.y + 20)
+            )
+        else:
+            self.text_obj = Text(
+                self.lines[self.current_line] if self.lines else "",
+                # Below the object
+                self.object.pos + Pos(0, self.object.size.y + 20),
+                self.font_size,
+                color=self.color,
+                parent=self.object,
+                z_index=2,
+            )
+            World.add(self.text_obj)
 
     def mount(self, object: Object):
         self.object = object
