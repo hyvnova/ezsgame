@@ -94,15 +94,15 @@ class Text(Object):
         # if font is a path | str
         elif isinstance(self.font, str):
             # if font in system fonts
-            if font in pg.font.get_fonts():
+            if self.font in pg.font.get_fonts():
                 font = pg.font.SysFont(
-                    font, self.font_size.get(), self.bold, self.italic
+                    self.font, self.font_size.get(), self.bold, self.italic
                 )
 
             # if font is a path
-            elif font.endswith(".ttf"):
+            elif self.font.endswith(".ttf"):
                 try:
-                    font = pg.font.Font(font, self.font_size.get())
+                    font = pg.font.Font(self.font, self.font_size.get())
                 except Exception as e:
                     raise ValueError(f"Error loading font: {e}")
 

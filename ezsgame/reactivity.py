@@ -60,14 +60,14 @@ class Reactive:
     def __sub__(self, other):
         return self._value - other
 
-    def __mult__(self, other):
+    def __mul__(self, other):
         return self._value * other
     
     def __div__(self, other):
         return self._value / other
     
     def __truediv__(self, other):
-        return self._value // other
+        return self._value / other
     
     def __pow__(self, other):
         return self._value ** other
