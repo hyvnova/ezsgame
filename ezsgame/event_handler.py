@@ -2,10 +2,11 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 import random
 from typing import Any, Dict, Generator, Iterable, List, Callable, Optional, Set, Union, override
-from numpy.char import lower
 import pygame as pg
 from .world import World
 from .objects import Object
+from .funcs import is_hovering
+from pygame.event import Event as PygameEvent
 
 
 def to_pgkey(key: str) -> int:
@@ -32,7 +33,7 @@ class Event:
     event_name: str
     callback: Callable
     object: Optional[Any] = None
-    name: str = "Default"
+    eid: str = "Default"
     priority: bool = False
     data: dict = field(default_factory=dict)
 
@@ -44,7 +45,7 @@ class Event:
             self.callback()
 
     def __eq__(self, other: Object) -> bool:
-        return isinstance(other, Event) and self.name == other.name
+        return isinstance(other, Event) and self.eid == other.eid
 
 
 # ──────────────────── EventList ────────────────────── #
@@ -68,11 +69,11 @@ class EventList(list):
 
     # ── internal plumbing ───────────────────────────── #
     def _register(self, ev: Event) -> None:
-        self._by_name[ev.name] = ev
+        self._by_name[ev.eid] = ev
         self._by_type[ev.type].append(ev)
 
     def _unregister(self, ev: Event) -> None:
-        self._by_name.pop(ev.name, None)
+        self._by_name.pop(ev.eid, None)
         try:
             self._by_type[ev.type].remove(ev)
             if not self._by_type[ev.type]:
@@ -126,15 +127,15 @@ class EventList(list):
 
     def add(self, event: Event) -> None:
         # replace duplicates
-        if event.name in self._by_name:
-            self.replace(event.name, event)
+        if event.eid in self._by_name:
+            self.replace(event.eid, event)
             return
 
         # priority events suspend siblings of same type
         if event.priority:
             siblings = self.get_by_type(event.type)
             if siblings:
-                self.priority_stash[event.name] = siblings
+                self.priority_stash[event.eid] = siblings
                 for sib in siblings:
                     self._remove_internal(sib)
 
@@ -142,7 +143,7 @@ class EventList(list):
 
     def __contains__(self, item) -> bool:
         if isinstance(item, Event):
-            return item.name in self._by_name
+            return item.eid in self._by_name
         return item in self._by_name  # allow `'jump' in events`
 
 
@@ -158,9 +159,10 @@ class EventHandler:
 
     __ezsgame_events = ("update",)
 
+    @staticmethod
     def check():
         # gets widnow events
-        events = pg.event.get()
+        app_incoming_events: List[PygameEvent] = pg.event.get()
 
         # log pressed keys
         EventHandler.pressed_keys = pg.key.get_pressed()
@@ -183,105 +185,108 @@ class EventHandler:
         EventHandler.to_remove.clear()
 
         # -------------------- adds events --------------------
-        for event in EventHandler.to_add:
+        for user_event in EventHandler.to_add:
 
             # if is ezsgame event
-            if event.type == "ezsgame":
+            if user_event.type == "ezsgame":
 
                 # MANAGE EZSGAME EVENTS
 
                 # on update event
-                if event.event_name == "update":
-                    World.on_update.add(event.name, event.callback)
+                if user_event.event_name == "update":
+                    World.on_update.add(user_event.eid, user_event.callback)
 
             # if is a event
             else:
-                EventHandler.events.add(event)
+                EventHandler.events.add(user_event)
 
         EventHandler.to_add.clear()
 
         # EVENT MANAGEMENT -------------------------------------------------------------------------------------------
-        for ev in events:
-            # ev : event to process
+        for app_event in app_incoming_events:
+            # app_event : event to process 
+
+            # event_list[app_eventhash] -> [Callbacks]
+            
 
             # quit event (cannot be event listener)
-            if ev.type == pg.QUIT:
-                for event in EventHandler.events.get_by_type(pg.QUIT):
-                    event.callback()
+            if app_event.type == pg.QUIT:
+                for user_event in EventHandler.events.get_by_type(pg.QUIT):
+                    user_event.callback()
 
                 World.window.quit()
 
             # Manages custom events
-            for event in EventHandler.events.get_by_type("custom"):
+            for user_event in EventHandler.events.get_by_type("custom"):
                 event_args = {
-                    "keys": event.data.get("keys"),
-                    "unicode": ev.data.get("unicode"),
-                    "type": ev.type,
-                    "button": event.data.get("button"),
+                    "keys": user_event.data.get("keys"),
+                    "unicode": app_event.data.get("unicode"),
+                    "type": app_event.type,
+                    "button": user_event.data.get("button"),
                     "is_hovering": (
-                        EventHandler.is_hovering(event["object"])
-                        if "object" in event
+                        is_hovering(user_event["object"])
+                        if "object" in user_event
                         else False
                     ),
                 }
 
-                event(**event_args)
+                user_event(**event_args)
 
             #  EVENT LOOP (managing events)
-            for event in EventHandler.events.get_by_type(ev.type):
+            for user_event in EventHandler.events.get_by_type(app_event.type):
 
                 # if is event listener (uses a object)
-                is_event_listener = event.object is not None
+                is_event_listener = user_event.object is not None
                 is_hovering = False
 
                 if is_event_listener:
-                    is_hovering = EventHandler.is_hovering(event.object)
+                    is_hovering = EventHandler.is_hovering(user_event.object)
 
                     # if is not hovering and event is not unhover then skip
-                    if not is_hovering and not event.event_name == "unhover":
+                    if not is_hovering and not user_event.event_name == "unhover":
                         continue
 
                 # function to reduce code, function decides whaterver callback should called or not
                 def callback():
                     if is_event_listener:
                         # events that require be hovering
-                        if is_hovering and event.object.styles.visible:
-                            event.callback()
+                        if is_hovering and user_event.object.styles.visible:
+                            user_event.callback()
 
                     # if is not event listener is base event, just call callback
                     else:
-                        event.callback()
+                        user_event.callback()
 
                 # mouse events
-                if ev.type == pg.MOUSEBUTTONDOWN:
+                if app_event.type == pg.MOUSEBUTTONDOWN:
                     # mouse wheel up
-                    if event.event_name == "mousewheelup" and ev.button == 4:
+                    if user_event.event_name == "mousewheelup" and app_event.button == 4:
                         callback()
                         continue
 
                         # mouse wheel down
-                    elif event.event_name == "mousewheeldown" and ev.button == 5:
+                    elif user_event.event_name == "mousewheeldown" and app_event.button == 5:
                         callback()
                         continue
 
                     # right mouse button
-                    elif event.event_name == "rightclick" and ev.button == 3:
+                    elif user_event.event_name == "rightclick" and app_event.button == 3:
                         callback()
                         continue
 
                     # click, mousedown or leftclick
                     elif (
-                        event.event_name in ("click", "mousedown", "leftclick")
-                        and ev.button == 1
+                        user_event.event_name in ("click", "mousedown", "leftclick")
+                        and app_event.button == 1
                     ):
                         callback()
                         continue
 
                 # hover events
-                elif ev.type == pg.MOUSEMOTION:
-                    if event.event_name == "unhover":
+                elif app_event.type == pg.MOUSEMOTION:
+                    if user_event.event_name == "unhover":
                         if not is_hovering:
-                            event.callback()
+                            user_event.callback()
                             continue
 
                     else:
@@ -289,9 +294,9 @@ class EventHandler:
                         continue
 
                 # mouse up events
-                elif ev.type == pg.MOUSEBUTTONUP:
-                    if event.event_name == "mouseup" or event.type == pg.MOUSEBUTTONUP:
-                        event.callback()
+                elif app_event.type == pg.MOUSEBUTTONUP:
+                    if user_event.event_name == "mouseup" or user_event.type == pg.MOUSEBUTTONUP:
+                        user_event.callback()
                         continue
 
                     else:
@@ -299,15 +304,15 @@ class EventHandler:
                         continue
 
                 # Key pressed events
-                elif (ev_keys := event.data.get("keys")):
-                    if ev.key in ev_keys:
-                        event(key=ev.key, unicode=ev.unicode)
+                elif (ev_keys := user_event.data.get("keys")):
+                    if app_event.key in ev_keys:
+                        user_event(key=app_event.key, unicode=app_event.unicode)
                         continue
 
                 # base on key event keydown or keyup
                 # keydown or keyup events
-                elif event.type in (pg.KEYDOWN, pg.KEYUP):
-                    event(key=ev.key, unicode=ev.unicode)
+                elif user_event.type in (pg.KEYDOWN, pg.KEYUP):
+                    user_event(key=app_event.key, unicode=app_event.unicode)
                     continue
 
                 # any event that matchess current window event
@@ -315,23 +320,25 @@ class EventHandler:
                     callback()
                     continue
 
-    def add_event(event: str, object: Object, callback, name: str = "Default"):
+    @staticmethod
+    def add_event(event: str, object: Object, callback, eid: str = "Default", priority: bool = False):
         """
         #### Adds a event listener to a object
         - `event` : event to be added
                 - Events : `click`, `hover`, `unhover`, `unclick`.
-        - `name` : name of the event
+        - `eid` : event id. used to identify the event and remove it later
         - `object` : object to be added to the event
         - `callback` : function to be called when the event is triggered
         """
 
         event, event_type = EventHandler._convert_to_pgevent(event)
 
-        if name == "Default":
-            name = f"{event}.{id(object)}.{len(EventHandler.events)}.{len(EventHandler.to_add)}"
+        if eid == "Default":
+            eid = f"{event}.{id(object)}.{len(EventHandler.events)}.{len(EventHandler.to_add)}"
 
-        EventHandler.to_add.append(Event(event_type, event, callback, object, name))
+        EventHandler.to_add.append(Event(event_type, event, callback, object, eid, priority=priority))
 
+    @staticmethod
     def remove_event(name: str):
         f"""
         #### Removes an event from the event list so it won't be called anymore
@@ -339,52 +346,41 @@ class EventHandler:
         """
         EventHandler.to_remove.add(name)
 
-    def is_hovering(object: Object) -> bool:
-        """
-        #### Checks if the mouse is hovering over the object
-        - `object` : object to check if the mouse is hovering over it
-        """
-        mouse_pos = pg.mouse.get_pos()
-        box = object._get_collision_box()
 
-        if mouse_pos[0] > box[0][0] and mouse_pos[0] < box[1][0]:
-            if mouse_pos[1] > box[0][1] and mouse_pos[1] < box[2][1]:
-                return True
-
-        return False
-
-    def on_event(event: str, callback, name: str = "Default", priority: bool = False):
+    @staticmethod
+    def on_event(event: str, callback, eid: str = "Default", priority: bool = False):
         """
         #### Adds a `Base Event` to the event list, Calls function when event is triggered.
         - `event`: event to be added
                 - Events : `quit`, `mousemotion`, `mousedown`, `mouseup`, `keydown`, `keyup`, `mousewheel`, `update`
         -  `callback`: function to be called when the event is triggered ``function``
-        - `name`: name of event (optional)
+        - `eid`: event id. used to identify the event and remove it later
         """
 
-        name = (
+        eid = (
             f"base_event.{event}.{len(EventHandler.events)}"
-            if name == "Default"
-            else name
+            if eid == "Default"
+            else eid
         )
 
         # if is ezsgame event
         if event in EventHandler.__ezsgame_events:
-            EventHandler.to_add.append(Event("ezsgame", event, callback, None, name, priority=priority))
+            EventHandler.to_add.append(Event("ezsgame", event, callback, None, eid, priority=priority))
             return
 
         event, event_type = EventHandler._convert_to_pgevent(event)
 
-        EventHandler.to_add.append(Event(event_type, event, callback, None, name, priority=priority))
+        EventHandler.to_add.append(Event(event_type, event, callback, None, eid, priority=priority))
 
-    def on_key(type: str, keys: list, callback, name: str = "Default", priority: bool = False):
+    @staticmethod
+    def on_key(type: str, keys: list, callback, eid: str = "Default", priority: bool = False):
         """
         #### Calls function when key event is triggered.
         -  `type`: type of `Event` to be added
                 - Events : `down` (when key is down), `up` (when key released)
         - `keys`: keys to be added to the event
         -  `callback`:  function to be called when the event is triggered
-        - `name`: name of event (optional)
+        - `eid`: event id. used to identify the event and remove it later
         """
         types = {"down": pg.KEYDOWN, "up": pg.KEYUP}
 
@@ -393,30 +389,33 @@ class EventHandler:
         if not event_type:
             raise ValueError('Invalid type: \nValid types are: "up", "down"', type)
 
-        name = f"{keys}_{type}_{len(EventHandler.events)}" if name == "Default" else name
+        eid = f"{keys}_{type}_{len(EventHandler.events)}" if eid == "Default" else eid
 
         keys = list(map(to_pgkey, keys))
 
         EventHandler.to_add.append(
-            Event(event_type, keys, callback, None, name, data={ "keys": keys}, priority=priority)
+            Event(event_type, keys, callback, None, eid, data={ "keys": keys}, priority=priority)
         )
 
-    def custom_event(callback, object=None, name: str = "Default", data: dict = {}, priority: bool = False):
+    @staticmethod
+    def custom_event(callback, object=None, eid: str = "Default", data: dict = {}, priority: bool = False):
         """
         #### Creates a custom event. *[Decorator]*
         - `callback` : function to be called with event parameters
         - `object` : object to check if is hovering, if you need `is_hovering` (Optional)
-        - `name`: name of event (optional)
+        - `eid`: event id. used to identify the event and remove it later
         """
 
-        name = (
-            f"custom_event.{name}.{len(EventHandler.events)}"
-            if name == "Default"
-            else name
+        eid = (
+            f"custom_event.{eid}.{len(EventHandler.events)}"
+            if eid == "Default"
+            else eid
         )
 
-        EventHandler.to_add.append(Event("custom", "custom", callback, object, name, data=data, priority=priority))
+        EventHandler.to_add.append(Event("custom", "custom", callback, object, eid, data=data, priority=priority))
 
+
+    @staticmethod
     def _convert_to_pgevent(event):
         if event in EventHandler.__ezsgame_events:
             return event
@@ -450,97 +449,97 @@ class EventHandler:
 
 
 # event decorators ------------------------------------------------------------
-def on_key(type: str, keys: Iterable | str, name: str = "Default") -> Callable:
+def on_key(type: str, keys: Iterable | str, eid: str = "Default") -> Callable:
     """
     #### Calls the function when the key event is triggered
     - `type` : type of the event. `up` or `down`
             - Event types : `up` (when the key is released), `down` (when the key is pressed)
     - `keys` : key/keys to listen to
-    - `name` : name of the event (Optional)
+    - `eid` : event id. used to identify the event and remove it later (Optional)
     """
     if not hasattr(keys, "__iter__") or isinstance(keys, str):
         keys = [keys]
 
     def wrapper(func):
-        EventHandler.on_key(type, keys, func, name)
+        EventHandler.on_key(type, keys, func, eid)
         return func
 
     return wrapper
 
 
-def on_key_updown(keys: Iterable | str, on_down: Callable, on_up: Callable, name: str = "Default", priority: bool = False) -> None:
+def on_key_updown(keys: Iterable | str, on_down: Callable, on_up: Callable, eid: str = "Default", priority: bool = False) -> None:
     """
     #### Calls the function when the key event is triggered
     - `keys` : key/keys to listen to
     - `on_down` : function to be called when the key is pressed
     - `on_up` : function to be called when the key is released
-    - `name` : name of the event (Optional) 
+    - `eid` : event id. used to identify the event and remove it later (Optional)
     """
     if not hasattr(keys, "__iter__") or isinstance(keys, str):
         keys = [keys]
 
-    if name == "Default":
-        name = f"key_updown.{len(EventHandler.events)}_{random.uniform(1, 10)}"
+    if eid == "Default":
+        eid = f"key_updown.{len(EventHandler.events)}_{random.uniform(1, 10)}"
 
-    EventHandler.on_key("up", keys, on_up, name, priority)
-    EventHandler.on_key("down", keys, on_down, name, priority)
+    EventHandler.on_key("up", keys, on_up, eid, priority)
+    EventHandler.on_key("down", keys, on_down, eid, priority)
 
 
-def add_event(event: str, object: Object, name: str = "Default", priority: bool = False) -> Callable:
+def add_event(event: str, object: Object, eid: str = "Default", priority: bool = False) -> Callable:
     """
     #### Adds an event listener to an object
     - `event` : event to listen to
     - `object` : object that will be "listening"
-    - `name` : name of the event (Optional)
+    - `eid` : event id. used to identify the event and remove it later (Optional)
     """
 
     def wrapper(func):
-        EventHandler.add_event(event, object, func, name, priority)
+        EventHandler.add_event(event, object, func, eid, priority)
         return func
 
     return wrapper
 
 
-def on_event(event: str, name: str = "Default", priority: bool = False) -> Callable:
+def on_event(event: str, eid: str = "Default", priority: bool = False) -> Callable:
     """
     #### Calls funcion when the event is triggered, (Base Event)
     - `event` : event to listen to
             - Events : `quit`, `mousemotion`, `mousedown`, `mouseup`, `keydown`, `keyup`, `mousewheel`
-    - `name` : name of the event (Optional)
+    - `eid` : event id. used to identify the event and remove it later (Optional)
     """
 
-    if name == "Default":
-        name = (
+    if eid == "Default":
+        eid = (
             f"base_event.{event}.{len(EventHandler.events)}.{random.uniform(1, 10)}"
-            if name == "Default"
-            else name
+            if eid == "Default"
+            else eid
         )
 
     def wrapper(func):
-        EventHandler.on_event(event, func, name, priority)
+        EventHandler.on_event(event, func, eid, priority)
         return func
 
     return wrapper
 
 
-def custom_event(object=None, name: str = "Default", priority: bool = False) -> Callable:
+def custom_event(object=None, eid: str = "Default", priority: bool = False) -> Callable:
     """
     #### Adds a function as custom event
     - `object` : object to check if is hovering, if you need `is_hovering` (Optional)
-    - `name` : name of the event (Optional)
+    - `eid` : event id. used to identify the event and remove it later (Optional)
     """
 
     def wrapper(func):
-        EventHandler.custom_event(func, object, name, priority)
+        EventHandler.custom_event(func, object, eid, priority)
         return func
 
     return wrapper
 
 
-def remove_event(name: str):
+def remove_event(eid: str):
     """
     #### Removes an event from the event handler
-    - `name` : name of the event
+    - `eid` : event id. used to identify the event
     """
     EventHandler.remove_event(name)
 

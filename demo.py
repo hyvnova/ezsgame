@@ -20,11 +20,11 @@ def on_near(obj):
                 return
 
             print("User: ", text)
-            # dialogue, thought = LADY_AI.send_message("user", text)
-            # print("Lady: ", dialogue)
-            # print("Thought: ", thought)
+            dialogue, thought = LADY_AI.send_message("user", text)
+            print("Lady: ", dialogue)
+            print("Thought: ", thought)
 
-            World.search_single(tags={"name": "lady"}).components[DialogueBox].push(["Line 1", "Line 2", "Line 3"])
+            World.search_single(tags={"name": "lady"}).components[DialogueBox].push(dialogue)
 
 player = Rect(
     Pos("center", "center"),
@@ -56,9 +56,20 @@ lady = Rect(
 )
 
 
+# This text does nothing, but for some reason without it no other text will be displayed
+# I'm gonna kill myself
+Text(
+    "",
+    Pos("center", 50),
+    font_size=20,
+    color="white"
+)
+
+
 while True:
     window.check_events()
     window.fill("black")
+
 
 
     for obj in World.objects:

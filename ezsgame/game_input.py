@@ -26,7 +26,7 @@ class InputBox:
 
         self.text = Text(
             "",
-            Pos("center", "center"),
+            Pos("right-center", "center"),
             font_size=25,
             color="white",
             parent=self.rect,
@@ -42,7 +42,7 @@ class InputBox:
             self._catch_keys()
 
     def _catch_keys(self):
-        @on_event("keydown", name=self._event_names[0], priority=True)
+        @on_event("keydown", eid=self._event_names[0], priority=True)
         def keydown(key, unicode):
             # stop on enter
             if key == pg.K_RETURN:

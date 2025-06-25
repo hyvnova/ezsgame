@@ -45,8 +45,8 @@ class Selectable(Component):
     def __init__(
         self,
         hover_color: str = "green",
-        hover_sound: str = "assets\hover.mp3",
-        select_sound: str = "assets\click.mp3",
+        hover_sound: str = r"./assets/hover.mp3",
+        select_sound: str = r"./assets/click.mp3",
         on_select: Callable = lambda: None,
     ) -> None:
 
@@ -68,7 +68,7 @@ class Selectable(Component):
         self.original_color = object.styles.color
 
     def enable(self) -> None:
-        @add_event("hover", self.object, name=self._hover_signal_name)
+        @add_event("hover", self.object, eid=self._hover_signal_name)
         def hover():
             if self.is_hovered:
                 return
@@ -79,7 +79,7 @@ class Selectable(Component):
 
             self.is_hovered = True
 
-        @add_event("unhover", self.object, name=self._hover_signal_name)
+        @add_event("unhover", self.object, eid=self._hover_signal_name)
         def unhover():
             if not self.is_hovered:
                 return
@@ -89,7 +89,7 @@ class Selectable(Component):
             self.object.styles.resolve(self.object.parent.size)
 
 
-        @add_event("click", self.object, name=self._click_signal_name)
+        @add_event("click", self.object, eid=self._click_signal_name)
         def select():
             self.select_sound.play()
             self.on_select()
@@ -187,7 +187,7 @@ class DialogueBox(Component):
 
         # Update existing text object if it exists instead of creating a new one
         if self.text_obj in World.objects:
-            self.text_obj.text = (
+            self.text_obj.text.set(
                 self.lines[self.current_line] if self.lines else ""
             )
             self.text_obj.pos = (
@@ -225,7 +225,6 @@ class DialogueBox(Component):
             self.current_line += 1
             if self.current_line >= len(self.lines):
                 self.reset()
-                self.disable()
                 return
 
             self.update_text()

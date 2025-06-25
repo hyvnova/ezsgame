@@ -24,29 +24,21 @@ class TimeHandler:
     to_remove: List[str] = []
     to_add: List[Interval] = []
 
-    def add(call_time: int, callback, name: str = "Default", repeat: int = -1):
+    def add(call_time: float, callback, name: str = "Default", repeat: int = -1):
         r"""
         #### Adds a `interval` that will be called every `time` seconds
         - `name` : name of the event
         - `time` : amount of time in seconds that the event will be called after
         - `callback` : function to be called when the event is triggered
         - `repeat` : number of times the interval will last (-1 for infinite)
-        """ 
-
-        # convert time to milliseconds
-        call_time *= 1000
-
-        name = (
-            f"{len(TimeHandler.intervals)}.{call_time}" if name == "Default" else name
-        )
-
-        # check for valid repeat
-        if repeat <= 0 and not repeat == -1:
-            raise ValueError(
-                f"At TimeHandler.add (Adding a interval): Argument `repeat` must be either -1 (infinite) or bigger than 0, got: {repeat}.\n For degubbing: TimeHandler.add({call_time=}, {callback=}, {name=}, {repeat=})"
-            )
-
-        TimeHandler.to_add.append(Interval(call_time, callback, 0, name, repeat))
+        """
+        call_time *= 1000  # sec → ms
+        now = pg.time.get_ticks()
+        name = f"{len(TimeHandler.intervals)}.{call_time}" if name == "Default" else name
+        if repeat <= 0 and repeat != -1:
+            raise ValueError("repeat must be -1 or > 0")
+        # start counting *now* so first fire is after `call_time`
+        TimeHandler.to_add.append(Interval(call_time, callback, now, name, repeat))
 
     def remove(name: str):
         r"""
@@ -75,20 +67,15 @@ class TimeHandler:
         # Checking  Intervals
         current_time = pg.time.get_ticks()
         for interval in TimeHandler.intervals:
-            if current_time - interval.last_call >= interval.time:
+            # fire as many times as period has elapsed
+            while current_time - interval.last_call >= interval.time:
                 interval.callback()
-                interval.last_call = pg.time.get_ticks()
-
-                # check interval repeats
-                if (
-                    interval.repeat > 0
-                ):  # this conditional avoids modifying infinite intervals
+                interval.last_call += interval.time  # keep absolute schedule
+                if interval.repeat > 0:
                     interval.repeat -= 1
-                    
-                    # if interval doesnt have to repeat any more, then delete it
                     if interval.repeat == 0:
                         TimeHandler.to_remove.append(interval.name)
-
+                        break
 
 # time decorators  ------------------------------------------------------------
 def add_interval(time: int, name: str = "Default", repeat: int = -1) -> Callable:
