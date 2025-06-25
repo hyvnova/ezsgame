@@ -77,7 +77,8 @@ class Object:
         self.components = ComponentGroup(self)
         self.components.add(*components)
 
-        # Modify draw method to ensure that the object is drawn only if it is visible and trigger on_draw signal
+        # Modify draw method so objects skip drawing when invisible and emit the
+        # on_draw signal after each draw call.
         def _draw_manager(draw_func):
             def wrapper():
                 if self.styles.visible:
@@ -121,6 +122,7 @@ class Object:
         pass
 
     def _get_collision_box(self):
+        """Return the object's collision box as four corner points."""
 
         # resolve the position and size of the object
         pos = resolve_position(self, self.pos, self.parent)

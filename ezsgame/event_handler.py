@@ -159,7 +159,9 @@ class EventHandler:
     __ezsgame_events = ("update",)
 
     def check():
-        # gets widnow events
+        """Process queued events and dispatch Pygame events."""
+
+        # gets window events
         events = pg.event.get()
 
         # log pressed keys
