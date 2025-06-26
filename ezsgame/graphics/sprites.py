@@ -16,6 +16,7 @@ pgSpriteClass = pygame.sprite.Sprite
 
 
 class Sprite(pgSpriteClass, Object):
+    """Static image that can be positioned and drawn like any other Object."""
     def __new__(
         cls,
         sprite: Path | str,
@@ -24,6 +25,8 @@ class Sprite(pgSpriteClass, Object):
         scale: bool = True,
         static: bool = False,
     ):
+        """Instantiate Sprite unless given a GIF path."""
+
         # if is animated
         if Path(sprite).suffix == ".gif":
             raise TypeError("Use the AnimatedSprite class for animated sprites instead.")
@@ -38,6 +41,7 @@ class Sprite(pgSpriteClass, Object):
         scale: bool = True,
         static: bool = False,
     ):
+        """Load an image and prepare rects for drawing."""
         pgSpriteClass.__init__(self)
         Object.__init__(self, pos, size)
 
@@ -57,6 +61,8 @@ class Sprite(pgSpriteClass, Object):
             self.draw = lambda: self.window.surface.blit(self.image, self.rect)
 
     def _update(self):
+        """Resize image and update the rect to match current state."""
+
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = self.image.get_rect()
         self.rect.topleft = self.pos.as_tuple()
@@ -68,6 +74,7 @@ class Sprite(pgSpriteClass, Object):
 
 
 class AnimatedSprite(pgSpriteClass):
+    """GIF-based sprite that updates frames automatically."""
     _cached_frames: Dict[str, List[pygame.Surface]] = {} # {path: [frames]} used to cache frames/resources for animated sprites
     _cached_sprites: Dict[str, Tuple] = {} # {path: (size, frame_rate, scale, draw_method)} used to cache sprites that do the same but are in different locations
     
@@ -79,6 +86,8 @@ class AnimatedSprite(pgSpriteClass):
         frame_rate: int = 5,
         scale: bool = True,
     ):
+        """Return cached clone when possible to save memory."""
+
         if AnimatedSprite._cached_sprites.get(sprite, [None])[:-1] == (size, frame_rate, scale):
             # Return a AnimatedSpriteRef object that references the cached sprite
             return AnimatedSpriteRef.__new__(AnimatedSpriteRef, AnimatedSprite._cached_sprites[sprite][-1])
@@ -93,6 +102,8 @@ class AnimatedSprite(pgSpriteClass):
         frame_rate: int = -1, # -1 = auto
         scale: bool = True,
     ):
+        """Load frames from a GIF and set up initial state."""
+
         pgSpriteClass.__init__(self)
 
         self.window = get_window()
@@ -135,6 +146,8 @@ class AnimatedSprite(pgSpriteClass):
         self._cached_sprites[sprite] = (size, frame_rate, scale, self.draw)
 
     def _update(self):
+        """Advance the animation if enough time has elapsed."""
+
         current_time = pygame.time.get_ticks()
 
         # calculate time since last update
@@ -151,15 +164,22 @@ class AnimatedSprite(pgSpriteClass):
         self.window.surface.blit(self.image, self.rect)
 
 class AnimatedSpriteRef:
+    """Lightweight proxy that reuses a cached draw method."""
 
     def __new__(
         cls,
         draw_method: Callable,
     ):
-        return object.__new__(cls)        
+        """Create a reference object without copying surfaces."""
+
+        return object.__new__(cls)
 
     def __init__(self, draw_method: Callable):
+        """Store the cached draw callable."""
+
         self.draw = draw_method
 
     def draw(self):
+        """Placeholder so AnimatedSpriteRef matches Sprite interface."""
+
         pass

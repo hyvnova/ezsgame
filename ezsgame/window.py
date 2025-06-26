@@ -128,6 +128,7 @@ class Window:
         return self
 
     def get_delta_time(self) -> int:
+        """Return the time elapsed between frames in seconds."""
         return self.clock.get_time() / 1000
 
     def load_icon(self, icon: str):
@@ -179,6 +180,7 @@ class Window:
         EventHandler.check()
 
     def _resolve_size(self, size: Size):
+        """Adjust the window size handling fullscreen and special tokens."""
         if self.fullscreen:
             self.__size = Size(size)
             self.size = Size(pg.display.list_modes()[0])
@@ -337,6 +339,7 @@ class Window:
 
     # Scenes
     def run_scenes(self, scene_manager: SceneManager):
+        """Run the active scene manager inside the main loop."""
         # Main loop
         while True:
             self.check_events()

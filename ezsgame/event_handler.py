@@ -295,7 +295,7 @@ class EventHandler:
     events = EventList()
     to_remove: Set[str] = set()
     to_add: List[EventRegist] = []
-    pressed_keys: pg.key.ScancodeWrapper = None
+    pressed_keys: pg.key.ScancodeWrapper = None # type: ignore
 
     __ezsgame_events = ("update",)
 
@@ -481,7 +481,7 @@ class EventHandler:
 
 
 # ------------------------ Event Handler Decorators ------------------------ #
-def on_key(type: str, keys: Iterable[str] | str, eid: str = "_") -> Callable:
+def on_key(type: str, keys: Iterable[str] | str, eid: str = "_") -> Callable: # type: ignore
     """
     #### Calls the function when the key event is triggered
     - `type` : type of the event. `up` or `down`
