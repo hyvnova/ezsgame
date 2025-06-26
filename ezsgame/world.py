@@ -115,7 +115,7 @@ class World:
 
 # Utility for getting the window object easily
 @lru_cache()
-def get_window():
+def get_window() -> "Window":
     """
     #### Returns the window object
     """

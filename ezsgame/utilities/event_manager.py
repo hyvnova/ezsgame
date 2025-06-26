@@ -6,7 +6,7 @@ An Event Manager is a class that is responsible for handling events, meaning,
 """
 
 from ast import Dict
-from ..event_handler import Event, EventHandler, remove_event
+from ..event_handler import EventRegist, EventHandler, remove_event
 
 
 class EventManager:
@@ -22,7 +22,7 @@ class EventManager:
         # Alias are meant to refer to event easily with local context
         # Name are the actual event names, which need to be unique
         self.events: Dict[str, str] = events
-        self.disabled: Dict[str, Event] = {}
+        self.disabled: Dict[str, EventRegist] = {}
 
     def add(self, alias: str, name: str):
         self.events[alias] = name

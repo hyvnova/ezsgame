@@ -1,7 +1,5 @@
-# EZSGAME (v0.6)
+# EZSGAME (v0.7)
 ezsgame is a library that aims to make the process of creating and manipulating 2D graphics or game development simple, easy, fun, and comfortable as possible for the user.
-
-## Notice: ezsgame development is currently on hold, and it probably won't continue. I'm planning on making a better library in Rust. 
 
 ## Instalation 
 ```bash
